@@ -1,0 +1,32 @@
+{
+  "name": "elm-test",
+  "version": "0.1.0",
+  "description": "Run elm-test suites.",
+  "main": "elm-test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rtfeldman/node-elm-test.git"
+  },
+  "bin": {
+    "elm-test": "bin/elm-test"
+  },
+  "keywords": [
+    "elm",
+    "elm-test",
+    "cli"
+  ],
+  "author": "Richard Feldman",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/rtfeldman/node-elm-test/issues"
+  },
+  "homepage": "https://github.com/rtfeldman/node-elm-test#readme",
+  "dependencies": {
+    "lodash": "3.9.3",
+    "node-elm-compiler": "0.3.0+elm-0.15",
+    "temp": "0.8.1"
+  }
+}

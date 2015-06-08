@@ -1,0 +1,69 @@
+#!/usr/bin/env node
+
+var processTitle = "elm-test"
+
+process.title = 'elm-test';
+
+var compile    = require("node-elm-compiler").compile,
+  suffix       = require("../elm-io-ports.js"),
+  fs           = require("fs"),
+  temp         = require("temp").track(), // Automatically cleans up temp files.
+  util         = require("util"),
+  _            = require("lodash"),
+  childProcess = require("child_process");
+
+var testFile   = process.argv[2],
+    cwd        = __dirname;
+
+function spawnCompiler(cmd, args, opts) {
+  // Silence stdout for the compiler and leave the others alone.
+  // This avoids the nasty compiler output message for the temp file, e.g.
+  // "Successfully generated /var/folders/f2/afdkmfglgkmsdfgkl/elm_test_3423940"
+  var compilerOpts = _.defaults({stdio: ["inherit", "ignore", "inherit"]}, opts);
+
+  return childProcess.spawn(cmd, args, compilerOpts);
+}
+
+if (typeof testFile !== "string") {
+  console.log("Usage: elm-test TESTFILE\n");
+  process.exit(1);
+}
+
+if (!fs.existsSync(testFile)) {
+  console.error("Could not find file " + testFile);
+  process.exit(1);
+}
+
+temp.open('elm_test_', function(err, info) {
+  var dest = info.path;
+  var compileProcess = compile([testFile], {output: dest, spawn: spawnCompiler});
+
+  console.log("Compiling", testFile);
+
+  compileProcess.on('close', function(exitCode) {
+    if (exitCode !== 0) {
+      process.exit(exitCode);
+    }
+
+    console.log("Successfully compiled", testFile);
+
+    var runnerOpts = {stdio: ["pipe", "inherit", "inherit"]};
+    var runnerProcess = childProcess.spawn("node", [], runnerOpts);
+
+    runnerProcess.on('exit', function (exitCode) {
+      process.exit(exitCode);
+    });
+
+    var reader = fs.createReadStream(dest);
+
+    reader.on("end", function() {
+      runnerProcess.stdin.write(suffix);
+
+      runnerProcess.stdin.end();
+    })
+
+    reader.pipe(runnerProcess.stdin);
+
+    console.log("Running tests...");
+  });
+});
