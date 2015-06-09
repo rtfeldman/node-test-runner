@@ -1,0 +1,16 @@
+{
+    "version": "1.0.0",
+    "summary": "Sample Elm Test",
+    "repository": "https://github.com/rtfeldman/node-elm-test.git",
+    "license": "Apache-2.0",
+    "source-directories": [
+        "."
+    ],
+    "exposed-modules": [],
+    "dependencies": {
+        "elm-lang/core": "2.0.1 <= v < 3.0.0",
+        "maxsnew/IO": "1.0.0 <= v < 2.0.0",
+        "deadfoxygrandpa/Elm-Test": "1.0.3 <= v < 2.0.0"
+    },
+    "elm-version": "0.15.0 <= v < 0.16.0"
+}
