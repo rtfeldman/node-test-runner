@@ -16,10 +16,7 @@ var testFile   = process.argv[2],
     cwd        = __dirname;
 
 function spawnCompiler(cmd, args, opts) {
-  // Silence stdout for the compiler and leave the others alone.
-  // This avoids the nasty compiler output message for the temp file, e.g.
-  // "Successfully generated /var/folders/f2/afdkmfglgkmsdfgkl/elm_test_3423940"
-  var compilerOpts = _.defaults({stdio: ["inherit", "ignore", "inherit"]}, opts);
+  var compilerOpts = _.defaults({stdio: ["inherit", "pipe", "inherit"]}, opts);
 
   return childProcess.spawn(cmd, args, compilerOpts);
 }
@@ -39,6 +36,16 @@ temp.open('elm_test_', function(err, info) {
   var compileProcess = compile([testFile], {output: dest, spawn: spawnCompiler});
 
   console.log("Compiling", testFile);
+
+  compileProcess.stdout.setEncoding("utf8")
+  compileProcess.stdout.on("data", function(data) {
+    // Explicitly strip out the "Successfully generated" message.
+    // This avoids the nasty compiler output message for the temp file, e.g.
+    // "Successfully generated /var/folders/f2/afd9fg0acfg32/elm_test_3423940"
+    if ((typeof data === "string") && !data.match(/^Successfully generated /)) {
+      console.log(data);
+    }
+  });
 
   compileProcess.on('close', function(exitCode) {
     if (exitCode !== 0) {
