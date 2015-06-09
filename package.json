@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
+  "engines" : {
+    "node" : ">=0.12.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
