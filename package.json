@@ -29,7 +29,7 @@
   "homepage": "https://github.com/rtfeldman/node-elm-test#readme",
   "dependencies": {
     "lodash": "3.9.3",
-    "node-elm-compiler": "0.3.0+elm-0.15",
+    "node-elm-compiler": "0.4.0+elm-0.15.1",
     "temp": "0.8.1"
   }
 }
