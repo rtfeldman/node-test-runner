@@ -1,12 +1,19 @@
 # node-elm-test
 Runs [elm-test](https://github.com/deadfoxygrandpa/Elm-Test) suites from Node.js
 
-Install it with `npm install -g elm-test`, then try this after downloading this repository:
+## Installation
 
 ```bash
-cd examples
-elm-package install --yes
-elm-test Test.elm
+npm install -g elm-test
 ```
+
+## Usage
+
+```bash
+elm-test init  # Adds the Elm-Test dependency and creates TestRunner.elm and Tests.elm
+elm-test TestRunner.elm  # Runs the tests
+```
+
+Then add your tests to Tests.elm.
 
 Also check out [`elm-check`](https://github.com/TheSeamau5/elm-check) for property-based testing via `elm-test`!

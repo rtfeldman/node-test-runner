@@ -6,11 +6,29 @@ process.title = 'elm-test';
 
 var compile    = require("node-elm-compiler").compile,
   suffix       = require("../elm-io-ports.js"),
-  fs           = require("fs"),
+  fs           = require("fs-extra"),
+  path         = require("path"),
   temp         = require("temp").track(), // Automatically cleans up temp files.
   util         = require("util"),
   _            = require("lodash"),
   childProcess = require("child_process");
+
+if (process.argv[2] == "init") {
+  var copyTemplate = function(templateName) {
+    if (fs.existsSync(templateName)) {
+      console.log(templateName + " already exists");
+    } else {
+      fs.copySync(path.resolve(__dirname, "../templates/" + templateName), templateName);
+      console.log("Created " + templateName);
+    }
+  };
+
+  childProcess.execSync("elm package install deadfoxygrandpa/Elm-Test", {stdio:[0,1,2]});
+  childProcess.execSync("elm package install maxsnew/IO", {stdio:[0,1,2]});
+  copyTemplate("TestRunner.elm");
+  copyTemplate("Tests.elm");
+  process.exit(0);
+}
 
 var testFile   = process.argv[2],
     cwd        = __dirname;
@@ -22,7 +40,8 @@ function spawnCompiler(cmd, args, opts) {
 }
 
 if (typeof testFile !== "string") {
-  console.log("Usage: elm-test TESTFILE\n");
+  console.log("Usage: elm-test init  # Create example tests\n");
+  console.log("Usage: elm-test TESTFILE  # Run tests\n");
   process.exit(1);
 }
 
