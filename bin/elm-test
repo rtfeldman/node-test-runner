@@ -23,8 +23,17 @@ if (process.argv[2] == "init") {
     }
   };
 
-  childProcess.execSync("elm package install deadfoxygrandpa/Elm-Test", {stdio:[0,1,2]});
-  childProcess.execSync("elm package install maxsnew/IO", {stdio:[0,1,2]});
+  var elmOptions = "";
+  if (process.argv[3] == "--yes" || process.argv[3] == "-y") {
+    elmOptions += " --yes";
+  }
+
+  var execElmSync = function(command) {
+      childProcess.execSync(command + elmOptions, {stdio:[0,1,2]});
+  }
+
+  execElmSync("elm package install deadfoxygrandpa/Elm-Test");
+  execElmSync("elm package install maxsnew/IO");
   copyTemplate("TestRunner.elm");
   copyTemplate("Tests.elm");
   process.exit(0);
@@ -40,7 +49,7 @@ function spawnCompiler(cmd, args, opts) {
 }
 
 if (typeof testFile !== "string") {
-  console.log("Usage: elm-test init  # Create example tests\n");
+  console.log("Usage: elm-test init [--yes]  # Create example tests\n");
   console.log("Usage: elm-test TESTFILE  # Run tests\n");
   process.exit(1);
 }
