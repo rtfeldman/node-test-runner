@@ -1,17 +1,12 @@
 module Main where
 
-import Basics exposing (..)
-import Signal exposing (..)
+import Signal exposing (Signal)
 
-import ElmTest.Assertion as A exposing (assertEqual, assert)
-import ElmTest.Run as R
 import ElmTest.Runner.Console exposing (runDisplay)
-import ElmTest.Test exposing (..)
-import IO.IO exposing (..)
+import IO.IO exposing (IO)
 import IO.Runner exposing (Request, Response)
 import IO.Runner as Run
 
-import String
 import Tests
 
 console : IO ()
