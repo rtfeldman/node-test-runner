@@ -1,6 +1,6 @@
 module Tests where
 
-import ElmTest.Assertion as A exposing (assertEqual, assert)
+import ElmTest.Assertion exposing (..)
 import ElmTest.Test exposing (..)
 
 import String
