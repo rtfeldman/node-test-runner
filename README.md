@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/rtfeldman/node-elm-test.svg?branch=master)](https://travis-ci.org/rtfeldman/node-elm-test)
+
 # node-elm-test
 Runs [elm-test](https://github.com/deadfoxygrandpa/Elm-Test) suites from Node.js
 
