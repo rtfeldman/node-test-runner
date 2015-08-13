@@ -11,7 +11,8 @@ var compile    = require("node-elm-compiler").compile,
   temp         = require("temp").track(), // Automatically cleans up temp files.
   util         = require("util"),
   _            = require("lodash"),
-  childProcess = require("child_process");
+  childProcess = require("child_process"),
+  elm          = require("elm");
 
 if (process.argv[2] == "init") {
   var copyTemplate = function(templateName) {
@@ -28,12 +29,12 @@ if (process.argv[2] == "init") {
     elmOptions += " --yes";
   }
 
-  var execElmSync = function(command) {
-      childProcess.execSync(command + elmOptions, {stdio:[0,1,2]});
+  var execElmPackageSync = function(command) {
+      childProcess.execSync(elm["elm-package"] + " " + command + elmOptions, {stdio:[0,1,2]});
   }
 
-  execElmSync("elm package install deadfoxygrandpa/Elm-Test");
-  execElmSync("elm package install maxsnew/IO");
+  execElmPackageSync("install deadfoxygrandpa/Elm-Test");
+  execElmPackageSync("install maxsnew/IO");
   copyTemplate("TestRunner.elm");
   copyTemplate("Tests.elm");
   process.exit(0);
