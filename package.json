@@ -1,6 +1,6 @@
 {
   "name": "elm-test",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
@@ -22,7 +22,7 @@
     "cli"
   ],
   "author": "Richard Feldman",
-  "license": "Apache-2.0",
+  "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/rtfeldman/node-elm-test/issues"
   },
