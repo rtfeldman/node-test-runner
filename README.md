@@ -1,3 +1,4 @@
+[![npm version](https://badge.fury.io/js/elm-test.svg)](http://badge.fury.io/js/elm-test)
 [![Build Status](https://travis-ci.org/rtfeldman/node-elm-test.svg?branch=master)](https://travis-ci.org/rtfeldman/node-elm-test)
 
 # node-elm-test
