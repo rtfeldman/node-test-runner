@@ -1,6 +1,7 @@
 /* Implementation from: https://raw.githubusercontent.com/maxsnew/IO/master/elm-io.sh */
 module.exports =
   "(function(){\n" +
+  "    window = {Date: Date};\n" +
   "    var stdin = process.stdin;\n" +
   "    var fs    = require('fs');\n" +
   "    var worker = Elm.worker(Elm.Main, {responses: null });\n" +
