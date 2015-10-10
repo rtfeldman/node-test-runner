@@ -36,6 +36,7 @@ if (process.argv[2] == "init") {
       childProcess.execSync(elm["elm-package"] + " " + command + elmOptions, {stdio:[0,1,2]});
   }
 
+  copyTemplate("elm-package.json");
   execElmPackageSync("install avh4/elm-test");
   execElmPackageSync("install laszlopandy/elm-console");
   copyTemplate("TestRunner.elm");
