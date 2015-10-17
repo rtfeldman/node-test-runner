@@ -2,7 +2,7 @@
 
 var processTitle = "elm-test"
 
-process.title = 'elm-test';
+process.title = processTitle;
 
 var compile    = require("node-elm-compiler").compile,
   suffix       = require("../elm-io-ports.js"),
