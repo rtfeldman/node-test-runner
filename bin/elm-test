@@ -4,7 +4,7 @@ var processTitle = "elm-test"
 
 process.title = 'elm-test';
 
-var compile    = require("@avh4/node-elm-compiler").compile,
+var compile    = require("node-elm-compiler").compile,
   suffix       = require("../elm-io-ports.js"),
   fs           = require("fs-extra"),
   path         = require("path"),

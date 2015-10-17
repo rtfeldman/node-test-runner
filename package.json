@@ -30,7 +30,7 @@
   "dependencies": {
     "fs-extra": "0.23.1",
     "lodash": "3.10.1",
-    "@avh4/node-elm-compiler": "0.16.0",
+    "node-elm-compiler": "1.0.0",
     "temp": "0.8.1"
   }
 }
