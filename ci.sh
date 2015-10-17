@@ -23,6 +23,12 @@ function assertTestSuccess() {
 echo "$0: Installing elm-test..."
 npm install --global
 
+echo "$0: Testing examples..."
+cd examples
+assertTestSuccess PassingTests.elm
+assertTestFailure FailingTests.elm
+cd ..
+
 echo "$0: Testing elm-test init..."
 mkdir -p tmp
 cd tmp
@@ -33,12 +39,6 @@ ex -c 'g/should fail/' -c 'd' -c 'g-1' -c 's/,$//' -c 'wq' Tests.elm
 assertTestSuccess TestRunner.elm
 cd ..
 rm -Rf tmp
-
-echo "$0: Testing examples..."
-cd examples
-assertTestFailure FailingTests.elm
-assertTestSuccess PassingTests.elm
-cd ..
 
 echo ""
 echo "$0: Everything looks good!"
