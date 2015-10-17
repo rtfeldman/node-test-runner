@@ -2,7 +2,7 @@
 
 var processTitle = "elm-test"
 
-process.title = 'elm-test';
+process.title = processTitle;
 
 var compile    = require("node-elm-compiler").compile,
   suffix       = require("../elm-io-ports.js"),
@@ -11,8 +11,11 @@ var compile    = require("node-elm-compiler").compile,
   temp         = require("temp").track(), // Automatically cleans up temp files.
   util         = require("util"),
   _            = require("lodash"),
-  childProcess = require("child_process"),
-  elm          = require("elm");
+  childProcess = require("child_process");
+
+var elm = {
+  'elm-package': 'elm-package'
+};
 
 if (process.argv[2] == "init") {
   var copyTemplate = function(templateName) {
@@ -33,8 +36,9 @@ if (process.argv[2] == "init") {
       childProcess.execSync(elm["elm-package"] + " " + command + elmOptions, {stdio:[0,1,2]});
   }
 
-  execElmPackageSync("install deadfoxygrandpa/Elm-Test");
-  execElmPackageSync("install maxsnew/IO");
+  copyTemplate("elm-package.json");
+  execElmPackageSync("install deadfoxygrandpa/elm-test");
+  execElmPackageSync("install laszlopandy/elm-console");
   copyTemplate("TestRunner.elm");
   copyTemplate("Tests.elm");
   process.exit(0);
@@ -60,7 +64,7 @@ if (!fs.existsSync(testFile)) {
   process.exit(1);
 }
 
-temp.open('elm_test_', function(err, info) {
+temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
   var dest = info.path;
   var compileProcess = compile([testFile], {output: dest, spawn: spawnCompiler});
 
