@@ -29,7 +29,7 @@
   "homepage": "https://github.com/rtfeldman/node-elm-test#readme",
   "dependencies": {
     "fs-extra": "0.23.1",
-    "lodash": "3.9.3",
+    "lodash": "3.10.1",
     "@avh4/node-elm-compiler": "0.16.0",
     "temp": "0.8.1"
   }
