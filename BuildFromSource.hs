@@ -63,8 +63,6 @@ configs =
         [ "elm-compiler" =: "0.15.1"
         , "elm-package"  =: "0.5.1"
         , "elm-make"     =: "0.2"
-        , "elm-reactor"  =: "0.3.2"
-        , "elm-repl"     =: "0.4.2"
         ]
     ,
       "0.15" =:
@@ -143,9 +141,6 @@ makeRepos artifactDirectory version repos =
     -- (install the dependencies a bit more quietly than the elm packages)
     cabal ([ "install", "-j", "--only-dependencies", "--ghc-options=\"-w\"" ] ++ (if version <= "0.15.1" then [ "--constraint=fsnotify<0.2" ] else []) ++ map fst repos)
     cabal ([ "install", "-j", "--ghc-options=\"-XFlexibleContexts\"" ] ++ filter (/= "elm-reactor") (map fst repos))
-
-    -- elm-reactor needs to be installed last because of a post-build dependency on elm-make
-    cabal [ "install", "-j", "elm-reactor" ]
 
     return ()
 
