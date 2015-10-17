@@ -6,7 +6,7 @@ echo "$0: Installing elm-test..."
 npm install --global
 
 echo "$0: Testing elm-test init..."
-mkdir tmp
+mkdir -p tmp
 cd tmp
 elm-test init --yes
 elm-test TestRunner.elm | tee test.log
