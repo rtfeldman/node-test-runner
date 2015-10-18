@@ -36,6 +36,7 @@ elm-test init --yes
 assertTestFailure TestRunner.elm
 # delete the failing tests and the comma on the preceding line
 ex -c 'g/should fail/' -c 'd' -c 'g-1' -c 's/,$//' -c 'wq' Tests.elm
+rm -Rf elm-stuff
 assertTestSuccess TestRunner.elm
 cd ..
 rm -Rf tmp

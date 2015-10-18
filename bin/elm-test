@@ -37,7 +37,7 @@ if (process.argv[2] == "init") {
   }
 
   copyTemplate("elm-package.json");
-  execElmPackageSync("install deadfoxygrandpa/Elm-Test");
+  execElmPackageSync("install deadfoxygrandpa/elm-test");
   execElmPackageSync("install laszlopandy/elm-console");
   copyTemplate("TestRunner.elm");
   copyTemplate("Tests.elm");

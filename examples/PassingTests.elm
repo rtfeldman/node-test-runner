@@ -7,7 +7,7 @@ import ElmTest.Assertion as A exposing (assertEqual, assert)
 import ElmTest.Run as R
 import ElmTest.Runner.Console exposing (runDisplay)
 import ElmTest.Test exposing (..)
-import Console exposing (..)
+import Console exposing (IO, run)
 import Task
 import String
 
@@ -21,4 +21,4 @@ console : IO ()
 console = runDisplay tests
 
 port runner : Signal (Task.Task x ())
-port runner = Console.run console
+port runner = run console
