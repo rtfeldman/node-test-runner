@@ -7,8 +7,10 @@ import ElmTest.Assertion as A exposing (assertEqual, assert)
 import ElmTest.Run as R
 import ElmTest.Runner.Console exposing (runDisplay)
 import ElmTest.Test exposing (..)
-import Console exposing (..)
-import Task
+import IO.IO exposing (..)
+import IO.Runner exposing (Request, Response)
+import IO.Runner as Run
+
 import String
 
 tests : Test
