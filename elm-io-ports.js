@@ -1,19 +1,14 @@
-/* Implementation from: https://raw.githubusercontent.com/laszlopandy/elm-console/1.0.2/elm-io.sh */
+/* Implementation from: https://raw.githubusercontent.com/maxsnew/IO/master/elm-io.sh */
 module.exports =
   "(function(){\n" +
   "    window = {Date: Date};\n" +
   "    var stdin = process.stdin;\n" +
   "    var fs    = require('fs');\n" +
-  "    if (typeof Elm === \"undefined\") { throw \"elm-io config error: Elm is not defined. Make sure you call elm-io with a real Elm output file\"}\n" +
-  "    if (typeof Elm.Main === \"undefined\" ) { throw \"Elm.Main is not defined, make sure your module is named Main.\" };\n" +
-  "    var worker = Elm.worker(Elm.Main\n" +
-  "                            , {responses: null }\n" +
-  "                           );\n" +
+  "    var worker = Elm.worker(Elm.Main, {responses: null });\n" +
   "    var just = function(v) {\n" +
   "        return { 'Just': v};\n" +
   "    }\n" +
   "    var handle = function(request) {\n" +
-  "        \n" +
   "        switch(request.ctor) {\n" +
   "        case 'Put':\n" +
   "            process.stdout.write(request.val);\n" +
@@ -38,9 +33,13 @@ module.exports =
   "        }\n" +
   "    }\n" +
   "    worker.ports.requests.subscribe(handler);\n" +
+  "    \n" +
+  "    // Read\n" +
   "    stdin.on('data', function(chunk) {\n" +
   "        stdin.pause();\n" +
   "        worker.ports.responses.send(just(chunk.toString()));\n" +
-  "    });\n" +
+  "    })\n" +
+  "\n" +
+  "    // Start msg\n" +
   "    worker.ports.responses.send(null);\n" +
   "})();\n";
