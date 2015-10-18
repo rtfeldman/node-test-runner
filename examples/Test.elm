@@ -21,5 +21,7 @@ tests = suite "A Test Suite"
 console : IO ()
 console = runDisplay tests
 
-port runner : Signal (Task.Task x ())
-port runner = Console.run console
+port requests : Signal Request
+port requests = Run.run responses console
+
+port responses : Signal Response
