@@ -1,4 +1,4 @@
-/* Implementation from: https://raw.githubusercontent.com/laszlopandy/elm-console/1.0.2/elm-io.sh */
+/* Implementation from: https://github.com/laszlopandy/elm-console/blob/master/elm-io.sh */
 module.exports =
   "(function(){\n" +
   "    window = {Date: Date};\n" +
