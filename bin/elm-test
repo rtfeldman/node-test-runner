@@ -17,6 +17,11 @@ var elm = {
   'elm-package': 'elm-package'
 };
 
+if (process.argv[2] == "--version") {
+  console.log(require(path.join(__dirname, "..", "package.json")).version);
+  process.exit(0);
+}
+
 if (process.argv[2] == "init") {
   var copyTemplate = function(templateName) {
     if (fs.existsSync(templateName)) {
