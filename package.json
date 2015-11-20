@@ -1,10 +1,10 @@
 {
   "name": "elm-test",
-  "version": "0.6.5",
+  "version": "0.16.0-beta",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=0.12.0"
   },
   "scripts": {
     "test": "./ci.sh"

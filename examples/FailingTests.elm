@@ -3,10 +3,7 @@ module Main where
 import Basics exposing (..)
 import Signal exposing (..)
 
-import ElmTest.Assertion as A exposing (assertEqual, assert)
-import ElmTest.Run as R
-import ElmTest.Runner.Console exposing (runDisplay)
-import ElmTest.Test exposing (..)
+import ElmTest exposing (..)
 import Console exposing (IO, run)
 import Task
 import String
@@ -19,7 +16,7 @@ tests = suite "A Test Suite"
         ]
 
 console : IO ()
-console = runDisplay tests
+console = consoleRunner tests
 
 port runner : Signal (Task.Task x ())
 port runner = run console

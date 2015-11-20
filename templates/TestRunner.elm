@@ -2,14 +2,14 @@ module Main where
 
 import Signal exposing (Signal)
 
-import ElmTest.Runner.Console exposing (runDisplay)
+import ElmTest exposing (consoleRunner)
 import Console exposing (IO, run)
 import Task
 
 import Tests
 
 console : IO ()
-console = runDisplay Tests.all
+console = consoleRunner Tests.all
 
 port runner : Signal (Task.Task x ())
 port runner = run console

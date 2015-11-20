@@ -23,6 +23,9 @@ function assertTestSuccess() {
 echo "$0: Installing elm-test..."
 npm install --global
 
+echo "$0: Verifying installed elm-test version..."
+elm-test --version
+
 echo "$0: Testing examples..."
 cd examples
 assertTestSuccess PassingTests.elm
