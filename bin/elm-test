@@ -73,7 +73,6 @@ temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
   var dest = info.path;
   var compileProcess = compile([testFile], {output: dest, spawn: spawnCompiler});
 
-  console.log("Compiling", testFile);
 
   compileProcess.stdout.setEncoding("utf8")
   compileProcess.stdout.on("data", function(data) {
