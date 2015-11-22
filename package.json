@@ -28,9 +28,9 @@
   },
   "homepage": "https://github.com/rtfeldman/node-elm-test#readme",
   "dependencies": {
-    "fs-extra": "0.23.1",
+    "fs-extra": "0.26.2",
     "lodash": "3.10.1",
     "node-elm-compiler": "1.0.1",
-    "temp": "0.8.1"
+    "temp": "0.8.3"
   }
 }
