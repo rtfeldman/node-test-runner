@@ -70,17 +70,27 @@ if (!fs.existsSync(testFile)) {
   process.exit(1);
 }
 
+if (process.argv[3] == "--compiler" || process.argv[3] == "-c") {
+  pathToMake = process.argv[4];
+
+  if (!pathToMake) {
+    console.error("The --compiler option must be given a path to an elm-make executable.");
+    process.exit(1);
+  }
+}
+
 temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
   var dest = info.path;
-  var compileProcess = compile([testFile], {output: dest, spawn: spawnCompiler});
-
+  var compileProcess = compile( [testFile],
+    {output: dest, spawn: spawnCompiler, pathToMake: pathToMake});
 
   compileProcess.stdout.setEncoding("utf8")
   compileProcess.stdout.on("data", function(data) {
     // Explicitly strip out the "Successfully generated" message.
     // This avoids the nasty compiler output message for the temp file, e.g.
     // "Successfully generated /var/folders/f2/afd9fg0acfg32/elm_test_3423940"
-    if ((typeof data === "string") && !data.match(/^Successfully generated /)) {
+    // Also strip out "Success! Compiled 1 module."
+    if ((typeof data === "string") && !/^Success/.test(data)) {
       console.log(data);
     }
   });
