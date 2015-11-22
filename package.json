@@ -1,6 +1,6 @@
 {
   "name": "elm-test",
-  "version": "0.16.0-beta2",
+  "version": "0.16.0",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
