@@ -49,8 +49,9 @@ if (process.argv[2] == "init") {
   process.exit(0);
 }
 
-var testFile   = process.argv[2],
-    cwd        = __dirname;
+var testFile = process.argv[2],
+    cwd = __dirname,
+    pathToMake = undefined;
 
 function spawnCompiler(cmd, args, opts) {
   var compilerOpts = _.defaults({stdio: ["inherit", "pipe", "inherit"]}, opts);
@@ -60,7 +61,7 @@ function spawnCompiler(cmd, args, opts) {
 
 if (typeof testFile !== "string") {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
-  console.log("Usage: elm-test TESTFILE  # Run tests\n");
+  console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run tests\n");
   process.exit(1);
 }
 
