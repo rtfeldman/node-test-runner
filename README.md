@@ -19,4 +19,4 @@ elm-test TestRunner.elm  # Runs the tests
 
 Then add your tests to Tests.elm.
 
-Also check out [`elm-check`](https://github.com/TheSeamau5/elm-check) for property-based testing via `elm-test`!
+Also check out [`elm-check`](https://github.com/NoRedInk/elm-check) for property-based testing via `elm-test`!
