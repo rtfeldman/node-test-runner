@@ -54,7 +54,7 @@ var testFile = process.argv[2],
     pathToMake = undefined;
 
 function spawnCompiler(cmd, args, opts) {
-  var compilerOpts = _.defaults({stdio: ["inherit", "pipe", "inherit"]}, opts);
+  var compilerOpts = _.defaults({stdio: "inherit"}, opts);
 
   return childProcess.spawn(cmd, args, compilerOpts);
 }
@@ -83,17 +83,6 @@ temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
   var dest = info.path;
   var compileProcess = compile( [testFile],
     {output: dest, spawn: spawnCompiler, pathToMake: pathToMake});
-
-  compileProcess.stdout.setEncoding("utf8")
-  compileProcess.stdout.on("data", function(data) {
-    // Explicitly strip out the "Successfully generated" message.
-    // This avoids the nasty compiler output message for the temp file, e.g.
-    // "Successfully generated /var/folders/f2/afd9fg0acfg32/elm_test_3423940"
-    // Also strip out "Success! Compiled 1 module."
-    if ((typeof data === "string") && !/^Success/.test(data)) {
-      console.log(data);
-    }
-  });
 
   compileProcess.on('close', function(exitCode) {
     if (exitCode !== 0) {
