@@ -15,7 +15,6 @@ install:
   - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version) $env:Platform
   - node --version
   - npm --version
-  - cd test
   - npm install -g elm@%ELM_VERSION%
   - npm install
 
