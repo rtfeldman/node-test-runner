@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/rtfeldman/node-elm-test#readme",
   "dependencies": {
+    "cross-spawn": "2.1.0",
     "fs-extra": "0.26.2",
     "lodash": "3.10.1",
     "node-elm-compiler": "2.3.2",
