@@ -7,7 +7,7 @@
     "node": ">=0.12.0"
   },
   "scripts": {
-    "test": "sh ci.sh"
+    "test": "bash ci.sh"
   },
   "repository": {
     "type": "git",
