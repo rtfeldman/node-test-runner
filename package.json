@@ -1,6 +1,6 @@
 {
   "name": "elm-test",
-  "version": "0.16.0",
+  "version": "0.16.1-alpha",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
@@ -30,7 +30,7 @@
   "dependencies": {
     "fs-extra": "0.26.2",
     "lodash": "3.10.1",
-    "node-elm-compiler": "2.0.0",
+    "node-elm-compiler": "2.3.2",
     "temp": "0.8.3"
   }
 }
