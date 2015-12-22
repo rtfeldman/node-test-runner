@@ -1,7 +1,5 @@
-[![npm version](https://badge.fury.io/js/elm-test.svg)](http://badge.fury.io/js/elm-test)
-[![Build Status](https://travis-ci.org/rtfeldman/node-elm-test.svg?branch=master)](https://travis-ci.org/rtfeldman/node-elm-test)
+# node-elm-test [![Version](https://img.shields.io/npm/v/elm-test.svg)](https://www.npmjs.com/package/elm-test) [![Travis build Status](https://travis-ci.org/rtfeldman/node-elm-test.svg?branch=master)](http://travis-ci.org/rtfeldman/node-elm-test) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/fixcy4ko78di0l31/branch/master?svg=true)](https://ci.appveyor.com/project/rtfeldman/node-elm-test/branch/master)
 
-# node-elm-test
 Runs [elm-test](https://github.com/deadfoxygrandpa/Elm-Test) suites from Node.js
 
 ## Installation
