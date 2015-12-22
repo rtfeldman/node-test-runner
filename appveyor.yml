@@ -18,7 +18,6 @@ install:
   - npm install -g elm@%ELM_VERSION%
   - npm install
 
-test_script:
-  - ./ci.sh
+test_script: ci.sh
 
 build: off
