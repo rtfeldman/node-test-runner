@@ -38,7 +38,17 @@ if (process.argv[2] == "init") {
   }
 
   var spawnElmPackageSync = function(command) {
-      spawn.sync(elm["elm-package"] + " " + command + elmOptions, {stdio:[0,1,2]});
+    var status =
+      spawn.sync(
+        elm["elm-package"] + " " + command + elmOptions,
+        {stdio:[0,1,2]}
+      ).status;
+
+    if (status) {
+      console.error("Error: " + command + " returned status code " + status);
+
+      process.exit(status);
+    }
   }
 
   copyTemplate("elm-package.json");
