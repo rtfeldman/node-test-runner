@@ -3,25 +3,27 @@
 set -e
 
 function assertTestFailure() {
-  cd tests
-  elm-package install --yes
-  elm-test "$1" | tee "$1".test.log
+  if [ -z "$1" ]; then
+    elm-test | tee "elm-test.test.log"
+  else
+    elm-test "$1" | tee "$1".test.log
+  fi
   if test ${PIPESTATUS[0]} -ne 1; then
     echo "$0: ERROR: $1: Expected tests to fail" >&2
     exit 1
   fi
-  cd -
 }
 
 function assertTestSuccess() {
-  cd tests
-  elm-package install --yes
-  elm-test "$1" | tee "$1".test.log
+  if [ -z "$1" ]; then
+    elm-test | tee "elm-test.test.log"
+  else
+    elm-test "$1" | tee "$1".test.log
+  fi
   if test ${PIPESTATUS[0]} -ne 0; then
     echo "$0: ERROR: $1: Expected tests to pass" >&2
     exit 1
   fi
-  cd -
 }
 
 echo "$0: Installing elm-test..."
@@ -31,20 +33,23 @@ echo "$0: Verifying installed elm-test version..."
 elm-test --version
 
 echo "$0: Testing examples..."
-cd examples
+cd examples/tests
+elm-package install --yes
 assertTestSuccess PassingTests.elm
 assertTestFailure FailingTests.elm
-cd ..
+cd ../..
 
 echo "$0: Testing elm-test init..."
 mkdir -p tmp
 cd tmp
 elm-test init --yes
-assertTestFailure TestRunner.elm
+(cd tests && elm-package install --yes)
+assertTestFailure
 # delete the failing tests and the comma on the preceding line
 ex -c 'g/should fail/' -c 'd' -c 'g-1' -c 's/,$//' -c 'wq' tests/Tests.elm
 rm -Rf tests/elm-stuff
-assertTestSuccess TestRunner.elm
+(cd tests && elm-package install --yes)
+assertTestSuccess
 cd ..
 rm -Rf tmp
 
