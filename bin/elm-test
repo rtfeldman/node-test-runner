@@ -17,6 +17,13 @@ var elm = {
   'elm-package': 'elm-package'
 };
 
+if (process.argv[2] == "--help" || process.argv[2] == "-h") {
+  console.log("Usage: elm-test init [--yes]  # Create example tests\n");
+  console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
+  console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/TestRunner.elm\n");
+  process.exit(1);
+}
+
 if (process.argv[2] == "--version") {
   console.log(require(path.join(__dirname, "..", "package.json")).version);
   process.exit(0);
@@ -87,15 +94,18 @@ function spawnCompiler(cmd, args, opts) {
   return spawn(cmd, args, compilerOpts);
 }
 
-if (typeof testFile !== "string") {
-  console.log("Usage: elm-test init [--yes]  # Create example tests\n");
-  console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run tests\n");
-  process.exit(1);
+if (typeof testFile == "undefined") {
+  testFile = "tests/TestRunner.elm";
 }
 
 if (!fs.existsSync(testFile)) {
   console.error("Could not find file " + testFile);
   process.exit(1);
+}
+
+if (testFile.slice(0, 6) == "tests/") {
+  process.chdir("./tests");
+  testFile = testFile.slice(6);
 }
 
 if (process.argv[3] == "--compiler" || process.argv[3] == "-c") {
