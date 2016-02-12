@@ -23,9 +23,12 @@ if (process.argv[2] == "--version") {
 }
 
 if (process.argv[2] == "init") {
-  var copyTemplate = function(templateName) {
+  var copyTemplate = function(templateName, destName) {
+    if (arguments.length == 1) {
+      destName = templateName;
+    }
     var source = path.resolve(__dirname, "../templates/" + templateName);
-    var destination = path.resolve("tests", templateName);
+    var destination = path.resolve("tests", destName);
     if (fs.existsSync(destination)) {
       console.log(destination + " already exists");
     } else {
@@ -70,6 +73,7 @@ if (process.argv[2] == "init") {
   spawnElmPackageSync("install laszlopandy/elm-console");
   copyTemplate("TestRunner.elm");
   copyTemplate("Tests.elm");
+  copyTemplate("gitignore", ".gitignore");
   process.exit(0);
 }
 
