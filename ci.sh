@@ -3,21 +3,25 @@
 set -e
 
 function assertTestFailure() {
+  cd tests
   elm-package install --yes
   elm-test "$1" | tee "$1".test.log
   if test ${PIPESTATUS[0]} -ne 1; then
     echo "$0: ERROR: $1: Expected tests to fail" >&2
     exit 1
   fi
+  cd -
 }
 
 function assertTestSuccess() {
+  cd tests
   elm-package install --yes
   elm-test "$1" | tee "$1".test.log
   if test ${PIPESTATUS[0]} -ne 0; then
     echo "$0: ERROR: $1: Expected tests to pass" >&2
     exit 1
   fi
+  cd -
 }
 
 echo "$0: Installing elm-test..."
@@ -38,8 +42,8 @@ cd tmp
 elm-test init --yes
 assertTestFailure TestRunner.elm
 # delete the failing tests and the comma on the preceding line
-ex -c 'g/should fail/' -c 'd' -c 'g-1' -c 's/,$//' -c 'wq' Tests.elm
-rm -Rf elm-stuff
+ex -c 'g/should fail/' -c 'd' -c 'g-1' -c 's/,$//' -c 'wq' tests/Tests.elm
+rm -Rf tests/elm-stuff
 assertTestSuccess TestRunner.elm
 cd ..
 rm -Rf tmp

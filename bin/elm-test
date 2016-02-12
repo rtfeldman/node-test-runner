@@ -24,11 +24,23 @@ if (process.argv[2] == "--version") {
 
 if (process.argv[2] == "init") {
   var copyTemplate = function(templateName) {
-    if (fs.existsSync(templateName)) {
-      console.log(templateName + " already exists");
+    var source = path.resolve(__dirname, "../templates/" + templateName);
+    var destination = path.resolve("tests", templateName);
+    if (fs.existsSync(destination)) {
+      console.log(destination + " already exists");
     } else {
-      fs.copySync(path.resolve(__dirname, "../templates/" + templateName), templateName);
-      console.log("Created " + templateName);
+      fs.copySync(source, destination);
+      console.log("Created " + destination);
+    }
+  };
+
+  var ensureDirectory = function(dirName) {
+    var destination = path.resolve(".", dirName);
+    if (fs.existsSync(destination)) {
+      console.log(destination + " already exists");
+    } else {
+      fs.mkdirSync(destination);
+      console.log("Created " + destination);
     }
   };
 
@@ -51,6 +63,8 @@ if (process.argv[2] == "init") {
     }
   }
 
+  ensureDirectory("src");
+  ensureDirectory("tests");
   copyTemplate("elm-package.json");
   spawnElmPackageSync("install deadfoxygrandpa/elm-test");
   spawnElmPackageSync("install laszlopandy/elm-console");
