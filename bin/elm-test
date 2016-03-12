@@ -59,25 +59,9 @@ if (process.argv[2] == "init") {
     elmOptions += " --yes";
   }
 
-  var spawnElmPackageSync = function(command) {
-    var status =
-      spawn.sync(
-        elm["elm-package"] + " " + command + elmOptions,
-        {stdio:[0,1,2]}
-      ).status;
-
-    if (status) {
-      console.error("Error: " + command + " returned status code " + status);
-
-      process.exit(status);
-    }
-  }
-
   ensureDirectory("src");
   ensureDirectory("tests");
   copyTemplate("elm-package.json");
-  spawnElmPackageSync("install deadfoxygrandpa/elm-test");
-  spawnElmPackageSync("install laszlopandy/elm-console");
   copyTemplate("TestRunner.elm");
   copyTemplate("Tests.elm");
   copyTemplate("gitignore", ".gitignore");
