@@ -12,7 +12,7 @@ npm install -g elm-test
 
 ```bash
 elm-test init  # Adds the Elm-Test dependency and creates TestRunner.elm and Tests.elm
-elm-test TestRunner.elm  # Runs the tests
+elm-test tests/TestRunner.elm  # Runs the tests
 ```
 
 Then add your tests to Tests.elm.
