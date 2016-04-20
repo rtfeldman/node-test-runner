@@ -18,3 +18,20 @@ elm-test TestRunner.elm  # Runs the tests
 Then add your tests to Tests.elm.
 
 Also check out [`elm-check`](https://github.com/NoRedInk/elm-check) for property-based testing via `elm-test`!
+
+### Travis-CI
+
+If you want to run your tests on Travis CI, here's a good starter `.travis.yml`:
+
+```yml
+language: node_js
+node_js:
+  - "5"
+install:
+  - npm install -g elm
+  - npm install -g elm-test
+  - elm-package install -y
+  - pushd tests && elm-package install -y && popd
+script:
+  - cd tests && elm-test TestRunner.elm
+```
