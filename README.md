@@ -19,7 +19,7 @@ Then add your tests to Tests.elm.
 
 Also check out [`elm-check`](https://github.com/NoRedInk/elm-check) for property-based testing via `elm-test`!
 
-### Travis-CI
+### Travis CI
 
 If you want to run your tests on Travis CI, here's a good starter `.travis.yml`:
 
