@@ -1,13 +1,13 @@
 {
   "name": "elm-test",
-  "version": "0.16.1-alpha4",
+  "version": "0.17.0",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
-    "node": ">=0.12.0"
+    "node": ">=4.0.0"
   },
   "scripts": {
-    "test": "node ci.js"
+    "test": "node tests/ci.js"
   },
   "repository": {
     "type": "git",
