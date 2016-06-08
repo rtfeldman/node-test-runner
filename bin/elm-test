@@ -108,10 +108,9 @@ temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
 
   compileProcess.on('close', function(exitCode) {
     if (exitCode !== 0) {
+      console.error("Compilation failed for", testFile);
       process.exit(exitCode);
     }
-
-    console.log("Successfully compiled", testFile);
 
     var runnerOpts = {stdio: ["pipe", "inherit", "inherit"]};
     var runnerProcess = spawn("node", [], runnerOpts);
