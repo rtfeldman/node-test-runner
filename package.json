@@ -1,6 +1,6 @@
 {
   "name": "elm-test",
-  "version": "0.17.0",
+  "version": "0.17.0-alpha1",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/rtfeldman/node-elm-test#readme",
   "dependencies": {
+    "chalk": "1.1.3",
     "cross-spawn": "2.1.0",
     "fs-extra": "0.26.2",
     "lodash": "3.10.1",

@@ -1,13 +1,14 @@
 module Test.Runner.Node exposing (run)
 
-import Test exposing (Test)
-import Assert exposing (Outcome)
+import Test exposing (Suite)
+import Test.Outcome exposing (Outcome)
 import Html
 import Dict exposing (Dict)
 import Task
 import Set exposing (Set)
 import Test.Runner
 import Json.Encode as Encode exposing (Value)
+import Random.Pcg as Random
 
 
 type alias TestId =
@@ -15,7 +16,7 @@ type alias TestId =
 
 
 type alias Model =
-    { available : Dict TestId (() -> Outcome)
+    { available : Dict TestId (() -> ( List String, Outcome ))
     , running : Set TestId
     , queue : List TestId
     , completed : List Outcome
@@ -26,11 +27,11 @@ type Msg
     = Dispatch
 
 
-failuresToChalk : { messages : List String, context : List String } -> Value
-failuresToChalk { messages, context } =
+failuresToChalk : List String -> List String -> Value
+failuresToChalk labels messages =
     let
-        ( maybeLastContext, otherContexts ) =
-            case List.reverse context of
+        ( maybeLastLabel, otherLabels ) =
+            case List.reverse labels of
                 [] ->
                     ( Nothing, [] )
 
@@ -38,7 +39,7 @@ failuresToChalk { messages, context } =
                     ( Just first, List.reverse rest )
 
         outputMessage message =
-            case maybeLastContext of
+            case maybeLastLabel of
                 Just lastContext ->
                     [ { styles = [ "red" ], text = "✗ " ++ lastContext }
                     , { styles = [], text = "\n" ++ message ++ "\n\n" }
@@ -48,10 +49,10 @@ failuresToChalk { messages, context } =
                     [ { styles = [], text = message ++ "\n\n" } ]
 
         outputContext =
-            otherContexts
+            otherLabels
                 |> List.map (\message -> { styles = [ "dim" ], text = "↓ " ++ message })
     in
-        (outputContext :: List.map outputMessage messages)
+        (outputContext :: (List.map outputMessage messages))
             |> List.concat
             |> List.map encodeChalk
             |> Encode.list
@@ -82,7 +83,7 @@ update emit msg model =
                 [] ->
                     let
                         exitCode =
-                            if List.all Assert.isSuccess model.completed then
+                            if List.all ((/=) Test.Outcome.pass) model.completed then
                                 0
                             else
                                 1
@@ -98,7 +99,7 @@ update emit msg model =
 
                         Just run ->
                             let
-                                outcome =
+                                ( labels, outcome ) =
                                     run ()
 
                                 completed =
@@ -115,12 +116,12 @@ update emit msg model =
                                     }
 
                                 cmd =
-                                    case Assert.toFailures outcome of
+                                    case Test.Outcome.toFailures outcome of
                                         Nothing ->
                                             Cmd.none
 
                                         Just failures ->
-                                            emit ( "CHALK", failuresToChalk failures )
+                                            emit ( "CHALK", failuresToChalk labels failures )
                             in
                                 ( newModel, Cmd.batch [ cmd, dispatch ] )
 
@@ -131,10 +132,10 @@ dispatch =
         |> Task.perform identity identity
 
 
-init : List (() -> Outcome) -> ( Model, Cmd Msg )
+init : List (() -> ( List String, Outcome )) -> ( Model, Cmd Msg )
 init thunks =
     let
-        indexedThunks : List ( TestId, () -> Outcome )
+        indexedThunks : List ( TestId, () -> ( List String, Outcome ) )
         indexedThunks =
             List.indexedMap (,) thunks
 
@@ -152,10 +153,17 @@ type alias Emitter msg =
     ( String, Value ) -> Cmd msg
 
 
-run : Emitter Msg -> Test -> Program Never
-run emit test =
+run : Emitter Msg -> Suite -> Program Never
+run =
+    runWithOptions Nothing Nothing
+
+
+runWithOptions : Maybe Random.Seed -> Maybe Int -> Emitter Msg -> Suite -> Program Never
+runWithOptions seed runs emit suite =
     Test.Runner.run
-        { test = test
+        { suite = suite
+        , seed = seed
+        , runs = runs
         , init = init
         , update = update emit
         , view = \_ -> Html.text "This should be run in Node, not in a browser!"
