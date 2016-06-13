@@ -26,7 +26,8 @@ module.exports =
   "      var data = msg[1];\n" +
 
   "      if (msgType === 'FINISHED') {\n" +
-  "        process.exit(data);\n" +
+  "        console.log(data.message);" +
+  "        process.exit(data.exitCode);\n" +
   "      } else if (msgType === 'CHALK') {\n" +
   "        data.forEach(function(msg) {\n" +
   "          var path = msg.styles;\n" +

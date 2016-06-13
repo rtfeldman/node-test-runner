@@ -82,13 +82,38 @@ update emit msg model =
             case model.queue of
                 [] ->
                     let
+                        failures =
+                            model.completed
+                                |> List.filter ((/=) Test.Outcome.pass)
+                                |> List.length
+
+                        testsCompleted =
+                            List.length model.completed
+
+                        completedMessage =
+                            toString testsCompleted ++ " ran in total."
+
+                        message =
+                            if failures == 0 then
+                                "\n\nALL TESTS PASSED! " ++ completedMessage
+                            else if failures == 1 then
+                                "1 TEST FAILED! " ++ completedMessage
+                            else
+                                toString failures ++ " TESTS FAILED! " ++ completedMessage
+
                         exitCode =
-                            if List.all ((/=) Test.Outcome.pass) model.completed then
+                            if failures == 0 then
                                 0
                             else
                                 1
+
+                        data =
+                            Encode.object
+                                [ ( "exitCode", Encode.int exitCode )
+                                , ( "message", Encode.string message )
+                                ]
                     in
-                        ( model, emit ( "FINISHED", Encode.int exitCode ) )
+                        ( model, emit ( "FINISHED", data ) )
                             |> warn "Attempted to Dispatch when all tests completed!"
 
                 testId :: newQueue ->
