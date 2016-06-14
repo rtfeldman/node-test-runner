@@ -9,6 +9,11 @@ import Set exposing (Set)
 import Test.Runner.Html.App
 import Json.Encode as Encode exposing (Value)
 import Random.Pcg as Random
+import Script exposing (WorkerId, WorkerCommands, SupervisorCommands)
+import Set exposing (Set)
+import Test.Runner.Node.Worker as Worker
+import Test.Runner.Node.Supervisor as Supervisor
+import Html
 
 
 type alias TestId =
@@ -180,7 +185,11 @@ init thunks =
 
 
 type alias Emitter msg =
-    ( String, Value ) -> Cmd msg
+    Value -> Cmd msg
+
+
+type alias Listener msg =
+    Value -> Cmd msg
 
 
 run : Emitter Msg -> Test -> Program Never
@@ -190,12 +199,19 @@ run =
 
 runWithOptions : Maybe Int -> Maybe Random.Seed -> Emitter Msg -> Test -> Program Never
 runWithOptions runs seed emit =
-    Test.Runner.Html.App.run
-        { runs = runs
-        , seed = seed
-        }
-        { init = init
-        , update = update emit
-        , view = \_ -> Html.text "This should be run in Node, not in a browser!"
-        , subscriptions = \_ -> Sub.none
+    Script.program
+        { worker =
+            { update = Worker.update
+            , receive = Worker.receive
+            , init = ( (Worker.Model "0"), Cmd.none )
+            , subscriptions = \_ -> Sub.none
+            }
+        , supervisor =
+            { update = Supervisor.update
+            , init = ( (Supervisor.Model [] Set.empty), Cmd.none )
+            , receive = Supervisor.receive
+            , subscriptions = \_ -> Sub.none
+            , view = \_ -> Html.text "Running..."
+            }
+        , ports = ( send, receive identity )
         }

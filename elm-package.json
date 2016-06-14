@@ -6,7 +6,8 @@
     "source-directories": [
         "src",
         "../elm-test/src",
-        "../elm-test-runner/src"
+        "../elm-test-runner/src",
+        "../elm-web-workers/src/elm"
     ],
     "exposed-modules": [ ],
     "dependencies": {
