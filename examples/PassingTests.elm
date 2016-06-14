@@ -8,24 +8,17 @@ import Json.Encode exposing (Value)
 
 main : Program Never
 main =
-    run emit suites
+    [ plainAssertion ]
+        |> batch
+        |> run emit
 
 
 port emit : ( String, Value ) -> Cmd msg
 
 
-{-| A fuzzzer that usually generates "foo", but occasonally "bar". We expect a claim that it's always "foo" to fail.
--}
-suites : Suite
-suites =
-    Batch
-        [ plainAssertion
-        ]
-
-
-plainAssertion : Suite
+plainAssertion : Test
 plainAssertion =
-    Test.singleton
+    test ""
         <| \_ ->
             { expected = "success"
             , actual = "success"

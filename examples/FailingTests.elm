@@ -4,7 +4,7 @@ import Test.Runner.Node exposing (run)
 import String
 import Assert
 import Test exposing (..)
-import Fuzzer exposing (Fuzzer)
+import Fuzz exposing (Fuzzer, int, string)
 import Random.Pcg as Random
 import Shrink
 import Json.Encode exposing (Value)
@@ -12,7 +12,16 @@ import Json.Encode exposing (Value)
 
 main : Program Never
 main =
-    run emit suites
+    [ testOxfordify
+    , noDescription
+    , testAssertions
+    , testFailingFuzzTests
+    , actualFuzzTest
+    , testFuzz
+    , testShrinkables
+    ]
+        |> batch
+        |> run emit
 
 
 port emit : ( String, Value ) -> Cmd msg
@@ -35,63 +44,35 @@ usuallyFoo =
         Shrink.string
 
 
-actualFuzzSuite : Suite
-actualFuzzSuite =
-    describe "actual fuzz suite"
-        [ Test.singleton
-            <| Test.fuzz usuallyFoo
+actualFuzzTest : Test
+actualFuzzTest =
+    describe "actual fuzz test"
+        [ fuzz usuallyFoo "description goes here"
             <| \shouldBeFoo ->
                 { expected = "foo"
                 , actual = shouldBeFoo
                 }
                     |> Assert.equal
-                    |> Assert.failWith "It wasn't \"foo\"."
+                    |> Assert.onFail "It wasn't \"foo\"."
         ]
 
 
-suites : Suite
-suites =
-    Batch
-        [ oxfordifySuite
-        , plainAssertion
-        , assertionSuite
-        , failFuzzSuite
-        , actualFuzzSuite
-        , fuzzSuite
-        , shrinkableSuite
-        ]
-
-
-plainAssertion : Suite
-plainAssertion =
-    Test.singleton
-        <| \_ ->
-            { expected = "no description"
-            , actual = "whatsoever!"
-            }
-                |> Assert.equal
-
-
-assertionSuite : Suite
-assertionSuite =
+testAssertions : Test
+testAssertions =
     describe "basic assertions"
-        [ describe "this should succeed"
-            [ Test.singleton
-                <| \_ ->
-                    { expected = ()
-                    , actual = ()
-                    }
-                        |> Assert.equal
-            ]
-        , describe "this should fail"
-            [ Test.singleton
-                <| \_ ->
-                    { expected = "something"
-                    , actual = "someting else"
-                    }
-                        |> Assert.equal
-            ]
-        , Test.singleton
+        [ test "this should succeed"
+            <| \_ ->
+                { expected = ()
+                , actual = ()
+                }
+                    |> Assert.equal
+        , test "this should fail"
+            <| \_ ->
+                { expected = "something"
+                , actual = "someting else"
+                }
+                    |> Assert.equal
+        , test "another failure"
             <| \_ ->
                 { expected = "forty-two"
                 , actual = "forty-three"
@@ -101,11 +82,10 @@ assertionSuite =
 
 
 
---Html.text (toString <| runWithSeed (Random.initialSeed 42) actualFuzzSuite)
 {- After this point, we're really just showing that Richard's proposed API compiles. -}
 
 
-{-| stubbed function under Suite
+{-| stubbed function under test
 -}
 oxfordify : a -> b -> c -> String
 oxfordify _ _ _ =
@@ -120,48 +100,53 @@ string =
         Shrink.string
 
 
-fuzzSuite : Suite
-fuzzSuite =
-    describe "fuzz suite"
-        [ Test.singleton
-            <| (fuzz2 string string)
+noDescription : Test
+noDescription =
+    test ""
+        <| \_ ->
+            { expected = "No description"
+            , actual = "Whatsoever!"
+            }
+                |> Assert.equal
+
+
+testFuzz : Test
+testFuzz =
+    describe "fuzzing"
+        [ fuzz2 string string "empty list etc"
             <| \name punctuation ->
                 { expected = ""
                 , actual = oxfordify "This sentence is empty" "." []
                 }
                     |> Assert.equal
-                    |> Assert.failWith "given an empty list, did not return an empty string"
-        , Test.singleton
-            <| (fuzz2 string string)
+                    |> Assert.onFail "given an empty list, did not return an empty string"
+        , fuzz2 string string "further testing"
             <| \name punctuation ->
                 { expected = "This sentence contains one item."
                 , actual = oxfordify "This sentence contains " "." [ "one item" ]
                 }
                     |> Assert.equal
-        , Test.singleton
-            <| (fuzz2 string string)
+        , fuzz2 string string "custom onFail here"
             <| \name punctuation ->
                 { expected = "This sentence contains one item and two item."
                 , actual = oxfordify "This sentence contains " "." [ "one item", "two item" ]
                 }
                     |> Assert.equal
-                    |> Assert.failWith "given an empty list, did not return an empty string"
-        , Test.singleton
-            <| (fuzz2 string string)
+                    |> Assert.onFail "given an empty list, did not return an empty string"
+        , fuzz2 string string "This is a test."
             <| \name punctuation ->
                 { expected = "This sentence contains one item, two item, and three item."
                 , actual = oxfordify "This sentence contains " "." [ "one item", "two item", "three item" ]
                 }
                     |> Assert.equal
-                    |> Assert.failWith "given a list of length 3, did not return an oxford-style sentence"
+                    |> Assert.onFail "given a list of length 3, did not return an oxford-style sentence"
         ]
 
 
-failFuzzSuite : Suite
-failFuzzSuite =
+testFailingFuzzTests : Test
+testFailingFuzzTests =
     describe "the first element in this fuzz tuple"
-        [ it "is always \"foo\""
-            <| fuzz2 string string
+        [ fuzz2 string string "is always \"foo\""
             <| \str1 str2 ->
                 Assert.equal
                     { expected = "foo"
@@ -170,11 +155,11 @@ failFuzzSuite =
         ]
 
 
-oxfordifySuite : Suite
-oxfordifySuite =
+testOxfordify : Test
+testOxfordify =
     describe "oxfordify"
         [ describe "given an empty sentence"
-            [ it "returns an empty string"
+            [ test "returns an empty string"
                 <| \_ ->
                     Assert.equal
                         { expected = ""
@@ -182,7 +167,7 @@ oxfordifySuite =
                         }
             ]
         , describe "given a sentence with one item"
-            [ it "still contains one item"
+            [ test "still contains one item"
                 <| \_ ->
                     Assert.equal
                         { expected = "This sentence contains one item."
@@ -190,13 +175,13 @@ oxfordifySuite =
                         }
             ]
         , describe "given a sentence with multiple items"
-            [ it "returns an oxford-style sentence"
+            [ test "returns an oxford-style sentence"
                 <| \_ ->
                     Assert.equal
                         { expected = "This sentence contains one item and two item."
                         , actual = oxfordify "This sentence contains " "." [ "one item", "two item" ]
                         }
-            , it "returns an oxford-style sentence"
+            , test "returns an oxford-style sentence"
                 <| \_ ->
                     Assert.equal
                         { expected = "This sentence contains one item, two item, and three item."
@@ -206,26 +191,23 @@ oxfordifySuite =
         ]
 
 
-shrinkableSuite : Suite
-shrinkableSuite =
-    describe "Some Suites that should fail and produce shrunken values"
+testShrinkables : Test
+testShrinkables =
+    describe "Some tests that should fail and produce shrunken values"
         [ describe "a randomly generated integer"
-            [ it "is for sure exactly 0"
-                <| (fuzz Fuzzer.int)
+            [ fuzz int "is for sure exactly 0"
                 <| \i ->
                     Assert.equal
                         { expected = 0
                         , actual = i
                         }
-            , it "is <42"
-                <| (fuzz Fuzzer.int)
+            , fuzz int "is <42"
                 <| \i ->
                     Assert.lessThan
                         { greater = 42
                         , lesser = i
                         }
-            , it "is also >42"
-                <| (fuzz Fuzzer.int)
+            , fuzz int "is also >42"
                 <| \i ->
                     Assert.greaterThan
                         { greater = 42
@@ -233,8 +215,7 @@ shrinkableSuite =
                         }
             ]
         , describe "a randomly generated string"
-            [ it "equals its reverse"
-                <| (fuzz Fuzzer.string)
+            [ fuzz string "equals its reverse"
                 <| \s ->
                     Assert.equal
                         { expected = s

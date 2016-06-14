@@ -5,7 +5,8 @@
     "license": "BSD-3-Clause",
     "source-directories": [
         "src",
-        "../elm-test/src"
+        "../elm-test/src",
+        "../elm-test-runner/src"
     ],
     "exposed-modules": [ ],
     "dependencies": {

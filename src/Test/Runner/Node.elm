@@ -1,12 +1,12 @@
 module Test.Runner.Node exposing (run)
 
-import Test exposing (Suite)
-import Test.Outcome exposing (Outcome)
+import Test exposing (Test)
+import Assert exposing (Assertion)
 import Html
 import Dict exposing (Dict)
 import Task
 import Set exposing (Set)
-import Test.Runner
+import Test.Runner.Html.App
 import Json.Encode as Encode exposing (Value)
 import Random.Pcg as Random
 
@@ -16,10 +16,10 @@ type alias TestId =
 
 
 type alias Model =
-    { available : Dict TestId (() -> ( List String, Outcome ))
+    { available : Dict TestId (() -> ( List String, List Assertion ))
     , running : Set TestId
     , queue : List TestId
-    , completed : List Outcome
+    , completed : List ( List String, List Assertion )
     }
 
 
@@ -31,7 +31,7 @@ failuresToChalk : List String -> List String -> Value
 failuresToChalk labels messages =
     let
         ( maybeLastLabel, otherLabels ) =
-            case List.reverse labels of
+            case labels of
                 [] ->
                     ( Nothing, [] )
 
@@ -84,7 +84,7 @@ update emit msg model =
                     let
                         failures =
                             model.completed
-                                |> List.filter ((/=) Test.Outcome.pass)
+                                |> List.filter (snd >> List.all ((/=) Assert.pass))
                                 |> List.length
 
                         testsCompleted =
@@ -124,11 +124,11 @@ update emit msg model =
 
                         Just run ->
                             let
-                                ( labels, outcome ) =
+                                result =
                                     run ()
 
                                 completed =
-                                    outcome :: model.completed
+                                    model.completed ++ [ result ]
 
                                 available =
                                     Dict.remove testId model.available
@@ -141,14 +141,19 @@ update emit msg model =
                                     }
 
                                 cmd =
-                                    case Test.Outcome.toFailures outcome of
-                                        Nothing ->
-                                            Cmd.none
-
-                                        Just failures ->
-                                            emit ( "CHALK", failuresToChalk labels failures )
+                                    chalkAllFailures emit result
                             in
                                 ( newModel, Cmd.batch [ cmd, dispatch ] )
+
+
+chalkAllFailures : Emitter Msg -> ( List String, List Assertion ) -> Cmd Msg
+chalkAllFailures emit ( labels, assertions ) =
+    case List.filterMap Assert.getFailure assertions of
+        [] ->
+            Cmd.none
+
+        failures ->
+            emit ( "CHALK", failuresToChalk labels failures )
 
 
 dispatch : Cmd Msg
@@ -157,10 +162,10 @@ dispatch =
         |> Task.perform identity identity
 
 
-init : List (() -> ( List String, Outcome )) -> ( Model, Cmd Msg )
+init : List (() -> ( List String, List Assertion )) -> ( Model, Cmd Msg )
 init thunks =
     let
-        indexedThunks : List ( TestId, () -> ( List String, Outcome ) )
+        indexedThunks : List ( TestId, () -> ( List String, List Assertion ) )
         indexedThunks =
             List.indexedMap (,) thunks
 
@@ -178,18 +183,18 @@ type alias Emitter msg =
     ( String, Value ) -> Cmd msg
 
 
-run : Emitter Msg -> Suite -> Program Never
+run : Emitter Msg -> Test -> Program Never
 run =
     runWithOptions Nothing Nothing
 
 
-runWithOptions : Maybe Random.Seed -> Maybe Int -> Emitter Msg -> Suite -> Program Never
-runWithOptions seed runs emit suite =
-    Test.Runner.run
-        { suite = suite
+runWithOptions : Maybe Int -> Maybe Random.Seed -> Emitter Msg -> Test -> Program Never
+runWithOptions runs seed emit =
+    Test.Runner.Html.App.run
+        { runs = runs
         , seed = seed
-        , runs = runs
-        , init = init
+        }
+        { init = init
         , update = update emit
         , view = \_ -> Html.text "This should be run in Node, not in a browser!"
         , subscriptions = \_ -> Sub.none
