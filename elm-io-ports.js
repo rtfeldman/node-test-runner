@@ -11,7 +11,7 @@ module.exports =
   "    if (typeof FormData === 'undefined') { FormData = function () { this._data = []; }; FormData.prototype.append = function () { this._data.push(Array.prototype.slice.call(arguments)); }; }\n" +
 
   // Fix Windows Unicode problems. Credit to https://github.com/sindresorhus/figures for the Windows compat idea!
-  "    var windowsSubstitutions = [[/[↓✗]/g, '>'], [/✔/g, '√']];\n" +
+  "    var windowsSubstitutions = [[/[↓✗►]/g, '>'], [/✔/g, '√']];\n" +
   "    function windowsify(str) { return windowsSubstitutions.reduce(\n" +
   "        function(result, sub) { return result.replace(sub[0], sub[1]); }, str\n" +
   "      );\n" +
