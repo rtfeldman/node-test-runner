@@ -20,7 +20,4 @@ plainAssertion : Test
 plainAssertion =
     test ""
         <| \_ ->
-            { expected = "success"
-            , actual = "success"
-            }
-                |> Assert.equal
+            Assert.equal "success" "success"

@@ -9,6 +9,7 @@ import Set exposing (Set)
 import Test.Runner.Html.App
 import Json.Encode as Encode exposing (Value)
 import Random.Pcg as Random
+import Time exposing (Time)
 
 
 type alias TestId =
@@ -20,11 +21,14 @@ type alias Model =
     , running : Set TestId
     , queue : List TestId
     , completed : List ( List String, List Assertion )
+    , startTime : Time
+    , finishTime : Maybe Time
     }
 
 
 type Msg
     = Dispatch
+    | Finish Time
 
 
 failuresToChalk : List String -> List String -> Value
@@ -41,7 +45,7 @@ failuresToChalk labels messages =
         outputMessage message =
             case maybeLastLabel of
                 Just lastContext ->
-                    [ { styles = [ "red" ], text = "✗ " ++ lastContext }
+                    [ { styles = [ "red" ], text = "✗ " ++ lastContext ++ "\n" }
                     , { styles = [], text = "\n" ++ message ++ "\n\n" }
                     ]
 
@@ -50,7 +54,7 @@ failuresToChalk labels messages =
 
         outputContext =
             otherLabels
-                |> List.map (\message -> { styles = [ "dim" ], text = "↓ " ++ message })
+                |> List.map (\message -> { styles = [ "dim" ], text = "↓ " ++ message ++ "\n" })
     in
         (outputContext :: (List.map outputMessage messages))
             |> List.concat
@@ -78,43 +82,59 @@ warn str result =
 update : Emitter Msg -> Msg -> Model -> ( Model, Cmd Msg )
 update emit msg model =
     case msg of
+        Finish finishTime ->
+            let
+                failed =
+                    model.completed
+                        |> List.filter (snd >> List.all ((/=) Assert.pass))
+                        |> List.length
+
+                passed =
+                    (List.length model.completed) - failed
+
+                duration =
+                    finishTime - model.startTime
+
+                headline =
+                    if failed > 0 then
+                        [ { styles = [ "red" ], text = "TEST RUN FAILED\n\n" } ]
+                    else
+                        [ { styles = [ "green" ], text = "TEST RUN PASSED\n\n" } ]
+
+                stat label value =
+                    [ { styles = [ "dim" ], text = label }
+                    , { styles = [], text = value ++ "\n" }
+                    ]
+
+                summary =
+                    [ headline
+                    , stat "Duration: " (formatDuration duration)
+                    , stat "Passed:   " (toString passed)
+                    , stat "Failed:   " (toString failed)
+                    ]
+                        |> List.concat
+                        |> List.map encodeChalk
+                        |> Encode.list
+
+                exitCode =
+                    if failed == 0 then
+                        0
+                    else
+                        1
+
+                data =
+                    Encode.object
+                        [ ( "exitCode", Encode.int exitCode )
+                        , ( "message", summary )
+                        ]
+            in
+                ( model, emit ( "FINISHED", data ) )
+                    |> warn "Attempted to Dispatch when all tests completed!"
+
         Dispatch ->
             case model.queue of
                 [] ->
-                    let
-                        failures =
-                            model.completed
-                                |> List.filter (snd >> List.all ((/=) Assert.pass))
-                                |> List.length
-
-                        testsCompleted =
-                            List.length model.completed
-
-                        completedMessage =
-                            toString testsCompleted ++ " ran in total."
-
-                        message =
-                            if failures == 0 then
-                                "\n\nALL TESTS PASSED! " ++ completedMessage
-                            else if failures == 1 then
-                                "1 TEST FAILED! " ++ completedMessage
-                            else
-                                toString failures ++ " TESTS FAILED! " ++ completedMessage
-
-                        exitCode =
-                            if failures == 0 then
-                                0
-                            else
-                                1
-
-                        data =
-                            Encode.object
-                                [ ( "exitCode", Encode.int exitCode )
-                                , ( "message", Encode.string message )
-                                ]
-                    in
-                        ( model, emit ( "FINISHED", data ) )
-                            |> warn "Attempted to Dispatch when all tests completed!"
+                    ( model, Task.perform never Finish Time.now )
 
                 testId :: newQueue ->
                     case Dict.get testId model.available of
@@ -146,6 +166,11 @@ update emit msg model =
                                 ( newModel, Cmd.batch [ cmd, dispatch ] )
 
 
+never : Never -> a
+never a =
+    never a
+
+
 chalkAllFailures : Emitter Msg -> ( List String, List Assertion ) -> Cmd Msg
 chalkAllFailures emit ( labels, assertions ) =
     case List.filterMap Assert.getFailure assertions of
@@ -162,8 +187,13 @@ dispatch =
         |> Task.perform identity identity
 
 
-init : List (() -> ( List String, List Assertion )) -> ( Model, Cmd Msg )
-init thunks =
+formatDuration : Time -> String
+formatDuration time =
+    toString time ++ " ms"
+
+
+init : Time -> List (() -> ( List String, List Assertion )) -> ( Model, Cmd Msg )
+init startTime thunks =
     let
         indexedThunks : List ( TestId, () -> ( List String, List Assertion ) )
         indexedThunks =
@@ -174,6 +204,8 @@ init thunks =
             , running = Set.empty
             , queue = List.map fst indexedThunks
             , completed = []
+            , startTime = startTime
+            , finishTime = Nothing
             }
     in
         ( model, dispatch )

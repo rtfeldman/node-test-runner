@@ -17,6 +17,23 @@ module.exports =
   "      );\n" +
   "    }\n" +
 
+  "    function chalkify(messages) {\n" +
+  "        return messages.map(function(msg) {\n" +
+  "          var path = msg.styles;\n" +
+  "          var text = process.platform === 'win32' ? windowsify(msg.text) : msg.text;\n" +
+
+  "          if (path.length === 0) {\n" +
+  "            return text;\n" +
+  "          } else {\n" +
+  "            var fn = chalk;\n" +
+
+  "            path.forEach(function(nextPath) { fn = fn[nextPath]; });\n" +
+
+  "            return fn(text);\n" +
+  "          }\n" +
+  "        }).join('');\n" +
+  "    }\n" +
+
   // Run the Elm app.
   "    var app = Elm.Main.embed({appendChild: function() {}});\n" +
 
@@ -26,23 +43,10 @@ module.exports =
   "      var data = msg[1];\n" +
 
   "      if (msgType === 'FINISHED') {\n" +
-  "        console.log(data.message);" +
+  "        console.log(chalkify(data.message));" +
   "        process.exit(data.exitCode);\n" +
   "      } else if (msgType === 'CHALK') {\n" +
-  "        data.forEach(function(msg) {\n" +
-  "          var path = msg.styles;\n" +
-  "          var text = process.platform === 'win32' ? windowsify(msg.text) : msg.text;\n" +
-
-  "          if (path.length === 0) {\n" +
-  "            console.log(text);\n" +
-  "          } else {\n" +
-  "            var fn = chalk;\n" +
-
-  "            path.forEach(function(nextPath) { fn = fn[nextPath]; });\n" +
-
-  "            console.log(fn(text));\n" +
-  "          }\n" +
-  "        });\n" +
+  "        console.log(chalkify(data));\n" +
   "      }\n" +
   "    });\n" +
   "})(module.exports, require('chalk'));\n";

@@ -128,7 +128,5 @@ temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
     })
 
     reader.pipe(runnerProcess.stdin);
-
-    console.log("Running tests...");
   });
 });
