@@ -97,9 +97,9 @@ update emit msg model =
 
                 headline =
                     if failed > 0 then
-                        [ { styles = [ "red" ], text = "TEST RUN FAILED\n\n" } ]
+                        [ { styles = [ "underline", "red" ], text = "\nTEST RUN FAILED\n\n" } ]
                     else
-                        [ { styles = [ "green" ], text = "TEST RUN PASSED\n\n" } ]
+                        [ { styles = [ "underline", "green" ], text = "\nTEST RUN PASSED\n\n" } ]
 
                 stat label value =
                     [ { styles = [ "dim" ], text = label }
