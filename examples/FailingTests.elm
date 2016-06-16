@@ -84,8 +84,6 @@ oxfordify _ _ _ =
     "Alice, Bob, and Claire"
 
 
-{-| Stubbed fuzzer - TODO implement
--}
 string : Fuzzer String
 string =
     Fuzzer (Random.choice "foo" "bar")
