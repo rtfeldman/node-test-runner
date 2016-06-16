@@ -1,5 +1,13 @@
 module Test.Runner.Node exposing (run)
 
+{-| # Node Runner
+
+Runs a test and outputs its results to the console. Exit code is 0 if tests
+passed and 1 if any failed.
+
+@docs run, runWithOptions
+-}
+
 import Test exposing (Test)
 import Assert exposing (Assertion)
 import Html
@@ -215,11 +223,19 @@ type alias Emitter msg =
     ( String, Value ) -> Cmd msg
 
 
+{-| Run the test and report the results.
+
+Fuzz tests use a default run count of 100, and an initial seed based on the
+system time when the test runs begin.
+-}
 run : Emitter Msg -> Test -> Program Never
 run =
     runWithOptions Nothing Nothing
 
 
+{-| Run the test using the provided options. If `Nothing` is provided for either
+`runs` or `seed`, it will fall back on the options used in [`run`](#run).
+-}
 runWithOptions : Maybe Int -> Maybe Random.Seed -> Emitter Msg -> Test -> Program Never
 runWithOptions runs seed emit =
     Test.Runner.Html.App.run
