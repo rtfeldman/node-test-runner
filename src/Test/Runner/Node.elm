@@ -1,4 +1,4 @@
-module Test.Runner.Node exposing (run)
+module Test.Runner.Node exposing (run, runWithOptions)
 
 {-| # Node Runner
 
