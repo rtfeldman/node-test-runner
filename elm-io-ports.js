@@ -12,6 +12,11 @@ module.exports =
 
   // Fix Windows Unicode problems. Credit to https://github.com/sindresorhus/figures for the Windows compat idea!
   "    var windowsSubstitutions = [[/[↓✗►]/g, '>'], [/✔/g, '√']];\n" +
+  "    var isWindows = process.platform === 'win32';\n" +
+
+  // Based on https://github.com/chalk/supports-color (c) Sindre Sorhus - full license: https://github.com/chalk/supports-color/blob/master/license
+  "    var noColor = !('FORCE_COLOR' in process.env) && ((process.stdout && !process.stdout.isTTY) || !isWindows || ('CI' in process.env) || !('COLORTERM' in process.env) || (process.env.TERM === 'dumb') || !(/^xterm-256(?:color)?/.test(process.env.TERM)) || !(/^screen|^xterm|^vt100|color|ansi|cygwin|linux/i.test(process.env.TERM)));\n" +
+
   "    function windowsify(str) { return windowsSubstitutions.reduce(\n" +
   "        function(result, sub) { return result.replace(sub[0], sub[1]); }, str\n" +
   "      );\n" +
@@ -20,9 +25,9 @@ module.exports =
   "    function chalkify(messages) {\n" +
   "        return messages.map(function(msg) {\n" +
   "          var path = msg.styles;\n" +
-  "          var text = process.platform === 'win32' ? windowsify(msg.text) : msg.text;\n" +
+  "          var text = isWindows ? windowsify(msg.text) : msg.text;\n" +
 
-  "          if (path.length === 0) {\n" +
+  "          if (noColor || path.length === 0) {\n" +
   "            return text;\n" +
   "          } else {\n" +
   "            var fn = chalk;\n" +
