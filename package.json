@@ -1,6 +1,6 @@
 {
   "name": "project-fuzzball-test",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
