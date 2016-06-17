@@ -112,21 +112,8 @@ temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
       process.exit(exitCode);
     }
 
-    var runnerOpts = {stdio: ["pipe", "inherit", "inherit"]};
-    var runnerProcess = spawn("node", [], runnerOpts);
+    var compiledCode = fs.readFileSync(dest, {encoding: "utf8"});
 
-    runnerProcess.on('exit', function (exitCode) {
-      process.exit(exitCode);
-    });
-
-    var reader = fs.createReadStream(dest);
-
-    reader.on("end", function() {
-      runnerProcess.stdin.write(suffix);
-
-      runnerProcess.stdin.end();
-    })
-
-    reader.pipe(runnerProcess.stdin);
+    eval(compiledCode + suffix);
   });
 });
