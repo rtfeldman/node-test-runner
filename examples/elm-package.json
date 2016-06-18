@@ -5,15 +5,15 @@
     "license": "BSD-3-Clause",
     "source-directories": [
         ".",
-        "../src",
-        "../../elm-test/src",
-        "../../elm-test-runner/src"
+        "../src"
     ],
-    "exposed-modules": [ ],
+    "exposed-modules": [],
     "dependencies": {
         "elm-community/shrink": "1.1.0 <= v < 2.0.0",
         "elm-lang/core": "4.0.0 <= v < 5.0.0",
         "elm-lang/html": "1.0.0 <= v < 2.0.0",
+        "project-fuzzball/test": "1.1.0 <= v < 2.0.0",
+        "project-fuzzball/test-runner": "1.0.0 <= v < 2.0.0",
         "mgold/elm-random-pcg": "2.1.0 <= v < 3.0.0"
     },
     "elm-version": "0.17.0 <= v < 0.18.0"
