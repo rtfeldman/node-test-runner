@@ -35,7 +35,7 @@ module.exports =
   "    }\n" +
 
   // Run the Elm app.
-  "    var app = Elm.Main.embed({appendChild: function() {}});\n" +
+  "    var app = Elm.Main.worker();\n" +
 
   // Receive messages from ports and translate them into appropriate JS calls.
   "    app.ports.emit.subscribe(function(msg) {\n" +
