@@ -5,8 +5,8 @@ var processTitle = "elm-test"
 process.title = processTitle;
 
 var compile    = require("node-elm-compiler").compile,
-  suffix       = require("../elm-io-ports.js"),
   fs           = require("fs-extra"),
+  chalk        = require("chalk"),
   path         = require("path"),
   temp         = require("temp").track(), // Automatically cleans up temp files.
   util         = require("util"),
@@ -68,6 +68,61 @@ if (process.argv[2] == "init") {
   process.exit(0);
 }
 
+function evalElmCode (compiledCode) {
+  var Elm = function(module) { eval(compiledCode); return module.exports; }({});
+
+  // Make sure necessary things are defined.
+  if (typeof Elm === 'undefined') { throw 'elm-io config error: Elm is not defined. Make sure you provide a file compiled by Elm!'}
+  if (typeof Elm.Main === 'undefined' ) { throw 'Elm.Main is not defined. Make sure your module is named Main.' };
+
+  // Apply Node polyfills as necessary.
+  var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
+  var document = {body: {}, createTextNode: function() {}};
+  if (typeof XMLHttpRequest === 'undefined') { XMLHttpRequest = function() { return { addEventListener: function() {}, open: function() {}, send: function() {} }; }; }
+  if (typeof FormData === 'undefined') { FormData = function () { this._data = []; }; FormData.prototype.append = function () { this._data.push(Array.prototype.slice.call(arguments)); }; }
+
+  // Fix Windows Unicode problems. Credit to https://github.com/sindresorhus/figures for the Windows compat idea!
+  var windowsSubstitutions = [[/[↓✗►]/g, '>'], [/✔/g, '√']];
+
+  function windowsify(str) {
+    return windowsSubstitutions.reduce(
+      function(result, sub) { return result.replace(sub[0], sub[1]); }, str);
+  }
+
+  function chalkify(messages) {
+    return messages.map(function(msg) {
+      var path = msg.styles;
+      var text = process.platform === 'win32' ? windowsify(msg.text) : msg.text;
+
+      if (path.length === 0) {
+        return text;
+      } else {
+        var fn = chalk;
+
+        path.forEach(function(nextPath) { fn = fn[nextPath]; });
+
+        return fn(text);
+      }
+    }).join('');
+  }
+
+  // Run the Elm app.
+  var app = Elm.Main.worker();
+
+  // Receive messages from ports and translate them into appropriate JS calls.
+  app.ports.emit.subscribe(function(msg) {
+    var msgType = msg[0];
+    var data = msg[1];
+
+    if (msgType === 'FINISHED') {
+      console.log(chalkify(data.message));
+      process.exit(data.exitCode);
+    } else if (msgType === 'CHALK') {
+      console.log(chalkify(data));
+    }
+  });
+}
+
 var testFile = process.argv[2],
     cwd = __dirname,
     pathToMake = undefined;
@@ -112,8 +167,6 @@ temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
       process.exit(exitCode);
     }
 
-    var compiledCode = fs.readFileSync(dest, {encoding: "utf8"});
-
-    eval(compiledCode + suffix);
+    evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}));
   });
 });
