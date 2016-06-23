@@ -47,8 +47,8 @@ usuallyFoo =
 actualFuzzTest : Test
 actualFuzzTest =
     describe "actual fuzz test"
-        [ fuzz usuallyFoo "description goes here"
-            <| \shouldBeFoo ->
+        [ fuzz usuallyFoo "description goes here" <|
+            \shouldBeFoo ->
                 shouldBeFoo
                     |> Assert.equal "foo"
                     |> Assert.onFail "It wasn't \"foo\"."
@@ -58,16 +58,16 @@ actualFuzzTest =
 testAssertions : Test
 testAssertions =
     describe "basic assertions"
-        [ test "this should succeed"
-            <| \_ ->
+        [ test "this should succeed" <|
+            \_ ->
                 "blah"
                     |> Assert.equal " blah"
-        , test "this should fail"
-            <| \_ ->
+        , test "this should fail" <|
+            \_ ->
                 "something"
                     |> Assert.equal "someting else"
-        , test "another failure"
-            <| \_ ->
+        , test "another failure" <|
+            \_ ->
                 "forty-two"
                     |> Assert.equal "forty-three"
         ]
@@ -92,30 +92,30 @@ string =
 
 noDescription : Test
 noDescription =
-    test ""
-        <| \_ ->
+    test "" <|
+        \_ ->
             Assert.equal "No description" "Whatsoever!"
 
 
 testFuzz : Test
 testFuzz =
     describe "fuzzing"
-        [ fuzz2 string string "empty list etc"
-            <| \name punctuation ->
+        [ fuzz2 string string "empty list etc" <|
+            \name punctuation ->
                 oxfordify "This sentence is empty" "." []
                     |> Assert.equal ""
                     |> Assert.onFail "given an empty list, did not return an empty string"
-        , fuzz2 string string "further testing"
-            <| \name punctuation ->
+        , fuzz2 string string "further testing" <|
+            \name punctuation ->
                 oxfordify "This sentence contains " "." [ "one item" ]
                     |> Assert.equal "This sentence contains one item."
-        , fuzz2 string string "custom onFail here"
-            <| \name punctuation ->
+        , fuzz2 string string "custom onFail here" <|
+            \name punctuation ->
                 oxfordify "This sentence contains " "." [ "one item", "two item" ]
                     |> Assert.equal "This sentence contains one item and two item."
                     |> Assert.onFail "given an empty list, did not return an empty string"
-        , fuzz2 string string "This is a test."
-            <| \name punctuation ->
+        , fuzz2 string string "This is a test." <|
+            \name punctuation ->
                 oxfordify "This sentence contains " "." [ "one item", "two item", "three item" ]
                     |> Assert.equal "This sentence contains one item, two item, and three item."
                     |> Assert.onFail "given a list of length 3, did not return an oxford-style sentence"
@@ -125,8 +125,8 @@ testFuzz =
 testFailingFuzzTests : Test
 testFailingFuzzTests =
     describe "the first element in this fuzz tuple"
-        [ fuzz2 string string "is always \"foo\""
-            <| \str1 str2 ->
+        [ fuzz2 string string "is always \"foo\"" <|
+            \str1 str2 ->
                 str1
                     |> Assert.equal "foo"
         ]
@@ -136,24 +136,24 @@ testOxfordify : Test
 testOxfordify =
     describe "oxfordify"
         [ describe "given an empty sentence"
-            [ test "returns an empty string"
-                <| \_ ->
+            [ test "returns an empty string" <|
+                \_ ->
                     oxfordify "This sentence is empty" "." []
                         |> Assert.equal ""
             ]
         , describe "given a sentence with one item"
-            [ test "still contains one item"
-                <| \_ ->
+            [ test "still contains one item" <|
+                \_ ->
                     oxfordify "This sentence contains " "." [ "one item" ]
                         |> Assert.equal "This sentence contains one item."
             ]
         , describe "given a sentence with multiple items"
-            [ test "returns an oxford-style sentence"
-                <| \_ ->
+            [ test "returns an oxford-style sentence" <|
+                \_ ->
                     oxfordify "This sentence contains " "." [ "one item", "two item" ]
                         |> Assert.equal "This sentence contains one item and two item."
-            , test "returns an oxford-style sentence"
-                <| \_ ->
+            , test "returns an oxford-style sentence" <|
+                \_ ->
                     oxfordify "This sentence contains " "." [ "one item", "two item", "three item" ]
                         |> Assert.equal "This sentence contains one item, two item, and three item."
             ]
@@ -169,8 +169,8 @@ testShrinkables =
             , fuzz int "is also >42" <| Assert.greaterThan 42
             ]
         , describe "a randomly generated string"
-            [ fuzz string "equals its reverse"
-                <| \str ->
+            [ fuzz string "equals its reverse" <|
+                \str ->
                     Assert.equal str (String.reverse str)
             ]
         ]

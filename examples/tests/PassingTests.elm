@@ -18,6 +18,6 @@ port emit : ( String, Value ) -> Cmd msg
 
 plainAssertion : Test
 plainAssertion =
-    test ""
-        <| \_ ->
+    test "" <|
+        \_ ->
             Assert.equal "success" "success"
