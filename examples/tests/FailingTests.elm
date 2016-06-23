@@ -73,10 +73,6 @@ testAssertions =
         ]
 
 
-
-{- After this point, we're really just showing that Richard's proposed API compiles. -}
-
-
 {-| stubbed function under test
 -}
 oxfordify : a -> b -> c -> String
