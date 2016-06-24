@@ -1,14 +1,14 @@
 port module Main exposing (..)
 
 import Test.Runner.Node exposing (run)
-import Assert
+import Expect
 import Test exposing (..)
 import Json.Encode exposing (Value)
 
 
 main : Program Never
 main =
-    [ plainAssertion ]
+    [ plainExpectation ]
         |> batch
         |> run emit
 
@@ -16,8 +16,8 @@ main =
 port emit : ( String, Value ) -> Cmd msg
 
 
-plainAssertion : Test
-plainAssertion =
+plainExpectation : Test
+plainExpectation =
     test "" <|
-        \_ ->
-            Assert.equal "success" "success"
+        \() ->
+            Expect.equal "success" "success"

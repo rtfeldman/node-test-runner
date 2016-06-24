@@ -9,7 +9,7 @@ passed and 1 if any failed.
 -}
 
 import Test exposing (Test)
-import Assert exposing (Assertion)
+import Expect exposing (Expectation)
 import Html
 import Dict exposing (Dict)
 import Task
@@ -25,10 +25,10 @@ type alias TestId =
 
 
 type alias Model =
-    { available : Dict TestId (() -> ( List String, List Assertion ))
+    { available : Dict TestId (() -> ( List String, List Expectation ))
     , running : Set TestId
     , queue : List TestId
-    , completed : List ( List String, List Assertion )
+    , completed : List ( List String, List Expectation )
     , startTime : Time
     , finishTime : Maybe Time
     }
@@ -94,7 +94,7 @@ update emit msg model =
             let
                 failed =
                     model.completed
-                        |> List.filter (snd >> List.all ((/=) Assert.pass))
+                        |> List.filter (snd >> List.all ((/=) Expect.pass))
                         |> List.length
 
                 passed =
@@ -179,9 +179,9 @@ never a =
     never a
 
 
-chalkAllFailures : Emitter Msg -> ( List String, List Assertion ) -> Cmd Msg
-chalkAllFailures emit ( labels, assertions ) =
-    case List.filterMap Assert.getFailure assertions of
+chalkAllFailures : Emitter Msg -> ( List String, List Expectation ) -> Cmd Msg
+chalkAllFailures emit ( labels, expectations ) =
+    case List.filterMap Expect.getFailure expectations of
         [] ->
             Cmd.none
 
@@ -200,10 +200,10 @@ formatDuration time =
     toString time ++ " ms"
 
 
-init : Time -> List (() -> ( List String, List Assertion )) -> ( Model, Cmd Msg )
+init : Time -> List (() -> ( List String, List Expectation )) -> ( Model, Cmd Msg )
 init startTime thunks =
     let
-        indexedThunks : List ( TestId, () -> ( List String, List Assertion ) )
+        indexedThunks : List ( TestId, () -> ( List String, List Expectation ) )
         indexedThunks =
             List.indexedMap (,) thunks
 
