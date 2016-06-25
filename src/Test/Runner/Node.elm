@@ -18,6 +18,7 @@ import Test.Runner.Html.App
 import Json.Encode as Encode exposing (Value)
 import Random.Pcg as Random
 import Time exposing (Time)
+import String
 
 
 type alias TestId =
@@ -54,11 +55,11 @@ failuresToChalk labels messages =
             case maybeLastLabel of
                 Just lastContext ->
                     [ { styles = [ "red" ], text = "✗ " ++ lastContext ++ "\n" }
-                    , { styles = [], text = "\n" ++ message ++ "\n\n" }
+                    , { styles = [], text = "\n" ++ indent message ++ "\n\n" }
                     ]
 
                 Nothing ->
-                    [ { styles = [], text = message ++ "\n\n" } ]
+                    [ { styles = [], text = indent message ++ "\n\n" } ]
 
         outputContext =
             otherLabels
@@ -68,6 +69,14 @@ failuresToChalk labels messages =
             |> List.concat
             |> List.map encodeChalk
             |> Encode.list
+
+
+indent : String -> String
+indent str =
+    str
+        |> String.split "\n"
+        |> List.map ((++) "    ")
+        |> String.join "\n"
 
 
 encodeChalk : { styles : List String, text : String } -> Value
