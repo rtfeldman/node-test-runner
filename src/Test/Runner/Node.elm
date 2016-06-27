@@ -9,14 +9,16 @@ passed and 1 if any failed.
 -}
 
 import Test exposing (Test)
+import Test.Runner exposing (formatLabels)
 import Expect exposing (Expectation)
 import Html
+import Chalk exposing (Chalk)
 import Dict exposing (Dict)
 import Task
 import Set exposing (Set)
 import Test.Runner.Html.App
-import Json.Encode as Encode exposing (Value)
 import Random.Pcg as Random
+import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 import String
 
@@ -46,16 +48,8 @@ failuresToChalk labels messages =
 
 
 labelsToChalk : List String -> List Chalk
-labelsToChalk labels =
-    case List.filter (not << String.isEmpty) labels of
-        [] ->
-            []
-
-        first :: rest ->
-            rest
-                |> List.map (Chalk.withColorChar '↓' "dim")
-                |> (::) (Chalk.withColorChar '✗' "red" first)
-                |> List.reverse
+labelsToChalk =
+    formatLabels (Chalk.withColorChar '↓' "dim") (Chalk.withColorChar '✗' "red")
 
 
 messageToChalk : String -> Chalk

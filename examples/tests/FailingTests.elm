@@ -4,15 +4,17 @@ import Test.Runner.Node exposing (run)
 import String
 import Expect
 import Test exposing (..)
-import Fuzz exposing (Fuzzer, int, string)
+import Fuzz exposing (..)
 import Random.Pcg as Random
 import Shrink
 import Json.Encode exposing (Value)
+import Char
 
 
 main : Program Never
 main =
-    [ testOxfordify
+    [ testWithoutNums
+    , testOxfordify
     , noDescription
     , testExpectations
     , testFailingFuzzTests
@@ -25,6 +27,21 @@ main =
 
 
 port emit : ( String, Value ) -> Cmd msg
+
+
+withoutNums : String -> String
+withoutNums =
+    String.filter (\ch -> not (Char.isDigit ch || ch == '.'))
+
+
+testWithoutNums : Test
+testWithoutNums =
+    describe "withoutNums"
+        [ fuzzWith { runs = 100 } (tuple3 ( string, float, string )) "adding numbers to strings has no effect" <|
+            \( prefix, num, suffix ) ->
+                withoutNums (prefix ++ toString num ++ suffix)
+                    |> Expect.equal (withoutNums (prefix ++ suffix))
+        ]
 
 
 {-| A fuzzzer that usually generates "foo", but occasonally "bar". We expect a claim that it's always "foo" to fail.
