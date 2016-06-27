@@ -40,35 +40,27 @@ type Msg
     | Finish Time
 
 
-failuresToChalk : List String -> List String -> Value
+failuresToChalk : List String -> List String -> List Chalk
 failuresToChalk labels messages =
-    let
-        ( maybeLastLabel, otherLabels ) =
-            case labels of
-                [] ->
-                    ( Nothing, [] )
+    labelsToChalk labels ++ List.map messageToChalk messages
 
-                first :: rest ->
-                    ( Just first, List.reverse rest )
 
-        outputMessage message =
-            case maybeLastLabel of
-                Just lastContext ->
-                    [ { styles = [ "red" ], text = "✗ " ++ lastContext ++ "\n" }
-                    , { styles = [], text = "\n" ++ indent message ++ "\n\n" }
-                    ]
+labelsToChalk : List String -> List Chalk
+labelsToChalk labels =
+    case List.filter (not << String.isEmpty) labels of
+        [] ->
+            []
 
-                Nothing ->
-                    [ { styles = [], text = indent message ++ "\n\n" } ]
+        first :: rest ->
+            rest
+                |> List.map (Chalk.withColorChar '↓' "dim")
+                |> (::) (Chalk.withColorChar '✗' "red" first)
+                |> List.reverse
 
-        outputContext =
-            otherLabels
-                |> List.map (\message -> { styles = [ "dim" ], text = "↓ " ++ message ++ "\n" })
-    in
-        (outputContext :: (List.map outputMessage messages))
-            |> List.concat
-            |> List.map encodeChalk
-            |> Encode.list
+
+messageToChalk : String -> Chalk
+messageToChalk message =
+    { styles = [], text = "\n" ++ indent message ++ "\n\n" }
 
 
 indent : String -> String
@@ -77,14 +69,6 @@ indent str =
         |> String.split "\n"
         |> List.map ((++) "    ")
         |> String.join "\n"
-
-
-encodeChalk : { styles : List String, text : String } -> Value
-encodeChalk { styles, text } =
-    Encode.object
-        [ ( "styles", Encode.list (List.map Encode.string styles) )
-        , ( "text", Encode.string text )
-        ]
 
 
 warn : String -> a -> a
@@ -130,7 +114,7 @@ update emit msg model =
                     , stat "Failed:   " (toString failed)
                     ]
                         |> List.concat
-                        |> List.map encodeChalk
+                        |> List.map Chalk.encode
                         |> Encode.list
 
                 exitCode =
@@ -195,7 +179,13 @@ chalkAllFailures emit ( labels, expectations ) =
             Cmd.none
 
         failures ->
-            emit ( "CHALK", failuresToChalk labels failures )
+            let
+                encoded =
+                    failuresToChalk labels failures
+                        |> List.map Chalk.encode
+                        |> Encode.list
+            in
+                emit ( "CHALK", encoded )
 
 
 dispatch : Cmd Msg
