@@ -42,9 +42,13 @@ type Msg
     | Finish Time
 
 
-failuresToChalk : List String -> List String -> List Chalk
-failuresToChalk labels messages =
-    labelsToChalk labels ++ List.map messageToChalk messages
+type alias Failure =
+    { given : String, message : String }
+
+
+failuresToChalk : List String -> List Failure -> List Chalk
+failuresToChalk labels failures =
+    labelsToChalk labels ++ List.concatMap failureToChalk failures
 
 
 labelsToChalk : List String -> List Chalk
@@ -52,9 +56,18 @@ labelsToChalk =
     formatLabels (Chalk.withColorChar '↓' "dim") (Chalk.withColorChar '✗' "red")
 
 
-messageToChalk : String -> Chalk
-messageToChalk message =
-    { styles = [], text = "\n" ++ indent message ++ "\n\n" }
+failureToChalk : Failure -> List Chalk
+failureToChalk { given, message } =
+    let
+        messageChalk =
+            { styles = [], text = "\n" ++ indent message ++ "\n\n" }
+    in
+        if String.isEmpty given then
+            [ messageChalk ]
+        else
+            [ { styles = [ "dim" ], text = "\nGiven " ++ given ++ "\n" }
+            , messageChalk
+            ]
 
 
 indent : String -> String
