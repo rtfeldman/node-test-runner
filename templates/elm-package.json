@@ -10,8 +10,8 @@
     "exposed-modules": [],
     "dependencies": {
         "elm-lang/core": "4.0.0 <= v < 5.0.0",
-        "project-fuzzball/test": "4.0.0 <= v < 5.0.0",
-        "project-fuzzball/node": "1.0.5 <= v < 2.0.0"
+        "project-fuzzball/test": "6.0.0 <= v < 7.0.0",
+        "project-fuzzball/node": "1.0.6 <= v < 2.0.0"
     },
     "elm-version": "0.17.0 <= v < 0.18.0"
 }

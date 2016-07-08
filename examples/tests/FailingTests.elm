@@ -5,7 +5,7 @@ import String
 import Expect
 import Test exposing (..)
 import Fuzz exposing (..)
-import Random.Pcg as Random
+import Random
 import Shrink
 import Json.Encode exposing (Value)
 import Char

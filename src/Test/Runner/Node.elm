@@ -17,7 +17,7 @@ import Dict exposing (Dict)
 import Task
 import Set exposing (Set)
 import Test.Runner.Html.App
-import Random.Pcg as Random
+import Random
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 import String
