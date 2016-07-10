@@ -30,14 +30,22 @@ type alias Model =
     { available : Dict TestId (() -> ( List String, List Expectation ))
     , running : Set TestId
     , queue : List TestId
-    , completed : List ( List String, List Expectation )
     , startTime : Time
     , finishTime : Maybe Time
+    , completed : List TestResult
+    }
+
+
+type alias TestResult =
+    { labels : List String
+    , expectations : List Expectation
+    , duration : Time
     }
 
 
 type Msg
-    = Dispatch
+    = Dispatch Time
+    | Complete TestId ( List String, List Expectation ) Time Time
     | Finish Time
 
 
@@ -93,7 +101,7 @@ update emit msg model =
             let
                 failed =
                     model.completed
-                        |> List.filter (snd >> List.all ((/=) Expect.pass))
+                        |> List.filter (.expectations >> List.all ((/=) Expect.pass))
                         |> List.length
 
                 passed =
@@ -138,7 +146,20 @@ update emit msg model =
                 ( model, emit ( "FINISHED", data ) )
                     |> warn "Attempted to Dispatch when all tests completed!"
 
-        Dispatch ->
+        Complete testId ( labels, expectations ) startTime endTime ->
+            let
+                result =
+                    { labels = labels
+                    , expectations = expectations
+                    , duration = endTime - startTime
+                    }
+
+                newModel =
+                    { model | completed = result :: model.completed }
+            in
+                ( newModel, Cmd.batch [ chalkAllFailures emit result, dispatch ] )
+
+        Dispatch startTime ->
             case model.queue of
                 [] ->
                     ( model, Task.perform never Finish Time.now )
@@ -151,26 +172,19 @@ update emit msg model =
 
                         Just run ->
                             let
-                                result =
-                                    run ()
-
-                                completed =
-                                    model.completed ++ [ result ]
+                                complete =
+                                    Complete testId (run ()) startTime
 
                                 available =
                                     Dict.remove testId model.available
 
                                 newModel =
                                     { model
-                                        | completed = completed
-                                        , available = available
+                                        | available = available
                                         , queue = newQueue
                                     }
-
-                                cmd =
-                                    chalkAllFailures emit result
                             in
-                                ( newModel, Cmd.batch [ cmd, dispatch ] )
+                                ( newModel, Task.perform never complete Time.now )
 
 
 never : Never -> a
@@ -178,8 +192,8 @@ never a =
     never a
 
 
-chalkAllFailures : Emitter Msg -> ( List String, List Expectation ) -> Cmd Msg
-chalkAllFailures emit ( labels, expectations ) =
+chalkAllFailures : Emitter Msg -> TestResult -> Cmd Msg
+chalkAllFailures emit { duration, labels, expectations } =
     case List.filterMap Expect.getFailure expectations of
         [] ->
             Cmd.none
@@ -196,8 +210,7 @@ chalkAllFailures emit ( labels, expectations ) =
 
 dispatch : Cmd Msg
 dispatch =
-    Task.succeed Dispatch
-        |> Task.perform identity identity
+    Task.perform never Dispatch Time.now
 
 
 formatDuration : Time -> String
