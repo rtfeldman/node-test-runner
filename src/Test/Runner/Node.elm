@@ -11,12 +11,11 @@ passed and 1 if any failed.
 import Test exposing (Test)
 import Test.Runner exposing (formatLabels)
 import Expect exposing (Expectation)
-import Html
 import Chalk exposing (Chalk)
 import Dict exposing (Dict)
 import Task
 import Set exposing (Set)
-import Test.Runner.Html.App
+import Test.Runner.Node.App
 import Random
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
@@ -244,12 +243,11 @@ run =
 -}
 runWithOptions : Maybe Int -> Maybe Random.Seed -> Emitter Msg -> Test -> Program Never
 runWithOptions runs seed emit =
-    Test.Runner.Html.App.run
+    Test.Runner.Node.App.run
         { runs = runs
         , seed = seed
         }
         { init = init
         , update = update emit
-        , view = \_ -> Html.text "This should be run in Node, not in a browser!"
         , subscriptions = \_ -> Sub.none
         }
