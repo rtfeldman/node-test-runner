@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
     "summary": "node-elm-test example",
-    "repository": "https://github.com/rtfeldman/node-elm-test.git",
+    "repository": "https://github.com/rtfeldman/node-test-runner.git",
     "license": "BSD-3-Clause",
     "source-directories": [
         ".",
