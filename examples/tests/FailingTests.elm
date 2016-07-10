@@ -5,8 +5,6 @@ import String
 import Expect
 import Test exposing (..)
 import Fuzz exposing (..)
-import Random
-import Shrink
 import Json.Encode exposing (Value)
 import Char
 
@@ -18,11 +16,10 @@ main =
     , noDescription
     , testExpectations
     , testFailingFuzzTests
-    , actualFuzzTest
     , testFuzz
     , testShrinkables
     ]
-        |> batch
+        |> Test.concat
         |> run emit
 
 
@@ -41,34 +38,6 @@ testWithoutNums =
             \( prefix, num, suffix ) ->
                 withoutNums (prefix ++ toString num ++ suffix)
                     |> Expect.equal (withoutNums (prefix ++ suffix))
-        ]
-
-
-{-| A fuzzzer that usually generates "foo", but occasonally "bar". We expect a claim that it's always "foo" to fail.
--}
-usuallyFoo : Fuzzer String
-usuallyFoo =
-    Fuzzer
-        (Random.oneIn 30
-            |> Random.map
-                (\b ->
-                    if b then
-                        "bar"
-                    else
-                        "foo"
-                )
-        )
-        Shrink.string
-
-
-actualFuzzTest : Test
-actualFuzzTest =
-    describe "actual fuzz test"
-        [ fuzz usuallyFoo "description goes here" <|
-            \shouldBeFoo ->
-                shouldBeFoo
-                    |> Expect.equal "foo"
-                    |> Expect.onFail "It wasn't \"foo\"."
         ]
 
 
@@ -95,12 +64,6 @@ testExpectations =
 oxfordify : a -> b -> c -> String
 oxfordify _ _ _ =
     "Alice, Bob, and Claire"
-
-
-string : Fuzzer String
-string =
-    Fuzzer (Random.choice "foo" "bar")
-        Shrink.string
 
 
 noDescription : Test
