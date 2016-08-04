@@ -1,5 +1,5 @@
 {
-    "version": "2.0.1",
+    "version": "3.0.0",
     "summary": "Unit testing support with Console/Html/String outputs.",
     "repository": "https://github.com/project-fuzzball/node.git",
     "license": "BSD-3-Clause",
@@ -12,7 +12,9 @@
     "dependencies": {
         "elm-lang/core": "4.0.0 <= v < 5.0.0",
         "elm-lang/html": "1.0.0 <= v < 2.0.0",
-        "project-fuzzball/test": "5.0.0 <= v < 6.0.0"
+        "mgold/elm-random-pcg": "3.0.0 <= v < 4.0.0",
+        "project-fuzzball/test": "6.0.0 <= v < 7.0.0",
+        "project-fuzzball/test-runner": "3.0.0 <= v < 4.0.0"
     },
     "elm-version": "0.17.0 <= v < 0.18.0"
 }
