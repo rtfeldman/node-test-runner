@@ -12,7 +12,7 @@ import Expect exposing (Expectation)
 import Html exposing (Html, text)
 import Html.App
 import Task
-import Random
+import Random.Pcg as Random
 import Time exposing (Time)
 
 

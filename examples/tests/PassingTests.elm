@@ -2,14 +2,14 @@ port module Main exposing (..)
 
 import Test.Runner.Node exposing (run)
 import Expect
-import Test exposing (..)
+import Test exposing (test, Test)
 import Json.Encode exposing (Value)
 
 
 main : Program Never
 main =
     [ plainExpectation ]
-        |> batch
+        |> Test.concat
         |> run emit
 
 
