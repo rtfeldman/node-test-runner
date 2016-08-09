@@ -9,7 +9,7 @@ import Json.Encode exposing (Value)
 main : Program Never
 main =
     [ plainExpectation ]
-        |> batch
+        |> concat
         |> run emit
 
 

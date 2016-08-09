@@ -12,7 +12,7 @@ import Expect exposing (Expectation)
 import Html exposing (Html, text)
 import Html.App
 import Task
-import Random
+import Random.Pcg
 import Time exposing (Time)
 
 
@@ -22,15 +22,15 @@ type Msg subMsg
 
 
 type Model subMsg subModel
-    = Uninitialized (SubUpdate subMsg subModel) (Maybe Random.Seed) Int Test (Time -> List (() -> ( List String, List Expectation )) -> ( subModel, Cmd subMsg ))
+    = Uninitialized (SubUpdate subMsg subModel) (Maybe Random.Pcg.Seed) Int Test (Time -> List (() -> ( List String, List Expectation )) -> ( subModel, Cmd subMsg ))
     | Initialized (SubUpdate subMsg subModel) subModel
 
 
-timeToSeed : Time -> Random.Seed
+timeToSeed : Time -> Random.Pcg.Seed
 timeToSeed time =
     (0xFFFFFFFF * time)
         |> floor
-        |> Random.initialSeed
+        |> Random.Pcg.initialSeed
 
 
 fromNever : Never -> a
@@ -82,7 +82,7 @@ type alias SubUpdate msg model =
 
 
 type alias RunnerOptions =
-    { seed : Maybe Random.Seed
+    { seed : Maybe Random.Pcg.Seed
     , runs : Maybe Int
     }
 

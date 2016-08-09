@@ -16,7 +16,7 @@ import Dict exposing (Dict)
 import Task
 import Set exposing (Set)
 import Test.Runner.Node.App
-import Random
+import Random.Pcg
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 import String
@@ -254,7 +254,7 @@ run =
 {-| Run the test using the provided options. If `Nothing` is provided for either
 `runs` or `seed`, it will fall back on the options used in [`run`](#run).
 -}
-runWithOptions : Maybe Int -> Maybe Random.Seed -> Emitter Msg -> Test -> Program Never
+runWithOptions : Maybe Int -> Maybe Random.Pcg.Seed -> Emitter Msg -> Test -> Program Never
 runWithOptions runs seed emit =
     Test.Runner.Node.App.run
         { runs = runs
