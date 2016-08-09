@@ -1,13 +1,14 @@
 {
     "version": "1.0.0",
-    "summary": "node-test-runner example",
+    "summary": "Run elm-test suites in a Node.js CLI. Get it with npm install -g elm-test",
     "repository": "https://github.com/rtfeldman/node-test-runner.git",
     "license": "BSD-3-Clause",
     "source-directories": [
-        ".",
-        "../../src"
+        "src"
     ],
-    "exposed-modules": [],
+    "exposed-modules": [
+        "Test.Runner.Node"
+    ],
     "dependencies": {
         "elm-community/elm-test": "2.0.0 <= v < 3.0.0",
         "elm-lang/core": "4.0.0 <= v < 5.0.0",

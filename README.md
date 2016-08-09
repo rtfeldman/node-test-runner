@@ -1,6 +1,6 @@
-# node-elm-test [![Version](https://img.shields.io/npm/v/elm-test.svg)](https://www.npmjs.com/package/elm-test) [![Travis build Status](https://travis-ci.org/rtfeldman/node-elm-test.svg?branch=master)](http://travis-ci.org/rtfeldman/node-elm-test) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/fixcy4ko78di0l31/branch/master?svg=true)](https://ci.appveyor.com/project/rtfeldman/node-elm-test/branch/master)
+# node-test-runner [![Version](https://img.shields.io/npm/v/elm-test.svg)](https://www.npmjs.com/package/elm-test) [![Travis build Status](https://travis-ci.org/rtfeldman/node-test-runner.svg?branch=master)](http://travis-ci.org/rtfeldman/node-test-runner) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/fixcy4ko78di0l31/branch/master?svg=true)](https://ci.appveyor.com/project/rtfeldman/node-test-runner/branch/master)
 
-Runs [elm-test](https://github.com/deadfoxygrandpa/Elm-Test) suites from Node.js
+Runs [elm-test](https://github.com/elm-community/elm-test) suites from Node.js
 
 ## Installation
 
@@ -11,13 +11,11 @@ npm install -g elm-test
 ## Usage
 
 ```bash
-elm-test init  # Adds the Elm-Test dependency and creates TestRunner.elm and Tests.elm
-elm-test tests/TestRunner.elm  # Runs the tests
+elm-test init  # Adds the elm-test dependency and creates Main.elm and Tests.elm
+elm-test tests/Main.elm  # Runs the tests
 ```
 
 Then add your tests to Tests.elm.
-
-Also check out [`elm-check`](https://github.com/NoRedInk/elm-check) for property-based testing via `elm-test`!
 
 ### Travis CI
 
@@ -33,5 +31,5 @@ install:
   - elm-package install -y
   - pushd tests && elm-package install -y && popd
 script:
-  - cd tests && elm-test TestRunner.elm
+  - cd tests && elm-test Main.elm
 ```
