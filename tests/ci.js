@@ -15,7 +15,7 @@ function run(testFile) {
     retVal = exec('elm-test ' + testFile)
   }
 
-  retVal.output.toEnd(logFile)
+  retVal.toEnd(logFile)
   return retVal.code
 }
 
@@ -77,4 +77,3 @@ echo('  __   ,_   _  __,  -/-     ,         __   __   _   ,    ,  ')
 echo('_(_/__/ (__(/_(_/(__/_    _/_)__(_/__(_,__(_,__(/__/_)__/_)_')
 echo(' _/_                                                        ')
 echo('(/                                                          ')
-
