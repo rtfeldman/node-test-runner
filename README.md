@@ -33,5 +33,5 @@ install:
   - elm-package install -y
   - pushd tests && elm-package install -y && popd
 script:
-  - cd tests && elm-test TestRunner.elm
+  - cd tests && elm-test Main.elm
 ```

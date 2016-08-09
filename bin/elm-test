@@ -20,7 +20,7 @@ var elm = {
 if (process.argv[2] == "--help" || process.argv[2] == "-h") {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
-  console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/TestRunner.elm\n");
+  console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
   process.exit(1);
 }
 
@@ -62,7 +62,7 @@ if (process.argv[2] == "init") {
   ensureDirectory("src");
   ensureDirectory("tests");
   copyTemplate("elm-package.json");
-  copyTemplate("TestRunner.elm");
+  copyTemplate("Main.elm");
   copyTemplate("Tests.elm");
   copyTemplate("gitignore", ".gitignore");
   process.exit(0);
@@ -134,7 +134,7 @@ function spawnCompiler(cmd, args, opts) {
 }
 
 if (typeof testFile == "undefined") {
-  testFile = "tests/TestRunner.elm";
+  testFile = "tests/Main.elm";
 }
 
 if (!fs.existsSync(testFile)) {
