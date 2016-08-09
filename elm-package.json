@@ -1,20 +1,16 @@
 {
-    "version": "3.1.0",
-    "summary": "Unit testing support with Console/Html/String outputs.",
+    "version": "4.0.0",
+    "summary": "DEPRECATED - This has been replaced by rtfeldman/node-test-runner",
     "repository": "https://github.com/project-fuzzball/node.git",
     "license": "BSD-3-Clause",
     "source-directories": [
         "src"
     ],
     "exposed-modules": [
-        "Test.Runner.Node"
+        "Deprecated"
     ],
     "dependencies": {
-        "elm-lang/core": "4.0.0 <= v < 5.0.0",
-        "elm-lang/html": "1.0.0 <= v < 2.0.0",
-        "mgold/elm-random-pcg": "3.0.0 <= v < 4.0.0",
-        "project-fuzzball/test": "6.0.0 <= v < 7.0.0",
-        "project-fuzzball/test-runner": "3.0.0 <= v < 4.0.0"
+        "elm-lang/core": "4.0.0 <= v < 5.0.0"
     },
     "elm-version": "0.17.0 <= v < 0.18.0"
 }
