@@ -16,7 +16,6 @@ import Dict exposing (Dict)
 import Task
 import Set exposing (Set)
 import Test.Runner.Node.App
-import Random.Pcg
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 import String
@@ -199,13 +198,8 @@ chalkAllFailures emit { duration, labels, expectations } =
             Cmd.none
 
         failures ->
-            let
-                encoded =
-                    failuresToChalk labels failures
-                        |> List.map Chalk.encode
-                        |> Encode.list
-            in
-                emit ( "CHALK", encoded )
+            failuresToChalk labels failures
+                |> chalkWith emit
 
 
 dispatch : Cmd Msg
@@ -218,12 +212,21 @@ formatDuration time =
     toString time ++ " ms"
 
 
-init : Time -> List (() -> ( List String, List Expectation )) -> ( Model, Cmd Msg )
-init startTime thunks =
+init :
+    Emitter Msg
+    -> { initialSeed : Int
+       , startTime : Time
+       , thunks : List (() -> ( List String, List Expectation ))
+       }
+    -> ( Model, Cmd Msg )
+init emit { startTime, initialSeed, thunks } =
     let
         indexedThunks : List ( TestId, () -> ( List String, List Expectation ) )
         indexedThunks =
             List.indexedMap (,) thunks
+
+        testCount =
+            List.length indexedThunks
 
         model =
             { available = Dict.fromList indexedThunks
@@ -233,8 +236,48 @@ init startTime thunks =
             , startTime = startTime
             , finishTime = Nothing
             }
+
+        reportCmd =
+            reportBegin emit { testCount = testCount, initialSeed = initialSeed }
     in
-        ( model, dispatch )
+        ( model, Cmd.batch [ dispatch, reportCmd ] )
+
+
+reportBegin : Emitter Msg -> { testCount : Int, initialSeed : Int } -> Cmd Msg
+reportBegin emit { testCount, initialSeed } =
+    chalkWith emit <|
+        [ { styles = []
+          , text =
+                "Running "
+                    ++ pluralize "test" "tests" testCount
+                    ++ " with fuzzer seed "
+                    ++ toString initialSeed
+                    ++ "\n"
+          }
+        ]
+
+
+pluralize : String -> String -> Int -> String
+pluralize singular plural count =
+    let
+        suffix =
+            if count == 1 then
+                singular
+            else
+                plural
+    in
+        String.join " " [ toString count, suffix ]
+
+
+chalkWith : Emitter Msg -> List Chalk -> Cmd Msg
+chalkWith emit chalks =
+    let
+        encoded =
+            chalks
+                |> List.map Chalk.encode
+                |> Encode.list
+    in
+        emit ( "CHALK", encoded )
 
 
 type alias Emitter msg =
@@ -248,19 +291,36 @@ system time when the test runs begin.
 -}
 run : Emitter Msg -> Test -> Program Never
 run =
-    runWithOptions Nothing Nothing
+    runWithOptions defaultOptions
+
+
+{-| The default Options for runWithOptions.
+-}
+defaultOptions : Options
+defaultOptions =
+    { runs = 100
+    , seed = Nothing
+    }
+
+
+{-| The Options you can pass to runWithOptions.
+-}
+type alias Options =
+    { runs : Int
+    , seed : Maybe Int
+    }
 
 
 {-| Run the test using the provided options. If `Nothing` is provided for either
 `runs` or `seed`, it will fall back on the options used in [`run`](#run).
 -}
-runWithOptions : Maybe Int -> Maybe Random.Pcg.Seed -> Emitter Msg -> Test -> Program Never
-runWithOptions runs seed emit =
+runWithOptions : Options -> Emitter Msg -> Test -> Program Never
+runWithOptions { runs, seed } emit =
     Test.Runner.Node.App.run
         { runs = runs
         , seed = seed
         }
-        { init = init
+        { init = init emit
         , update = update emit
         , subscriptions = \_ -> Sub.none
         }

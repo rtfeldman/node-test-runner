@@ -21,16 +21,31 @@ type Msg subMsg
     | SubMsg subMsg
 
 
+type alias InitArgs =
+    { initialSeed : Int
+    , startTime : Time
+    , thunks : List (() -> ( List String, List Expectation ))
+    }
+
+
 type Model subMsg subModel
-    = Uninitialized (SubUpdate subMsg subModel) (Maybe Random.Pcg.Seed) Int Test (Time -> List (() -> ( List String, List Expectation )) -> ( subModel, Cmd subMsg ))
-    | Initialized (SubUpdate subMsg subModel) subModel
+    = Initialized (SubUpdate subMsg subModel) subModel
+    | Uninitialized
+        (SubUpdate subMsg subModel)
+        { maybeNumericSeed : Maybe Int
+        , runs : Int
+        , test : Test
+        , init : InitArgs -> ( subModel, Cmd subMsg )
+        }
 
 
-timeToSeed : Time -> Random.Pcg.Seed
-timeToSeed time =
-    (0xFFFFFFFF * time)
+timeToNumericSeed : Time -> Int
+timeToNumericSeed time =
+    time
         |> floor
         |> Random.Pcg.initialSeed
+        |> Random.Pcg.step (Random.Pcg.int 100 Random.Pcg.maxInt)
+        |> fst
 
 
 fromNever : Never -> a
@@ -41,23 +56,32 @@ fromNever a =
 initOrUpdate : Msg subMsg -> Model subMsg subModel -> ( Model subMsg subModel, Cmd (Msg subMsg) )
 initOrUpdate msg maybeModel =
     case maybeModel of
-        Uninitialized update seed runs test init ->
+        Uninitialized update { maybeNumericSeed, runs, test, init } ->
             case msg of
                 Init time ->
                     let
-                        finalSeed =
-                            case seed of
-                                Just realSeed ->
-                                    realSeed
+                        numericSeed =
+                            case maybeNumericSeed of
+                                Just givenNumericSeed ->
+                                    givenNumericSeed
 
                                 Nothing ->
-                                    timeToSeed time
+                                    timeToNumericSeed time
+
+                        seed =
+                            Random.Pcg.initialSeed numericSeed
+
+                        thunks =
+                            test
+                                |> Test.Runner.fromTest runs seed
+                                |> toThunks
 
                         ( subModel, subCmd ) =
-                            test
-                                |> Test.Runner.fromTest runs finalSeed
-                                |> toThunks
-                                |> init time
+                            init
+                                { initialSeed = numericSeed
+                                , startTime = time
+                                , thunks = thunks
+                                }
                     in
                         ( Initialized update subModel, Cmd.map SubMsg subCmd )
 
@@ -82,13 +106,13 @@ type alias SubUpdate msg model =
 
 
 type alias RunnerOptions =
-    { seed : Maybe Random.Pcg.Seed
-    , runs : Maybe Int
+    { seed : Maybe Int
+    , runs : Int
     }
 
 
 type alias AppOptions msg model =
-    { init : Time -> List (() -> ( List String, List Expectation )) -> ( model, Cmd msg )
+    { init : InitArgs -> ( model, Cmd msg )
     , update : SubUpdate msg model
     , subscriptions : model -> Sub msg
     }
@@ -97,7 +121,7 @@ type alias AppOptions msg model =
 subscriptions : (subModel -> Sub subMsg) -> Model subMsg subModel -> Sub (Msg subMsg)
 subscriptions subs model =
     case model of
-        Uninitialized _ _ _ _ _ ->
+        Uninitialized _ _ ->
             Sub.none
 
         Initialized _ subModel ->
@@ -125,16 +149,20 @@ toThunksHelp labels runner =
 {-| Run the tests and render the results as a Web page.
 -}
 run : RunnerOptions -> AppOptions msg model -> Test -> Program Never
-run runnerOpts appOpts test =
+run { runs, seed } appOpts test =
     let
-        runs =
-            Maybe.withDefault defaultRunCount runnerOpts.runs
-
         cmd =
             Task.perform fromNever Init Time.now
 
         init =
-            ( Uninitialized appOpts.update runnerOpts.seed runs test appOpts.init, cmd )
+            ( Uninitialized appOpts.update
+                { maybeNumericSeed = seed
+                , runs = runs
+                , test = test
+                , init = appOpts.init
+                }
+            , cmd
+            )
     in
         Html.App.program
             { init = init
@@ -142,8 +170,3 @@ run runnerOpts appOpts test =
             , view = \_ -> Html.text "This should be run in Node, not in a browser!"
             , subscriptions = subscriptions appOpts.subscriptions
             }
-
-
-defaultRunCount : Int
-defaultRunCount =
-    100
