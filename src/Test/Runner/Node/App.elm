@@ -44,13 +44,8 @@ timeToNumericSeed time =
     time
         |> floor
         |> Random.Pcg.initialSeed
-        |> Random.Pcg.step (Random.Pcg.int 0 maxSafeInt)
+        |> Random.Pcg.step (Random.Pcg.int 100 Random.Pcg.maxInt)
         |> fst
-
-
-maxSafeInt : Int
-maxSafeInt =
-    9007199254740990
 
 
 fromNever : Never -> a
