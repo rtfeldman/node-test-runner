@@ -23,7 +23,7 @@ var args = minimist(process.argv.slice(2), {
         'yes': 'y',
         'compiler': 'c'
     },
-    boolean: [ 'yes', 'version', 'help' ],
+    boolean: [ 'yes', 'warn', 'version', 'help' ],
     string: [ 'compiler' ]
 });
 
@@ -169,7 +169,7 @@ if (args.compiler !== undefined) {
 temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
   var dest = info.path;
   var compileProcess = compile( [testFile],
-    {output: dest, spawn: spawnCompiler, pathToMake: pathToMake});
+    {output: dest, spawn: spawnCompiler, pathToMake: pathToMake, warn:args.warn});
 
   compileProcess.on('close', function(exitCode) {
     if (exitCode !== 0) {
