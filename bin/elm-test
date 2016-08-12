@@ -24,12 +24,15 @@ var args = minimist(process.argv.slice(2), {
         'compiler': 'c'
     },
     boolean: [ 'yes', 'warn', 'version', 'help' ],
-    string: [ 'compiler' ]
+    string: [ 'compiler', 'module' ],
+    default: {
+        'module': 'Main'
+    }
 });
 
 if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
-  console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
+  console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] [--module Tests.MyTestRunner] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
   process.exit(1);
 }
@@ -83,7 +86,7 @@ function evalElmCode (compiledCode) {
 
   // Make sure necessary things are defined.
   if (typeof Elm === 'undefined') { throw 'elm-io config error: Elm is not defined. Make sure you provide a file compiled by Elm!'}
-  if (typeof Elm.Main === 'undefined' ) { throw 'Elm.Main is not defined. Make sure your module is named Main.' };
+  if (typeof Elm[args.module] === 'undefined' ) { throw 'Elm.' + args.module + ' is not defined. Make sure your module is named Main, or pass the module via the --module option.' };
 
   // Apply Node polyfills as necessary.
   var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
@@ -117,7 +120,7 @@ function evalElmCode (compiledCode) {
   }
 
   // Run the Elm app.
-  var app = Elm.Main.worker();
+  var app = Elm[args.module].worker();
 
   // Receive messages from ports and translate them into appropriate JS calls.
   app.ports.emit.subscribe(function(msg) {
