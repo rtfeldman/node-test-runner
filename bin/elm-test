@@ -11,25 +11,35 @@ var compile    = require("node-elm-compiler").compile,
   temp         = require("temp").track(), // Automatically cleans up temp files.
   util         = require("util"),
   _            = require("lodash"),
-  spawn        = require("cross-spawn");
+  spawn        = require("cross-spawn"),
+  minimist     = require("minimist");
 
 var elm = {
   'elm-package': 'elm-package'
 };
+var args = minimist(process.argv.slice(2), {
+    alias: {
+        'help': 'h',
+        'yes': 'y',
+        'compiler': 'c'
+    },
+    boolean: [ 'yes', 'version', 'help' ],
+    string: [ 'compiler' ]
+});
 
-if (process.argv[2] == "--help" || process.argv[2] == "-h") {
+if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
   process.exit(1);
 }
 
-if (process.argv[2] == "--version") {
+if (args.version) {
   console.log(require(path.join(__dirname, "..", "package.json")).version);
   process.exit(0);
 }
 
-if (process.argv[2] == "init") {
+if (args._[0] == "init") {
   var copyTemplate = function(templateName, destName) {
     if (arguments.length == 1) {
       destName = templateName;
@@ -55,7 +65,7 @@ if (process.argv[2] == "init") {
   };
 
   var elmOptions = "";
-  if (process.argv[3] == "--yes" || process.argv[3] == "-y") {
+  if (args.yes) {
     elmOptions += " --yes";
   }
 
@@ -123,7 +133,7 @@ function evalElmCode (compiledCode) {
   });
 }
 
-var testFile = process.argv[2],
+var testFile = args._[0],
     cwd = __dirname,
     pathToMake = undefined;
 
@@ -147,8 +157,8 @@ if (testFile.slice(0, 6) == "tests/") {
   testFile = testFile.slice(6);
 }
 
-if (process.argv[3] == "--compiler" || process.argv[3] == "-c") {
-  pathToMake = process.argv[4];
+if (args.compiler !== undefined) {
+  pathToMake = args.compiler;
 
   if (!pathToMake) {
     console.error("The --compiler option must be given a path to an elm-make executable.");
