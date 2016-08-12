@@ -86,7 +86,24 @@ function evalElmCode (compiledCode) {
 
   // Make sure necessary things are defined.
   if (typeof Elm === 'undefined') { throw 'elm-io config error: Elm is not defined. Make sure you provide a file compiled by Elm!'}
-  if (typeof Elm[args.module] === 'undefined' ) { throw 'Elm.' + args.module + ' is not defined. Make sure your module is named Main, or pass the module via the --module option.' };
+
+  function getTestModule() {
+      var module = Elm;
+      var moduleParts = args.module.split('.');
+      while (moduleParts.length) {
+          var modulePart = moduleParts.shift();
+          if (module[modulePart] === undefined) {
+              return undefined;
+          }
+
+          module = module[modulePart];
+      }
+
+      return module;
+  }
+
+  var testModule = getTestModule();
+  if (testModule === undefined) { throw 'Elm.' + args.module + ' is not defined. Make sure your module is named Main, or pass the module via the --module option.' };
 
   // Apply Node polyfills as necessary.
   var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
@@ -120,7 +137,7 @@ function evalElmCode (compiledCode) {
   }
 
   // Run the Elm app.
-  var app = Elm[args.module].worker();
+  var app = testModule.worker();
 
   // Receive messages from ports and translate them into appropriate JS calls.
   app.ports.emit.subscribe(function(msg) {
