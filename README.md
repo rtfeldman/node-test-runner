@@ -12,10 +12,22 @@ npm install -g elm-test
 
 ```bash
 elm-test init  # Adds the elm-test dependency and creates Main.elm and Tests.elm
-elm-test tests/Main.elm  # Runs the tests
+elm-test       # Runs the tests
 ```
 
 Then add your tests to Tests.elm.
+
+
+### Configuration
+
+The `--compiler` flag can be used to use a version of the Elm compiler that
+has not been install globally.
+
+```
+npm install elm
+elm-test --compiler ./node_modules/.bin/elm-make
+```
+
 
 ### Travis CI
 
@@ -31,5 +43,5 @@ install:
   - elm-package install -y
   - pushd tests && elm-package install -y && popd
 script:
-  - cd tests && elm-test Main.elm
+  - elm-test
 ```
