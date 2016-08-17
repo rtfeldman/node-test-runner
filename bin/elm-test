@@ -11,25 +11,36 @@ var compile    = require("node-elm-compiler").compile,
   temp         = require("temp").track(), // Automatically cleans up temp files.
   util         = require("util"),
   _            = require("lodash"),
-  spawn        = require("cross-spawn");
+  spawn        = require("cross-spawn"),
+  minimist     = require("minimist"),
+  firstline    = require("firstline");
 
 var elm = {
   'elm-package': 'elm-package'
 };
+var args = minimist(process.argv.slice(2), {
+    alias: {
+        'help': 'h',
+        'yes': 'y',
+        'compiler': 'c'
+    },
+    boolean: [ 'yes', 'warn', 'version', 'help' ],
+    string: [ 'compiler' ]
+});
 
-if (process.argv[2] == "--help" || process.argv[2] == "-h") {
+if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
   process.exit(1);
 }
 
-if (process.argv[2] == "--version") {
+if (args.version) {
   console.log(require(path.join(__dirname, "..", "package.json")).version);
   process.exit(0);
 }
 
-if (process.argv[2] == "init") {
+if (args._[0] == "init") {
   var copyTemplate = function(templateName, destName) {
     if (arguments.length == 1) {
       destName = templateName;
@@ -55,7 +66,7 @@ if (process.argv[2] == "init") {
   };
 
   var elmOptions = "";
-  if (process.argv[3] == "--yes" || process.argv[3] == "-y") {
+  if (args.yes) {
     elmOptions += " --yes";
   }
 
@@ -68,12 +79,29 @@ if (process.argv[2] == "init") {
   process.exit(0);
 }
 
-function evalElmCode (compiledCode) {
+function evalElmCode (compiledCode, testModuleName) {
   var Elm = function(module) { eval(compiledCode); return module.exports; }({});
 
   // Make sure necessary things are defined.
   if (typeof Elm === 'undefined') { throw 'elm-io config error: Elm is not defined. Make sure you provide a file compiled by Elm!'}
-  if (typeof Elm.Main === 'undefined' ) { throw 'Elm.Main is not defined. Make sure your module is named Main.' };
+
+  function getTestModule() {
+      var module = Elm;
+      var moduleParts = testModuleName.split('.');
+      while (moduleParts.length) {
+          var modulePart = moduleParts.shift();
+          if (module[modulePart] === undefined) {
+              return undefined;
+          }
+
+          module = module[modulePart];
+      }
+
+      return module;
+  }
+
+  var testModule = getTestModule();
+  if (testModule === undefined) { throw 'Elm.' + testModuleName + ' is not defined. Make sure you provide a file compiled by Elm!' };
 
   // Apply Node polyfills as necessary.
   var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
@@ -107,7 +135,7 @@ function evalElmCode (compiledCode) {
   }
 
   // Run the Elm app.
-  var app = Elm.Main.worker();
+  var app = testModule.worker();
 
   // Receive messages from ports and translate them into appropriate JS calls.
   app.ports.emit.subscribe(function(msg) {
@@ -123,7 +151,7 @@ function evalElmCode (compiledCode) {
   });
 }
 
-var testFile = process.argv[2],
+var testFile = args._[0],
     cwd = __dirname,
     pathToMake = undefined;
 
@@ -147,8 +175,8 @@ if (testFile.slice(0, 6) == "tests/") {
   testFile = testFile.slice(6);
 }
 
-if (process.argv[3] == "--compiler" || process.argv[3] == "-c") {
-  pathToMake = process.argv[4];
+if (args.compiler !== undefined) {
+  pathToMake = args.compiler;
 
   if (!pathToMake) {
     console.error("The --compiler option must be given a path to an elm-make executable.");
@@ -159,7 +187,7 @@ if (process.argv[3] == "--compiler" || process.argv[3] == "-c") {
 temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
   var dest = info.path;
   var compileProcess = compile( [testFile],
-    {output: dest, spawn: spawnCompiler, pathToMake: pathToMake});
+    {output: dest, spawn: spawnCompiler, pathToMake: pathToMake, warn:args.warn});
 
   compileProcess.on('close', function(exitCode) {
     if (exitCode !== 0) {
@@ -167,6 +195,8 @@ temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
       process.exit(exitCode);
     }
 
-    evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}));
+    testModulePromise.then(function (testModuleName) {
+        evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), testModuleName);
+    });
   });
 });
