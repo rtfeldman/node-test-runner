@@ -250,7 +250,7 @@ reportBegin emit { testCount, initialSeed } =
           , text =
                 "Running "
                     ++ pluralize "test" "tests" testCount
-                    ++ " with fuzzer seed "
+                    ++ ". To reproduce these results: elm-test --seed "
                     ++ toString initialSeed
                     ++ "\n"
           }
