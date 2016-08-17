@@ -12,7 +12,8 @@ var compile    = require("node-elm-compiler").compile,
   util         = require("util"),
   _            = require("lodash"),
   spawn        = require("cross-spawn"),
-  minimist     = require("minimist");
+  minimist     = require("minimist"),
+  firstline    = require("firstline");
 
 var elm = {
   'elm-package': 'elm-package'
@@ -24,15 +25,12 @@ var args = minimist(process.argv.slice(2), {
         'compiler': 'c'
     },
     boolean: [ 'yes', 'warn', 'version', 'help' ],
-    string: [ 'compiler', 'module' ],
-    default: {
-        'module': 'Main'
-    }
+    string: [ 'compiler' ]
 });
 
 if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
-  console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] [--module Tests.MyTestRunner] # Run TESTFILE\n");
+  console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
   process.exit(1);
 }
@@ -81,7 +79,7 @@ if (args._[0] == "init") {
   process.exit(0);
 }
 
-function evalElmCode (compiledCode) {
+function evalElmCode (compiledCode, testModuleName) {
   var Elm = function(module) { eval(compiledCode); return module.exports; }({});
 
   // Make sure necessary things are defined.
@@ -89,7 +87,7 @@ function evalElmCode (compiledCode) {
 
   function getTestModule() {
       var module = Elm;
-      var moduleParts = args.module.split('.');
+      var moduleParts = testModuleName.split('.');
       while (moduleParts.length) {
           var modulePart = moduleParts.shift();
           if (module[modulePart] === undefined) {
@@ -103,7 +101,7 @@ function evalElmCode (compiledCode) {
   }
 
   var testModule = getTestModule();
-  if (testModule === undefined) { throw 'Elm.' + args.module + ' is not defined. Make sure your module is named Main, or pass the module via the --module option.' };
+  if (testModule === undefined) { throw 'Elm.' + testModuleName + ' is not defined. Make sure you provide a file compiled by Elm!' };
 
   // Apply Node polyfills as necessary.
   var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
@@ -197,6 +195,8 @@ temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
       process.exit(exitCode);
     }
 
-    evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}));
+    testModulePromise.then(function (testModuleName) {
+        evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), testModuleName);
+    });
   });
 });
