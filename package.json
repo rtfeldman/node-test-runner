@@ -30,6 +30,7 @@
   "dependencies": {
     "chalk": "1.1.3",
     "cross-spawn": "4.0.0",
+    "find-up": "^1.1.2",
     "firstline": "^1.2.0",
     "fs-extra": "0.30.0",
     "lodash": "4.13.1",
