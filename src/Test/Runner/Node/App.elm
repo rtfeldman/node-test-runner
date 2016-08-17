@@ -14,6 +14,9 @@ import Html.App
 import Task
 import Random.Pcg
 import Time exposing (Time)
+import Json.Decode exposing (Value, Decoder, string, decodeValue, customDecoder)
+import Json.Decode.Extra exposing (maybeNull)
+import String
 
 
 type Msg subMsg
@@ -146,25 +149,59 @@ toThunksHelp labels runner =
             List.concatMap (toThunksHelp labels) runners
 
 
+intFromString : Decoder Int
+intFromString =
+    customDecoder string String.toInt
+
+
 {-| Run the tests and render the results as a Web page.
 -}
-run : RunnerOptions -> AppOptions msg model -> Test -> Program Never
+run : RunnerOptions -> AppOptions msg model -> Test -> Program Value
 run { runs, seed } appOpts test =
     let
-        cmd =
-            Task.perform fromNever Init Time.now
+        init maybeInitialSeed =
+            let
+                cmd =
+                    Task.perform fromNever Init Time.now
 
-        init =
-            ( Uninitialized appOpts.update
-                { maybeNumericSeed = seed
-                , runs = runs
-                , test = test
-                , init = appOpts.init
-                }
-            , cmd
-            )
+                initialSeed : Maybe Int
+                initialSeed =
+                    case ( decodeValue (maybeNull intFromString) maybeInitialSeed, seed ) of
+                        -- The --seed argument didn't decode
+                        ( Err str, _ ) ->
+                            Debug.crash ("Invalid --seed argument: " ++ str)
+
+                        -- The user provided both a --seed flag and a seed from Elm
+                        ( Ok (Just fromCli), Just fromElm ) ->
+                            if fromCli == fromElm then
+                                -- If they were the same, then that's no problem.
+                                seed
+                            else
+                                -- If they were different, crash. We don't know which to use.
+                                Debug.crash ("Received both a --seed flag (" ++ toString fromCli ++ ") and a runner option seed (" ++ toString fromElm ++ "). Which initial seed did you mean to use?")
+
+                        -- User passed --seed but not an Elm arg
+                        ( Ok (Just fromCli), Nothing ) ->
+                            Just fromCli
+
+                        -- User passed an Elm arg but not --seed
+                        ( Ok Nothing, Just fromElm ) ->
+                            seed
+
+                        -- User passed neither --seed nor an Elm arg
+                        ( Ok Nothing, Nothing ) ->
+                            Nothing
+            in
+                ( Uninitialized appOpts.update
+                    { maybeNumericSeed = initialSeed
+                    , runs = runs
+                    , test = test
+                    , init = appOpts.init
+                    }
+                , cmd
+                )
     in
-        Html.App.program
+        Html.App.programWithFlags
             { init = init
             , update = initOrUpdate
             , view = \_ -> Html.text "This should be run in Node, not in a browser!"

@@ -289,7 +289,7 @@ type alias Emitter msg =
 Fuzz tests use a default run count of 100, and an initial seed based on the
 system time when the test runs begin.
 -}
-run : Emitter Msg -> Test -> Program Never
+run : Emitter Msg -> Test -> Program Value
 run =
     runWithOptions defaultOptions
 
@@ -314,7 +314,7 @@ type alias Options =
 {-| Run the test using the provided options. If `Nothing` is provided for either
 `runs` or `seed`, it will fall back on the options used in [`run`](#run).
 -}
-runWithOptions : Options -> Emitter Msg -> Test -> Program Never
+runWithOptions : Options -> Emitter Msg -> Test -> Program Value
 runWithOptions { runs, seed } emit =
     Test.Runner.Node.App.run
         { runs = runs

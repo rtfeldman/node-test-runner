@@ -23,16 +23,18 @@ var args = minimist(process.argv.slice(2), {
     alias: {
         'help': 'h',
         'yes': 'y',
+        'seed': 's',
         'compiler': 'c'
     },
     boolean: [ 'yes', 'warn', 'version', 'help' ],
-    string: [ 'compiler' ]
+    string: [ 'compiler', 'seed' ]
 });
 
 if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
+  console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
   process.exit(1);
 }
 
@@ -104,9 +106,16 @@ function evalElmCode (compiledCode, testModuleName) {
   var testModule = getTestModule();
   if (testModule === undefined) { throw 'Elm.' + testModuleName + ' is not defined. Make sure you provide a file compiled by Elm!' };
 
+  var initialSeed = null;
+
+  if (args.seed !== undefined) {
+    initialSeed = args.seed;
+  }
+
   // Apply Node polyfills as necessary.
   var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
   var document = {body: {}, createTextNode: function() {}};
+  pathToMake = args.compiler;
   if (typeof XMLHttpRequest === 'undefined') { XMLHttpRequest = function() { return { addEventListener: function() {}, open: function() {}, send: function() {} }; }; }
   if (typeof FormData === 'undefined') { FormData = function () { this._data = []; }; FormData.prototype.append = function () { this._data.push(Array.prototype.slice.call(arguments)); }; }
 
@@ -136,7 +145,7 @@ function evalElmCode (compiledCode, testModuleName) {
   }
 
   // Run the Elm app.
-  var app = testModule.worker();
+  var app = testModule.worker(initialSeed);
 
   // Receive messages from ports and translate them into appropriate JS calls.
   app.ports.emit.subscribe(function(msg) {

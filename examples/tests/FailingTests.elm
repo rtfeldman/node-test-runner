@@ -9,7 +9,7 @@ import Json.Encode exposing (Value)
 import Char
 
 
-main : Program Never
+main : Program Value
 main =
     [ testWithoutNums
     , testOxfordify
