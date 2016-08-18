@@ -248,9 +248,9 @@ reportBegin emit { testCount, initialSeed } =
     chalkWith emit <|
         [ { styles = []
           , text =
-                "Running "
+                "\nelm-test\n--------\n\nRunning "
                     ++ pluralize "test" "tests" testCount
-                    ++ ". To reproduce these results: elm-test --seed "
+                    ++ ". To reproduce these results, run: elm-test --seed "
                     ++ toString initialSeed
                     ++ "\n"
           }
