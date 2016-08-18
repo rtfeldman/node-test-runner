@@ -6,7 +6,7 @@ import Test exposing (..)
 import Json.Encode exposing (Value)
 
 
-main : Program Never
+main : Program Value
 main =
     [ plainExpectation ]
         |> concat
