@@ -208,8 +208,14 @@ findUp('elm-package.json', { cwd: path.dirname(testFile) })
 
         temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
             var dest = info.path;
-            var compileProcess = compile( [testFile],
-                {output: dest, spawn: spawnCompiler, pathToMake: pathToMake, warn:args.warn});
+            var compileProcess = compile( [testFile], {
+              output: dest,
+              verbose: args.verbose,
+              yes: true,
+              spawn: spawnCompiler,
+              pathToMake: pathToMake,
+              warn:args.warn
+            });
 
             compileProcess.on('close', function(exitCode) {
                 if (exitCode !== 0) {
