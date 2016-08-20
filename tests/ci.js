@@ -56,18 +56,16 @@ exec('elm-test init --yes');
 cd('tests');
 exec('elm-package install --yes');
 cd('..');
-// TODO fix test; it always fails, but running the steps manually, they succeed.
-// assertTestFailure()
+assertTestFailure();
 
-// delete the failing test and the comma on the preceding line
-sed('-i', /.*should fail.*/, '', 'tests/Tests.elm');
-sed('-i', /abcdefg"\)\),/, 'abcdefg"))', 'tests/Tests.elm');
+// update failing test to passing test
+sed('-i', /should fail/, 'should pass', 'tests/Tests.elm');
+sed('-i', /Expect.fail "failed as expected!"/, 'Expect.pass', 'tests/Tests.elm');
 rm('-Rf', 'tests/elm-stuff');
 cd('tests');
 exec('elm-package install --yes');
 cd('..');
-// TODO fix test; it always fails, but running the steps manually, they succeed.
-// assertTestSuccess()
+assertTestSuccess();
 
 cd('..');
 rm('-Rf', 'tmp');
