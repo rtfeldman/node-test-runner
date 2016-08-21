@@ -238,7 +238,7 @@ process.on('uncaughtException', function(error) {
     // This module does not take arguments though! You probably need to change the
     // initialization code to something like `Elm.Main.fullscreen()`]"
     console.error("Error starting the node-test-runner.");
-    console.error("Please check your javascript node-test-runner and Elm node-test runner packages versions are compatible");
+    console.error("Please check your Javascript 'elm-test' and Elm 'node-test-runner' package versions are compatible");
   } else {
     console.error("Unhandled exception while running the tests:", error);
   }
