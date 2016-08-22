@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var processTitle = "elm-test"
+var processTitle = "elm-test";
 
 process.title = processTitle;
 
@@ -41,6 +41,20 @@ if (args.help) {
 if (args.version) {
   console.log(require(path.join(__dirname, "..", "package.json")).version);
   process.exit(0);
+}
+
+checkNodeVersion();
+
+function checkNodeVersion() {
+  var nodeVersionString = process.versions.node;
+  var nodeVersion = _.map(_.split(nodeVersionString, '.'), _.parseInt);
+
+  if((nodeVersion[0] === 0 && nodeVersion[1] < 11) ||
+     (nodeVersion[0] === 0 && nodeVersion[1] === 11 && nodeVersion[2] < 13)) {
+    console.log("using node v" + nodeVersionString);
+    console.error("elm-test requires node v0.11.13 or greater - upgrade the installed version of node and try again");
+    process.exit(1);
+  }
 }
 
 if (args._[0] == "init") {
@@ -86,7 +100,7 @@ function evalElmCode (compiledCode, testModuleName) {
   var Elm = function(module) { eval(compiledCode); return module.exports; }({});
 
   // Make sure necessary things are defined.
-  if (typeof Elm === 'undefined') { throw 'elm-io config error: Elm is not defined. Make sure you provide a file compiled by Elm!'}
+  if (typeof Elm === 'undefined') { throw 'elm-io config error: Elm is not defined. Make sure you provide a file compiled by Elm!'; }
 
   function getTestModule() {
       var module = Elm;
@@ -104,7 +118,7 @@ function evalElmCode (compiledCode, testModuleName) {
   }
 
   var testModule = getTestModule();
-  if (testModule === undefined) { throw 'Elm.' + testModuleName + ' is not defined. Make sure you provide a file compiled by Elm!' };
+  if (testModule === undefined) { throw 'Elm.' + testModuleName + ' is not defined. Make sure you provide a file compiled by Elm!'; }
 
   var initialSeed = null;
 
