@@ -238,7 +238,7 @@ findUp('elm-package.json', { cwd: path.dirname(testFile) })
                 unlinkDir: 'removed',
             };
 
-            watcher.on('all', (event, filePath) => {
+            watcher.on('all', function (event, filePath) {
                 var relativePath = path.relative(elmRootDir, filePath);
                 var eventName = eventNameMap[event] || event;
 
