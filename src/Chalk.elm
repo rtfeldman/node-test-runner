@@ -1,6 +1,7 @@
 module Chalk exposing (Chalk, encode, withColorChar)
 
 import Json.Encode as Encode exposing (Value)
+import String
 
 
 type alias Chalk =
@@ -16,5 +17,5 @@ encode { styles, text } =
 
 
 withColorChar : Char -> String -> String -> Chalk
-withColorChar char textColor str =
-    { styles = [ textColor ], text = "✗ " ++ str ++ "\n" }
+withColorChar icon textColor str =
+    { styles = [ textColor ], text = String.fromChar icon ++ " " ++ str ++ "\n" }
