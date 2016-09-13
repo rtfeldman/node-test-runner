@@ -14,7 +14,8 @@ var compile    = require("node-elm-compiler").compile,
   spawn        = require("cross-spawn"),
   minimist     = require("minimist"),
   firstline    = require("firstline"),
-  findUp       = require("find-up");
+  findUp       = require("find-up"),
+  chokidar     = require("chokidar");
 
 var elm = {
   'elm-package': 'elm-package'
@@ -24,9 +25,10 @@ var args = minimist(process.argv.slice(2), {
         'help': 'h',
         'yes': 'y',
         'seed': 's',
-        'compiler': 'c'
+        'compiler': 'c',
+        'watch': 'w'
     },
-    boolean: [ 'yes', 'warn', 'version', 'help' ],
+    boolean: [ 'yes', 'warn', 'version', 'help', 'watch' ],
     string: [ 'compiler', 'seed' ]
 });
 
@@ -35,6 +37,7 @@ if (args.help) {
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
   console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
+  console.log("Usage: elm-test [--watch] # Run tests on file changes\n");
   process.exit(1);
 }
 
@@ -167,10 +170,12 @@ function evalElmCode (compiledCode, testModuleName) {
     var data = msg[1];
 
     if (msgType === 'FINISHED') {
-      console.log(chalkify(data.message));
-      process.exit(data.exitCode);
+        console.log(chalkify(data.message));
+        if (!args.watch) {
+            process.exit(data.exitCode);
+        }
     } else if (msgType === 'CHALK') {
-      console.log(chalkify(data));
+        console.log(chalkify(data));
     }
   });
 }
@@ -220,29 +225,58 @@ findUp('elm-package.json', { cwd: path.dirname(testFile) })
             process.chdir(elmRootDir);
         }
 
-        temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
-            var dest = info.path;
-            var compileProcess = compile( [testFile], {
-              output: dest,
-              verbose: args.verbose,
-              yes: true,
-              spawn: spawnCompiler,
-              pathToMake: pathToMake,
-              warn:args.warn
+        if (args.watch) {
+            console.log('Running in watch mode');
+
+            var watcher = chokidar.watch('**/*.elm', { ignoreInitial: true });
+
+            var eventNameMap = {
+                add: 'added',
+                addDir: 'added',
+                change: 'changed',
+                unlink: 'removed',
+                unlinkDir: 'removed',
+            };
+
+            watcher.on('all', function (event, filePath) {
+                var relativePath = path.relative(elmRootDir, filePath);
+                var eventName = eventNameMap[event] || event;
+
+                console.log('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
+
+                runTests();
             });
+        }
 
-            compileProcess.on('close', function(exitCode) {
-                if (exitCode !== 0) {
-                    console.error("Compilation failed for", testFile);
-                    process.exit(exitCode);
-                }
+        function runTests () {
+            temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
+                var dest = info.path;
+                var compileProcess = compile( [testFile], {
+                    output: dest,
+                    verbose: args.verbose,
+                    yes: true,
+                    spawn: spawnCompiler,
+                    pathToMake: pathToMake,
+                    warn:args.warn
+                });
 
-                testModulePromise.then(function (testModuleName) {
-                    evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), testModuleName);
+                compileProcess.on('close', function(exitCode) {
+                    if (exitCode !== 0) {
+                        console.error("Compilation failed for", testFile);
+                        if (!args.watch) {
+                            process.exit(exitCode);
+                        }
+                    } else {
+                        testModulePromise.then(function (testModuleName) {
+                            evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), testModuleName);
+                        });
+                    }
                 });
             });
-        });
-});
+        }
+
+        runTests();
+    });
 
 
 process.on('uncaughtException', function(error) {
