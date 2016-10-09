@@ -26,10 +26,11 @@ var args = minimist(process.argv.slice(2), {
         'yes': 'y',
         'seed': 's',
         'compiler': 'c',
+        'report': 'r',
         'watch': 'w'
     },
     boolean: [ 'yes', 'warn', 'version', 'help', 'watch' ],
-    string: [ 'compiler', 'seed' ]
+    string: [ 'compiler', 'seed', 'report' ]
 });
 
 if (args.help) {
@@ -37,6 +38,7 @@ if (args.help) {
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
   console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
+  console.log("Usage: elm-test [--report json or chalk (default)] # Print results to stdout in given format\n");
   console.log("Usage: elm-test [--watch] # Run tests on file changes\n");
   process.exit(1);
 }
@@ -45,6 +47,12 @@ if (args.version) {
   console.log(require(path.join(__dirname, "..", "package.json")).version);
   process.exit(0);
 }
+
+var report = "chalk";
+if (args.report !== undefined) {
+  report = args.report;
+}
+
 
 checkNodeVersion();
 
@@ -129,6 +137,9 @@ function evalElmCode (compiledCode, testModuleName) {
     initialSeed = args.seed;
   }
 
+
+
+
   // Apply Node polyfills as necessary.
   var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
   var document = {body: {}, createTextNode: function() {}};
@@ -162,7 +173,7 @@ function evalElmCode (compiledCode, testModuleName) {
   }
 
   // Run the Elm app.
-  var app = testModule.worker(initialSeed);
+  var app = testModule.worker({seed: initialSeed, report: report});
 
   // Receive messages from ports and translate them into appropriate JS calls.
   app.ports.emit.subscribe(function(msg) {
@@ -170,22 +181,34 @@ function evalElmCode (compiledCode, testModuleName) {
     var data = msg[1];
 
     if (msgType === 'FINISHED') {
+      if (data.format === "CHALK") {
         console.log(chalkify(data.message));
-        if (!args.watch) {
-            process.exit(data.exitCode);
+      } else {
+        console.log(JSON.stringify(data.message));
+      }
+
+      if (!args.watch) {
+        process.exit(data.exitCode);
+      }
+    } else if (msgType === "STARTED" || msgType === "TEST_COMPLETED")  {
+        if (data.format === "CHALK") {
+          console.log(chalkify(data.message));
+        } else {
+          console.log(JSON.stringify(data.message));
         }
-    } else if (msgType === 'CHALK') {
-        console.log(chalkify(data));
+
     }
   });
 }
+
 
 var testFile = args._[0],
     cwd = __dirname,
     pathToMake = undefined;
 
 function spawnCompiler(cmd, args, opts) {
-  var compilerOpts = _.defaults({stdio: "inherit"}, opts);
+  var compilerOpts =
+      _.defaults({stdio: [process.stdin, report === "chalk" ? process.stdout : 'ignore', process.stderr] }, opts);
 
   return spawn(cmd, args, compilerOpts);
 }
@@ -217,6 +240,12 @@ var testModulePromise = firstline(testFile).then(function (testModuleLine) {
     return 'Main';
 });
 
+function infoLog(msg) {
+  if (report === "chalk") {
+    console.log(msg);
+  }
+}
+
 findUp('elm-package.json', { cwd: path.dirname(testFile) })
     .then(function (elmPackagePath) {
         var elmRootDir = path.dirname(elmPackagePath);
@@ -226,7 +255,7 @@ findUp('elm-package.json', { cwd: path.dirname(testFile) })
         }
 
         if (args.watch) {
-            console.log('Running in watch mode');
+            infoLog('Running in watch mode');
 
             var watcher = chokidar.watch('**/*.elm', { ignoreInitial: true });
 
@@ -242,7 +271,7 @@ findUp('elm-package.json', { cwd: path.dirname(testFile) })
                 var relativePath = path.relative(elmRootDir, filePath);
                 var eventName = eventNameMap[event] || event;
 
-                console.log('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
+                infoLog('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
 
                 runTests();
             });
