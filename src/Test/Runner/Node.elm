@@ -8,17 +8,16 @@ passed and 1 if any failed.
 @docs run, runWithOptions
 -}
 
-import Test exposing (Test)
-import Test.Runner exposing (formatLabels)
-import Expect exposing (Expectation)
-import Chalk exposing (Chalk)
+import Test.Reporter.Reporter exposing (TestReporter, Report(..), createReporter)
+import Test.Reporter.Result exposing (Failure, TestResult)
+import Test.Runner.Node.App as App
 import Dict exposing (Dict)
-import Task
-import Set exposing (Set)
-import Test.Runner.Node.App
+import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
+import Set exposing (Set)
+import Task
+import Test exposing (Test)
 import Time exposing (Time)
-import String
 
 
 type alias TestId =
@@ -32,56 +31,18 @@ type alias Model =
     , startTime : Time
     , finishTime : Maybe Time
     , completed : List TestResult
+    , testReporter : TestReporter
     }
 
 
-type alias TestResult =
-    { labels : List String
-    , expectations : List Expectation
-    , duration : Time
-    }
+type alias Emitter msg =
+    ( String, Value ) -> Cmd msg
 
 
 type Msg
     = Dispatch Time
     | Complete TestId ( List String, List Expectation ) Time Time
     | Finish Time
-
-
-type alias Failure =
-    { given : String, message : String }
-
-
-failuresToChalk : List String -> List Failure -> List Chalk
-failuresToChalk labels failures =
-    labelsToChalk labels ++ List.concatMap failureToChalk failures
-
-
-labelsToChalk : List String -> List Chalk
-labelsToChalk =
-    formatLabels (Chalk.withColorChar '↓' "dim") (Chalk.withColorChar '✗' "red")
-
-
-failureToChalk : Failure -> List Chalk
-failureToChalk { given, message } =
-    let
-        messageChalk =
-            { styles = [], text = "\n" ++ indent message ++ "\n\n" }
-    in
-        if String.isEmpty given then
-            [ messageChalk ]
-        else
-            [ { styles = [ "dim" ], text = "\nGiven " ++ given ++ "\n" }
-            , messageChalk
-            ]
-
-
-indent : String -> String
-indent str =
-    str
-        |> String.split "\n"
-        |> List.map ((++) "    ")
-        |> String.join "\n"
 
 
 warn : String -> a -> a
@@ -94,7 +55,7 @@ warn str result =
 
 
 update : Emitter Msg -> Msg -> Model -> ( Model, Cmd Msg )
-update emit msg model =
+update emit msg ({ testReporter } as model) =
     case msg of
         Finish finishTime ->
             let
@@ -103,32 +64,11 @@ update emit msg model =
                         |> List.filter (.expectations >> List.all ((/=) Expect.pass))
                         |> List.length
 
-                passed =
-                    (List.length model.completed) - failed
-
                 duration =
                     finishTime - model.startTime
 
-                headline =
-                    if failed > 0 then
-                        [ { styles = [ "underline", "red" ], text = "\nTEST RUN FAILED\n\n" } ]
-                    else
-                        [ { styles = [ "underline", "green" ], text = "\nTEST RUN PASSED\n\n" } ]
-
-                stat label value =
-                    [ { styles = [ "dim" ], text = label }
-                    , { styles = [], text = value ++ "\n" }
-                    ]
-
                 summary =
-                    [ headline
-                    , stat "Duration: " (formatDuration duration)
-                    , stat "Passed:   " (toString passed)
-                    , stat "Failed:   " (toString failed)
-                    ]
-                        |> List.concat
-                        |> List.map Chalk.encode
-                        |> Encode.list
+                    testReporter.reportSummary duration model.completed
 
                 exitCode =
                     if failed == 0 then
@@ -139,6 +79,7 @@ update emit msg model =
                 data =
                     Encode.object
                         [ ( "exitCode", Encode.int exitCode )
+                        , ( "format", Encode.string testReporter.format )
                         , ( "message", summary )
                         ]
             in
@@ -155,8 +96,22 @@ update emit msg model =
 
                 newModel =
                     { model | completed = result :: model.completed }
+
+                reportCmd =
+                    case (testReporter.reportComplete result) of
+                        Just val ->
+                            emit
+                                ( "TEST_COMPLETED"
+                                , Encode.object
+                                    [ ( "format", Encode.string testReporter.format )
+                                    , ( "message", val )
+                                    ]
+                                )
+
+                        Nothing ->
+                            Cmd.none
             in
-                ( newModel, Cmd.batch [ chalkAllFailures emit result, dispatch ] )
+                ( newModel, Cmd.batch [ reportCmd, dispatch ] )
 
         Dispatch startTime ->
             case model.queue of
@@ -191,25 +146,9 @@ never a =
     never a
 
 
-chalkAllFailures : Emitter Msg -> TestResult -> Cmd Msg
-chalkAllFailures emit { duration, labels, expectations } =
-    case List.filterMap Expect.getFailure expectations of
-        [] ->
-            Cmd.none
-
-        failures ->
-            failuresToChalk labels failures
-                |> chalkWith emit
-
-
 dispatch : Cmd Msg
 dispatch =
     Task.perform never Dispatch Time.now
-
-
-formatDuration : Time -> String
-formatDuration time =
-    toString time ++ " ms"
 
 
 init :
@@ -217,9 +156,10 @@ init :
     -> { initialSeed : Int
        , startTime : Time
        , thunks : List (() -> ( List String, List Expectation ))
+       , report : Report
        }
     -> ( Model, Cmd Msg )
-init emit { startTime, initialSeed, thunks } =
+init emit { startTime, initialSeed, thunks, report } =
     let
         indexedThunks : List ( TestId, () -> ( List String, List Expectation ) )
         indexedThunks =
@@ -228,6 +168,9 @@ init emit { startTime, initialSeed, thunks } =
         testCount =
             List.length indexedThunks
 
+        testReporter =
+            createReporter report
+
         model =
             { available = Dict.fromList indexedThunks
             , running = Set.empty
@@ -235,53 +178,19 @@ init emit { startTime, initialSeed, thunks } =
             , completed = []
             , startTime = startTime
             , finishTime = Nothing
+            , testReporter = testReporter
             }
 
         reportCmd =
-            reportBegin emit { testCount = testCount, initialSeed = initialSeed }
+            emit
+                ( "STARTED"
+                , Encode.object
+                    [ ( "format", Encode.string testReporter.format )
+                    , ( "message", testReporter.reportBegin { testCount = testCount, initialSeed = initialSeed } )
+                    ]
+                )
     in
         ( model, Cmd.batch [ dispatch, reportCmd ] )
-
-
-reportBegin : Emitter Msg -> { testCount : Int, initialSeed : Int } -> Cmd Msg
-reportBegin emit { testCount, initialSeed } =
-    chalkWith emit <|
-        [ { styles = []
-          , text =
-                "\nelm-test\n--------\n\nRunning "
-                    ++ pluralize "test" "tests" testCount
-                    ++ ". To reproduce these results, run: elm-test --seed "
-                    ++ toString initialSeed
-                    ++ "\n"
-          }
-        ]
-
-
-pluralize : String -> String -> Int -> String
-pluralize singular plural count =
-    let
-        suffix =
-            if count == 1 then
-                singular
-            else
-                plural
-    in
-        String.join " " [ toString count, suffix ]
-
-
-chalkWith : Emitter Msg -> List Chalk -> Cmd Msg
-chalkWith emit chalks =
-    let
-        encoded =
-            chalks
-                |> List.map Chalk.encode
-                |> Encode.list
-    in
-        emit ( "CHALK", encoded )
-
-
-type alias Emitter msg =
-    ( String, Value ) -> Cmd msg
 
 
 {-| Run the test and report the results.
@@ -316,7 +225,7 @@ type alias Options =
 -}
 runWithOptions : Options -> Emitter Msg -> Test -> Program Value
 runWithOptions { runs, seed } emit =
-    Test.Runner.Node.App.run
+    App.run
         { runs = runs
         , seed = seed
         }

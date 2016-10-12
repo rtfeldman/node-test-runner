@@ -6,6 +6,7 @@ module Test.Runner.Node.App exposing (run)
 
 -}
 
+import Test.Reporter.Reporter as Reporter
 import Test exposing (Test)
 import Test.Runner exposing (Runner(..))
 import Expect exposing (Expectation)
@@ -14,7 +15,7 @@ import Html.App
 import Task
 import Random.Pcg
 import Time exposing (Time)
-import Json.Decode exposing (Value, Decoder, string, decodeValue, customDecoder)
+import Json.Decode exposing (Value, Decoder, string, decodeValue, decodeString, customDecoder, object2, (:=), andThen)
 import Json.Decode.Extra exposing (maybeNull)
 import String
 
@@ -28,6 +29,7 @@ type alias InitArgs =
     { initialSeed : Int
     , startTime : Time
     , thunks : List (() -> ( List String, List Expectation ))
+    , report : Reporter.Report
     }
 
 
@@ -35,7 +37,8 @@ type Model subMsg subModel
     = Initialized (SubUpdate subMsg subModel) subModel
     | Uninitialized
         (SubUpdate subMsg subModel)
-        { maybeNumericSeed : Maybe Int
+        { maybeInitialSeed : Maybe Int
+        , report : Reporter.Report
         , runs : Int
         , test : Test
         , init : InitArgs -> ( subModel, Cmd subMsg )
@@ -59,12 +62,12 @@ fromNever a =
 initOrUpdate : Msg subMsg -> Model subMsg subModel -> ( Model subMsg subModel, Cmd (Msg subMsg) )
 initOrUpdate msg maybeModel =
     case maybeModel of
-        Uninitialized update { maybeNumericSeed, runs, test, init } ->
+        Uninitialized update { maybeInitialSeed, report, runs, test, init } ->
             case msg of
                 Init time ->
                     let
                         numericSeed =
-                            case maybeNumericSeed of
+                            case maybeInitialSeed of
                                 Just givenNumericSeed ->
                                     givenNumericSeed
 
@@ -84,6 +87,7 @@ initOrUpdate msg maybeModel =
                                 { initialSeed = numericSeed
                                 , startTime = time
                                 , thunks = thunks
+                                , report = report
                                 }
                     in
                         ( Initialized update subModel, Cmd.map SubMsg subCmd )
@@ -154,46 +158,74 @@ intFromString =
     customDecoder string String.toInt
 
 
+decodeReport : Decoder String -> Decoder Reporter.Report
+decodeReport decoder =
+    customDecoder decoder
+        (\str ->
+            case str of
+                "json" ->
+                    Result.Ok Reporter.JsonReport
+
+                "chalk" ->
+                    Result.Ok Reporter.ChalkReport
+
+                _ ->
+                    Result.Err <| "Invalid --report argument: " ++ str
+        )
+
+
+decodeInitArgs : Value -> Result String ( Maybe Int, Reporter.Report )
+decodeInitArgs args =
+    decodeValue
+        (object2 (,)
+            ("seed" := (maybeNull intFromString))
+            ("report" := decodeReport string)
+        )
+        args
+
+
 {-| Run the tests and render the results as a Web page.
 -}
 run : RunnerOptions -> AppOptions msg model -> Test -> Program Value
 run { runs, seed } appOpts test =
     let
-        init maybeInitialSeed =
+        init args =
             let
                 cmd =
                     Task.perform fromNever Init Time.now
 
-                initialSeed : Maybe Int
-                initialSeed =
-                    case ( decodeValue (maybeNull intFromString) maybeInitialSeed, seed ) of
+                initArgs : ( Maybe Int, Reporter.Report )
+                initArgs =
+                    case ( decodeInitArgs args, seed ) of
+                        -- ( decodeValue (maybeNull intFromString) maybeInitialSeed, seed ) of
                         -- The --seed argument didn't decode
                         ( Err str, _ ) ->
                             Debug.crash ("Invalid --seed argument: " ++ str)
 
                         -- The user provided both a --seed flag and a seed from Elm
-                        ( Ok (Just fromCli), Just fromElm ) ->
+                        ( Ok ( Just fromCli, report ), Just fromElm ) ->
                             if fromCli == fromElm then
                                 -- If they were the same, then that's no problem.
-                                seed
+                                ( seed, report )
                             else
                                 -- If they were different, crash. We don't know which to use.
                                 Debug.crash ("Received both a --seed flag (" ++ toString fromCli ++ ") and a runner option seed (" ++ toString fromElm ++ "). Which initial seed did you mean to use?")
 
                         -- User passed --seed but not an Elm arg
-                        ( Ok (Just fromCli), Nothing ) ->
-                            Just fromCli
+                        ( Ok ( Just fromCli, report ), Nothing ) ->
+                            ( Just fromCli, report )
 
                         -- User passed an Elm arg but not --seed
-                        ( Ok Nothing, Just fromElm ) ->
-                            seed
+                        ( Ok ( Nothing, report ), Just fromElm ) ->
+                            ( seed, report )
 
                         -- User passed neither --seed nor an Elm arg
-                        ( Ok Nothing, Nothing ) ->
-                            Nothing
+                        ( Ok ( Nothing, report ), Nothing ) ->
+                            ( Nothing, report )
             in
                 ( Uninitialized appOpts.update
-                    { maybeNumericSeed = initialSeed
+                    { maybeInitialSeed = fst initArgs
+                    , report = snd initArgs
                     , runs = runs
                     , test = test
                     , init = appOpts.init
