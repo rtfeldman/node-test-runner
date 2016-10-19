@@ -22,10 +22,9 @@ visitExample : BrowserTest
 visitExample =
     test "steps work" <|
         \() ->
-            [ Visit "http://bites.goodeggs.com/posts/selenium-webdriver-nodejs-tutorial/"
-            , Title (\_ -> Expect.pass)
-              -- TODO Expect.contains "Getting started with Selenium Webdriver for node.js"
-            , Text ".post .meta time" (Expect.equal "December 30th, 2014")
-            , ClickLink "Bites"
-            , Url (Expect.equal "http://bites.goodeggs.com/")
+            [ Visit "http://elm-lang.org/"
+            , Title (Expect.equal "home")
+            , Text ".splash div:nth-child(2)" (Expect.equal "A delightful language for reliable webapps.")
+            , ClickLink "Get Started"
+            , Url (Expect.equal "https://guide.elm-lang.org/get_started.html")
             ]
