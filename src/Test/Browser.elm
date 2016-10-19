@@ -9,9 +9,9 @@ type BrowserTest
 
 
 type EffectTest val
-    = Expectation (val -> Expectation)
-    | PortEffect String Value (Value -> Expectation)
+    = PortEffect String Value (Value -> Expectation)
     | ChainedEffect (EffectTest val) (val -> EffectTest val)
+    | NoEffect
 
 
 type Step
@@ -35,7 +35,7 @@ stepsToBrowserEffect : List Step -> EffectTest Value
 stepsToBrowserEffect steps =
     case steps of
         [] ->
-            Expectation (\_ -> Expect.pass)
+            NoEffect
 
         step :: rest ->
             List.foldl chain (stepToBrowserEffect step) rest
@@ -43,7 +43,7 @@ stepsToBrowserEffect steps =
 
 chain : Step -> EffectTest Value -> EffectTest Value
 chain nextStep result =
-    ChainedEffect result (\_ -> stepToBrowserEffect nextStep)
+    ChainedEffect (stepToBrowserEffect nextStep) (\_ -> result)
 
 
 alwaysPass : a -> Expectation

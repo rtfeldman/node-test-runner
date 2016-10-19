@@ -14,6 +14,7 @@ import Test.Runner.Node.App as App exposing (ExpectationsOrEffects(..))
 import Dict exposing (Dict)
 import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
+import Json.Decode as Decode exposing (Decoder)
 import Set exposing (Set)
 import Task
 import Test exposing (Test)
@@ -29,7 +30,7 @@ type alias Model =
     { available : Dict TestId (() -> ( List String, ExpectationsOrEffects ))
     , running : Set TestId
     , queue : List TestId
-    , maybePending : Maybe (Value -> EffectTest Value)
+    , maybePending : Maybe ( TestId, Value -> ( List String, EffectTest Value ) )
     , startTime : Time
     , finishTime : Maybe Time
     , completed : List TestResult
@@ -43,8 +44,10 @@ type alias Emitter msg =
 
 type Msg
     = Dispatch Time
+    | DispatchNext
     | Complete TestId ( List String, List Expectation ) Time Time
     | Finish Time
+    | RunPending Value
     | Receive ReceivedValue
 
 
@@ -60,6 +63,26 @@ warn str result =
 update : Emitter Msg -> Msg -> Model -> ( Model, Cmd Msg )
 update emit msg ({ testReporter } as model) =
     case msg of
+        DispatchNext ->
+            ( model, Task.perform never Dispatch Time.now )
+
+        RunPending val ->
+            case model.maybePending of
+                Just ( testId, getPendingTests ) ->
+                    let
+                        ( maybeNext, cmd ) =
+                            runEffectTest emit testId (getPendingTests val)
+
+                        maybePending =
+                            Maybe.map (\fn -> ( testId, \val -> fn val )) maybeNext
+                    in
+                        ( { model | maybePending = maybePending }, cmd )
+
+                Nothing ->
+                    -- When it's time to RunPending and we're out of pending tests,
+                    -- that means it's time to quit Webdriver.
+                    ( model, emitWebdriver emit "QUIT" Encode.null )
+
         Finish finishTime ->
             let
                 failed =
@@ -149,7 +172,7 @@ update emit msg ({ testReporter } as model) =
             ( model, Cmd.none )
 
 
-runTest : Emitter Msg -> Time -> TestId -> ( List String, ExpectationsOrEffects ) -> ( Maybe (Value -> EffectTest Value), Cmd Msg )
+runTest : Emitter Msg -> Time -> TestId -> ( List String, ExpectationsOrEffects ) -> ( Maybe ( TestId, Value -> ( List String, EffectTest Value ) ), Cmd Msg )
 runTest emit startTime testId ( labels, expectationsOrEffects ) =
     case expectationsOrEffects of
         Expectations expectations ->
@@ -160,34 +183,48 @@ runTest emit startTime testId ( labels, expectationsOrEffects ) =
                 ( Nothing, Task.perform never complete Time.now )
 
         Effects effectTest ->
-            -- TODO add the QUIT at the end
-            runEffectTest emit startTime testId ( labels, ChainedEffect initEffectTest (\_ -> effectTest) )
+            let
+                ( maybeNext, cmd ) =
+                    runEffectTest emit testId ( labels, ChainedEffect initEffectTest (\_ -> effectTest) )
+            in
+                ( Maybe.map (\fn -> ( testId, \val -> fn val )) maybeNext
+                , cmd
+                )
 
 
-runEffectTest : Emitter Msg -> Time -> TestId -> ( List String, EffectTest Value ) -> ( Maybe (Value -> EffectTest Value), Cmd Msg )
-runEffectTest emit startTime testId ( labels, effectTest ) =
+runEffectTest : Emitter Msg -> TestId -> ( List String, EffectTest Value ) -> ( Maybe (Value -> ( List String, EffectTest Value )), Cmd Msg )
+runEffectTest emit testId ( labels, effectTest ) =
     case effectTest of
-        Expectation callback ->
-            -- TODO this is dumb, it should not take a callback obviously
-            -- callback Encode.null
+        NoEffect ->
             ( Nothing, Cmd.none )
 
         ChainedEffect currentTest runNextTest ->
-            -- TODO something is wrong here...we should not have a snd here.
-            ( Just runNextTest, snd (runEffectTest emit startTime testId ( labels, currentTest )) )
+            let
+                -- ( Maybe ( TestId, Value -> ( List String, EffectTest Value ) ), Cmd Msg )
+                ( maybeNext, cmd ) =
+                    runEffectTest emit testId ( labels, currentTest )
+            in
+                case maybeNext of
+                    Just getTest ->
+                        ( Just (\val -> ( labels, ChainedEffect (snd (getTest val)) runNextTest )), cmd )
+
+                    Nothing ->
+                        ( Just (\val -> ( labels, runNextTest val )), cmd )
 
         PortEffect cmdType payload handler ->
-            ( Nothing
-              -- TODO
-              --Just (\val -> handler val |> (Expectation val))
-            , emit
-                ( "WEBDRIVER"
-                , Encode.object
-                    [ ( "cmd", Encode.string cmdType )
-                    , ( "val", payload )
-                    ]
-                )
-            )
+            -- TODO pretty bad sign that handler is unused here...
+            ( Nothing, emitWebdriver emit cmdType payload )
+
+
+emitWebdriver : Emitter Msg -> String -> Value -> Cmd Msg
+emitWebdriver emit cmdType payload =
+    emit
+        ( "WEBDRIVER"
+        , Encode.object
+            [ ( "cmd", Encode.string cmdType )
+            , ( "val", payload )
+            ]
+        )
 
 
 initEffectTest : EffectTest Value
@@ -288,7 +325,7 @@ runWithOptions { runs, seed } emit =
         , update = update emit
         , subscriptions = \_ -> Sub.none
         }
-        (BrowserTest "" (\() -> Expectation (\_ -> Expect.pass)))
+        (BrowserTest "" (\() -> NoEffect))
 
 
 type alias Receive msg =
@@ -297,16 +334,58 @@ type alias Receive msg =
 
 decodeReceiveToMsg : Value -> Msg
 decodeReceiveToMsg val =
-    let
-        _ =
-            Debug.log "val" val
-    in
-        -- TODO make ReceivedValue more interesting
-        Receive ReceivedValue
+    case Decode.decodeValue receiveTupleDecoder val of
+        Ok msg ->
+            msg
+
+        Err str ->
+            Receive (ErrReceiving str)
+
+
+receiveTupleDecoder : Decoder Msg
+receiveTupleDecoder =
+    Decode.andThen (Decode.tuple2 (,) Decode.string Decode.value) (uncurry receiveDecoder)
+
+
+receiveDecoder : String -> Value -> Decoder Msg
+receiveDecoder msgType val =
+    case msgType of
+        "WEBDRIVER_FINISHED" ->
+            Decode.succeed DispatchNext
+
+        "WEBDRIVER_INITIALIZED" ->
+            -- val contains the browser
+            Decode.succeed (RunPending val)
+
+        "WEBDRIVER_SUCCESS" ->
+            Decode.succeed (RunPending Encode.null)
+
+        "WEBDRIVER_VISIT" ->
+            Decode.succeed (RunPending Encode.null)
+
+        "WEBDRIVER_CLICK_LINK" ->
+            Decode.succeed (RunPending Encode.null)
+
+        "WEBDRIVER_URL" ->
+            Decode.succeed (RunPending val)
+
+        "WEBDRIVER_TEXT" ->
+            Decode.succeed (RunPending val)
+
+        "WEBDRIVER_TITLE" ->
+            Decode.succeed (RunPending val)
+
+        _ ->
+            let
+                _ =
+                    Debug.log "Failed decoding " ( msgType, val )
+            in
+                Decode.fail ("Unrecognized msgType: " ++ msgType)
 
 
 type ReceivedValue
     = ReceivedValue
+    | ErrReceiving String
 
 
 {-| Run the test using the provided options. If `Nothing` is provided for either
