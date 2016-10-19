@@ -30,8 +30,7 @@ type alias Model =
     { available : Dict TestId (() -> ( List String, ExpectationsOrEffects ))
     , running : Set TestId
     , queue : List TestId
-    , maybePending : Maybe ( TestId, Decoder ( List String, EffectTest Value ) )
-    , nextExpectation : Decoder Expectation
+    , maybePending : Maybe ( TestId, Value -> ( List String, EffectTest Value ) )
     , startTime : Time
     , finishTime : Maybe Time
     , completed : List TestResult
@@ -69,25 +68,20 @@ update emit msg ({ testReporter } as model) =
 
         RunPending val ->
             case model.maybePending of
-                Just ( testId, decoder ) ->
-                    case Decode.decodeValue decoder val of
-                        Ok ( labels, pendingTest ) ->
-                            let
-                                ( maybeNext, cmd ) =
-                                    runEffectTest emit testId pendingTest
+                Just ( testId, getPendingTests ) ->
+                    let
+                        ( maybeNext, cmd ) =
+                            runEffectTest emit testId (getPendingTests val)
 
-                                maybePending =
-                                    Maybe.map ((,) testId) maybeNext
-                            in
-                                ( { model | maybePending = maybePending }, cmd )
-
-                        Err err ->
-                            -- TOOD test failed!
-                            ( model, emitQuit emit )
+                        maybePending =
+                            Maybe.map (\fn -> ( testId, \val -> fn val )) maybeNext
+                    in
+                        ( { model | maybePending = maybePending }, cmd )
 
                 Nothing ->
-                    -- TODO test passed!
-                    ( model, emitQuit emit )
+                    -- When it's time to RunPending and we're out of pending tests,
+                    -- that means it's time to quit Webdriver.
+                    ( model, emitWebdriver emit "QUIT" Encode.null )
 
         Finish finishTime ->
             let
@@ -178,11 +172,7 @@ update emit msg ({ testReporter } as model) =
                                 ( newModel, cmd )
 
 
-emitQuit emit =
-    emitWebdriver emit "QUIT" Encode.null
-
-
-runTest : Emitter Msg -> Time -> TestId -> ( List String, ExpectationsOrEffects ) -> ( Maybe ( TestId, Decoder ( List String, EffectTest Value ) ), Cmd Msg )
+runTest : Emitter Msg -> Time -> TestId -> ( List String, ExpectationsOrEffects ) -> ( Maybe ( TestId, Value -> ( List String, EffectTest Value ) ), Cmd Msg )
 runTest emit startTime testId ( labels, expectationsOrEffects ) =
     case expectationsOrEffects of
         Expectations expectations ->
@@ -197,12 +187,12 @@ runTest emit startTime testId ( labels, expectationsOrEffects ) =
                 ( maybeNext, cmd ) =
                     runEffectTest emit testId ( labels, ChainedEffect initEffectTest (\_ -> effectTest) )
             in
-                ( Maybe.map ((,) testId) maybeNext
+                ( Maybe.map (\fn -> ( testId, \val -> fn val )) maybeNext
                 , cmd
                 )
 
 
-runEffectTest : Emitter Msg -> TestId -> ( List String, EffectTest Value ) -> ( Maybe (Decoder ( List String, EffectTest Value )), Cmd Msg )
+runEffectTest : Emitter Msg -> TestId -> ( List String, EffectTest Value ) -> ( Maybe (Value -> ( List String, EffectTest Value )), Cmd Msg )
 runEffectTest emit testId ( labels, effectTest ) =
     case effectTest of
         NoEffect ->
@@ -214,13 +204,11 @@ runEffectTest emit testId ( labels, effectTest ) =
                     runEffectTest emit testId ( labels, currentTest )
             in
                 case maybeNext of
-                    Just decoder ->
-                        ( Just (Decode.map (\( _, test ) -> ( labels, ChainedEffect test runNextTest )) decoder)
-                        , cmd
-                        )
+                    Just getTest ->
+                        ( Just (\val -> ( labels, ChainedEffect (snd (getTest val)) runNextTest )), cmd )
 
                     Nothing ->
-                        ( Just (Decode.andThen Decode.value (\val -> Decode.succeed ( labels, runNextTest val ))), cmd )
+                        ( Just (\val -> ( labels, runNextTest val )), cmd )
 
         PortEffect cmdType payload decoder ->
             -- TODO actually make use of decoder to decide whether the test passed
@@ -278,7 +266,6 @@ init emit { startTime, initialSeed, thunks, report } =
             , running = Set.empty
             , queue = List.map fst indexedThunks
             , maybePending = Nothing
-            , nextExpectation = Decode.succeed Expect.pass
             , completed = []
             , startTime = startTime
             , finishTime = Nothing
