@@ -71,7 +71,7 @@ update emit msg ({ testReporter } as model) =
                 Just ( testId, getPendingTests ) ->
                     let
                         ( maybeNext, cmd ) =
-                            runEffectTest emit testId (getPendingTests val)
+                            runEffectTest model.startTime emit testId (getPendingTests val)
 
                         maybePending =
                             Maybe.map (\fn -> ( testId, \val -> fn val )) maybeNext
@@ -160,7 +160,7 @@ update emit msg ({ testReporter } as model) =
                                     Dict.remove testId model.available
 
                                 ( maybePending, cmd ) =
-                                    runTest emit startTime testId (run ())
+                                    runTest startTime emit testId (run ())
 
                                 newModel =
                                     { model
@@ -172,8 +172,8 @@ update emit msg ({ testReporter } as model) =
                                 ( newModel, cmd )
 
 
-runTest : Emitter Msg -> Time -> TestId -> ( List String, ExpectationsOrEffects ) -> ( Maybe ( TestId, Value -> ( List String, EffectTest Value ) ), Cmd Msg )
-runTest emit startTime testId ( labels, expectationsOrEffects ) =
+runTest : Time -> Emitter Msg -> TestId -> ( List String, ExpectationsOrEffects ) -> ( Maybe ( TestId, Value -> ( List String, EffectTest Value ) ), Cmd Msg )
+runTest startTime emit testId ( labels, expectationsOrEffects ) =
     case expectationsOrEffects of
         Expectations expectations ->
             let
@@ -185,23 +185,35 @@ runTest emit startTime testId ( labels, expectationsOrEffects ) =
         Effects effectTest ->
             let
                 ( maybeNext, cmd ) =
-                    runEffectTest emit testId ( labels, ChainedEffect initEffectTest (\_ -> effectTest) )
+                    runEffectTest startTime emit testId ( labels, ChainedEffect initEffectTest (\_ -> effectTest) )
             in
                 ( Maybe.map (\fn -> ( testId, \val -> fn val )) maybeNext
                 , cmd
                 )
 
 
-runEffectTest : Emitter Msg -> TestId -> ( List String, EffectTest Value ) -> ( Maybe (Value -> ( List String, EffectTest Value )), Cmd Msg )
-runEffectTest emit testId ( labels, effectTest ) =
+runEffectTest : Time -> Emitter Msg -> TestId -> ( List String, EffectTest Value ) -> ( Maybe (Value -> ( List String, EffectTest Value )), Cmd Msg )
+runEffectTest startTime emit testId ( labels, effectTest ) =
     case effectTest of
-        NoEffect ->
-            ( Nothing, Cmd.none )
+        ResolvedEffect expectation ->
+            ( Nothing
+            , Task.perform never (Complete testId ( labels, [ expectation ] ) startTime) Time.now
+            )
+
+        PortEffect cmdType payload decoder ->
+            ( Just (\val -> ( labels, ResolvedEffect (decodeOrFail decoder val) ))
+            , emitWebdriver emit cmdType payload
+            )
+
+        ChainedEffect (PortEffect cmdType payload decoder) runNextTest ->
+            ( Just (\val -> ( labels, runNextTest val ))
+            , emitWebdriver emit cmdType payload
+            )
 
         ChainedEffect currentTest runNextTest ->
             let
                 ( maybeNext, cmd ) =
-                    runEffectTest emit testId ( labels, currentTest )
+                    runEffectTest startTime emit testId ( labels, currentTest )
             in
                 case maybeNext of
                     Just getTest ->
@@ -210,9 +222,15 @@ runEffectTest emit testId ( labels, effectTest ) =
                     Nothing ->
                         ( Just (\val -> ( labels, runNextTest val )), cmd )
 
-        PortEffect cmdType payload decoder ->
-            -- TODO actually make use of decoder to decide whether the test passed
-            ( Nothing, emitWebdriver emit cmdType payload )
+
+decodeOrFail : Decoder Expectation -> Value -> Expectation
+decodeOrFail decoder val =
+    case Decode.decodeValue decoder val of
+        Ok expectation ->
+            expectation
+
+        Err str ->
+            Expect.fail ("Unable to decode response: " ++ str)
 
 
 emitWebdriver : Emitter Msg -> String -> Value -> Cmd Msg
@@ -324,7 +342,7 @@ runWithOptions { runs, seed } emit =
         , update = update emit
         , subscriptions = \_ -> Sub.none
         }
-        (BrowserTest "" (\() -> NoEffect))
+        (BrowserTest "" (\() -> ResolvedEffect Expect.pass))
 
 
 decodeReceiveToMsg : Value -> Msg

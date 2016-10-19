@@ -12,7 +12,7 @@ type BrowserTest
 type EffectTest val
     = PortEffect String Value (Decoder Expectation)
     | ChainedEffect (EffectTest val) (val -> EffectTest val)
-    | NoEffect
+    | ResolvedEffect Expectation
 
 
 type alias QuerySelector =
@@ -40,7 +40,7 @@ stepsToBrowserEffect : List Step -> EffectTest Value
 stepsToBrowserEffect steps =
     case steps of
         [] ->
-            NoEffect
+            ResolvedEffect Expect.pass
 
         step :: rest ->
             List.foldl chain (stepToBrowserEffect step) rest
