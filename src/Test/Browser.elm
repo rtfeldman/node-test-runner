@@ -1,6 +1,7 @@
 module Test.Browser exposing (..)
 
-import Json.Encode exposing (Value)
+import Json.Decode as Decode exposing (Value, Decoder)
+import Json.Encode as Encode
 import Expect exposing (Expectation)
 
 
@@ -9,17 +10,21 @@ type BrowserTest
 
 
 type EffectTest val
-    = PortEffect String Value (Value -> Expectation)
+    = PortEffect String Value (Decoder Expectation)
     | ChainedEffect (EffectTest val) (val -> EffectTest val)
     | NoEffect
 
 
+type alias QuerySelector =
+    String
+
+
 type Step
     = Visit String
-    | Title
-    | Text String
+    | Title (String -> Expectation)
+    | Text QuerySelector (String -> Expectation)
     | ClickLink String
-    | Url
+    | Url (String -> Expectation)
 
 
 test : String -> (() -> List Step) -> BrowserTest
@@ -41,33 +46,43 @@ stepsToBrowserEffect steps =
             List.foldl chain (stepToBrowserEffect step) rest
 
 
-chain : Step -> EffectTest Value -> EffectTest Value
+chain : Step -> EffectTest val -> EffectTest val
 chain nextStep result =
     ChainedEffect (stepToBrowserEffect nextStep) (\_ -> result)
 
 
-alwaysPass : a -> Expectation
-alwaysPass _ =
-    Expect.pass
+decodeToExpectation : Decoder val -> (val -> Expectation) -> Value -> Expectation
+decodeToExpectation decoder getExpectation raw =
+    case Decode.decodeValue decoder raw of
+        Ok val ->
+            getExpectation val
+
+        Err str ->
+            Expect.fail ("Error decoding value: " ++ str ++ " - " ++ toString raw)
 
 
-stepToBrowserEffect : Step -> EffectTest Value
+fireAndForget : String -> Value -> EffectTest val
+fireAndForget str val =
+    PortEffect str val (Decode.succeed Expect.pass)
+
+
+stepToBrowserEffect : Step -> EffectTest val
 stepToBrowserEffect step =
     case step of
         Visit url ->
-            PortEffect "VISIT" (Json.Encode.string url) alwaysPass
+            fireAndForget "VISIT" (Encode.string url)
 
-        Title ->
-            -- TODO expect title to be something
-            PortEffect "TITLE" (Json.Encode.null) alwaysPass
+        Title getExpectation ->
+            Decode.map getExpectation Decode.string
+                |> PortEffect "TITLE" (Encode.null)
 
-        Text querySelector ->
-            -- TODO expect text to be something
-            PortEffect "TEXT" (Json.Encode.string querySelector) alwaysPass
+        Text querySelector getExpectation ->
+            Decode.map getExpectation Decode.string
+                |> PortEffect "TEXT" (Encode.string querySelector)
 
         ClickLink linkName ->
-            PortEffect "CLICK_LINK" (Json.Encode.string linkName) alwaysPass
+            fireAndForget "CLICK_LINK" (Encode.string linkName)
 
-        Url ->
-            -- TODO expect url to be something
-            PortEffect "URL" (Json.Encode.null) alwaysPass
+        Url getExpectation ->
+            Decode.map getExpectation Decode.string
+                |> PortEffect "URL" (Encode.null)

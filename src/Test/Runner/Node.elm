@@ -48,7 +48,7 @@ type Msg
     | Complete TestId ( List String, List Expectation ) Time Time
     | Finish Time
     | RunPending Value
-    | Receive ReceivedValue
+    | ReportError String
 
 
 warn : String -> a -> a
@@ -139,6 +139,10 @@ update emit msg ({ testReporter } as model) =
             in
                 ( newModel, Cmd.batch [ reportCmd, dispatch ] )
 
+        ReportError str ->
+            -- TODO don't crash, just do something better.
+            Debug.crash str
+
         Dispatch startTime ->
             case model.queue of
                 [] ->
@@ -166,10 +170,6 @@ update emit msg ({ testReporter } as model) =
                                     }
                             in
                                 ( newModel, cmd )
-
-        Receive receivedValue ->
-            -- TODO do more interesting stuff with receivedValue
-            ( model, Cmd.none )
 
 
 runTest : Emitter Msg -> Time -> TestId -> ( List String, ExpectationsOrEffects ) -> ( Maybe ( TestId, Value -> ( List String, EffectTest Value ) ), Cmd Msg )
@@ -200,7 +200,6 @@ runEffectTest emit testId ( labels, effectTest ) =
 
         ChainedEffect currentTest runNextTest ->
             let
-                -- ( Maybe ( TestId, Value -> ( List String, EffectTest Value ) ), Cmd Msg )
                 ( maybeNext, cmd ) =
                     runEffectTest emit testId ( labels, currentTest )
             in
@@ -211,8 +210,8 @@ runEffectTest emit testId ( labels, effectTest ) =
                     Nothing ->
                         ( Just (\val -> ( labels, runNextTest val )), cmd )
 
-        PortEffect cmdType payload handler ->
-            -- TODO pretty bad sign that handler is unused here...
+        PortEffect cmdType payload decoder ->
+            -- TODO actually make use of decoder to decide whether the test passed
             ( Nothing, emitWebdriver emit cmdType payload )
 
 
@@ -227,9 +226,9 @@ emitWebdriver emit cmdType payload =
         )
 
 
-initEffectTest : EffectTest Value
+initEffectTest : EffectTest val
 initEffectTest =
-    PortEffect "INIT" (Encode.string "chrome") (\_ -> Expect.pass)
+    PortEffect "INIT" (Encode.string "chrome") (Decode.succeed Expect.pass)
 
 
 never : Never -> a
@@ -328,10 +327,6 @@ runWithOptions { runs, seed } emit =
         (BrowserTest "" (\() -> NoEffect))
 
 
-type alias Receive msg =
-    (Value -> msg) -> Sub msg
-
-
 decodeReceiveToMsg : Value -> Msg
 decodeReceiveToMsg val =
     case Decode.decodeValue receiveTupleDecoder val of
@@ -339,7 +334,7 @@ decodeReceiveToMsg val =
             msg
 
         Err str ->
-            Receive (ErrReceiving str)
+            ReportError str
 
 
 receiveTupleDecoder : Decoder Msg
@@ -383,9 +378,8 @@ receiveDecoder msgType val =
                 Decode.fail ("Unrecognized msgType: " ++ msgType)
 
 
-type ReceivedValue
-    = ReceivedValue
-    | ErrReceiving String
+type alias Receive msg =
+    (Value -> msg) -> Sub msg
 
 
 {-| Run the test using the provided options. If `Nothing` is provided for either

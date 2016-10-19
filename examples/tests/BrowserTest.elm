@@ -4,6 +4,7 @@ import Test.Runner.Node exposing (runWithBrowserOptions)
 import Test.Browser exposing (..)
 import Test
 import Json.Encode exposing (Value)
+import Expect
 
 
 main : Program Value
@@ -22,8 +23,9 @@ visitExample =
     test "steps work" <|
         \() ->
             [ Visit "http://bites.goodeggs.com/posts/selenium-webdriver-nodejs-tutorial/"
-            , Title
-            , Text ".post .meta time"
+            , Title (\_ -> Expect.pass)
+              -- TODO Expect.contains "Getting started with Selenium Webdriver for node.js"
+            , Text ".post .meta time" (Expect.equal "December 30th, 2014")
             , ClickLink "Bites"
-            , Url
+            , Url (Expect.equal "http://bites.goodeggs.com/")
             ]
