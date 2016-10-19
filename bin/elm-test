@@ -265,10 +265,12 @@ function evalElmCode (compiledCode, testModuleName) {
       driver.getCurrentUrl().then(
         function(url) { sendWebdriverResponse("URL", url)}
       );
-    } else if (data.cmd === "FINISHED") {
+    } else if (data.cmd === "QUIT") {
       driver.quit();
 
-      sendWebdriverSuccess();
+      sendWebdriverResponse("FINISHED", null);
+    } else {
+      console.error("Received unrecognized webdriver command:", data.cmd);
     }
   }
 }
