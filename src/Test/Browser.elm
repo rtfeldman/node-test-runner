@@ -36,7 +36,7 @@ test str thunk =
 -- HELPERS --
 
 
-stepsToBrowserEffect : List Step -> EffectTest Value
+stepsToBrowserEffect : List Step -> EffectTest val
 stepsToBrowserEffect steps =
     case steps of
         [] ->
