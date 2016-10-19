@@ -206,9 +206,22 @@ runEffectTest startTime emit testId ( labels, effectTest ) =
             )
 
         ChainedEffect (PortEffect cmdType payload decoder) runNextTest ->
-            ( Just (\val -> ( labels, runNextTest val ))
-            , emitWebdriver emit cmdType payload
-            )
+            let
+                resolve val =
+                    let
+                        expectation =
+                            decodeOrFail decoder val
+                    in
+                        if expectation == Expect.pass then
+                            -- It passed; keep going
+                            ( labels, runNextTest val )
+                        else
+                            -- It failed; short circuit!
+                            ( labels, ResolvedEffect expectation )
+            in
+                ( Just resolve
+                , emitWebdriver emit cmdType payload
+                )
 
         ChainedEffect currentTest runNextTest ->
             let
@@ -389,11 +402,7 @@ receiveDecoder msgType val =
             Decode.succeed (RunPending val)
 
         _ ->
-            let
-                _ =
-                    Debug.log "Failed decoding " ( msgType, val )
-            in
-                Decode.fail ("Unrecognized msgType: " ++ msgType)
+            Decode.fail ("Unrecognized msgType: " ++ msgType)
 
 
 type alias Receive msg =
