@@ -1,4 +1,4 @@
-module Test.Runner.Node.App exposing (run)
+module Test.Runner.Node.App exposing (run, ExpectationsOrEffects(Expectations, Effects))
 
 {-| Test runner for a Node app
 
@@ -8,6 +8,7 @@ module Test.Runner.Node.App exposing (run)
 
 import Test.Reporter.Reporter as Reporter
 import Test exposing (Test)
+import Test.Browser exposing (BrowserTest(..), EffectTest)
 import Test.Runner exposing (Runner(..))
 import Expect exposing (Expectation)
 import Html exposing (Html, text)
@@ -28,9 +29,14 @@ type Msg subMsg
 type alias InitArgs =
     { initialSeed : Int
     , startTime : Time
-    , thunks : List (() -> ( List String, List Expectation ))
+    , thunks : List (() -> ( List String, ExpectationsOrEffects ))
     , report : Reporter.Report
     }
+
+
+type ExpectationsOrEffects
+    = Expectations (List Expectation)
+    | Effects (EffectTest Value)
 
 
 type Model subMsg subModel
@@ -39,8 +45,13 @@ type Model subMsg subModel
         (SubUpdate subMsg subModel)
         { maybeInitialSeed : Maybe Int
         , report : Reporter.Report
-        , runs : Int
-        , test : Test
+        , runs :
+            Int
+            -- TODO Maybe Test
+        , test :
+            Test
+            -- TODO Maybe BrowserTest
+        , browserTest : BrowserTest
         , init : InitArgs -> ( subModel, Cmd subMsg )
         }
 
@@ -62,7 +73,7 @@ fromNever a =
 initOrUpdate : Msg subMsg -> Model subMsg subModel -> ( Model subMsg subModel, Cmd (Msg subMsg) )
 initOrUpdate msg maybeModel =
     case maybeModel of
-        Uninitialized update { maybeInitialSeed, report, runs, test, init } ->
+        Uninitialized update { maybeInitialSeed, report, runs, test, browserTest, init } ->
             case msg of
                 Init time ->
                     let
@@ -82,11 +93,15 @@ initOrUpdate msg maybeModel =
                                 |> Test.Runner.fromTest runs seed
                                 |> toThunks
 
+                        browserThunks =
+                            browserTest
+                                |> toBrowserThunks
+
                         ( subModel, subCmd ) =
                             init
                                 { initialSeed = numericSeed
                                 , startTime = time
-                                , thunks = thunks
+                                , thunks = thunks ++ browserThunks
                                 , report = report
                                 }
                     in
@@ -135,16 +150,23 @@ subscriptions subs model =
             Sub.map SubMsg (subs subModel)
 
 
-toThunks : Runner -> List (() -> ( List String, List Expectation ))
+toBrowserThunks : BrowserTest -> List (() -> ( List String, ExpectationsOrEffects ))
+toBrowserThunks browserTest =
+    case browserTest of
+        BrowserTest str thunk ->
+            [ \() -> ( [ str ], Effects (thunk ()) ) ]
+
+
+toThunks : Runner -> List (() -> ( List String, ExpectationsOrEffects ))
 toThunks =
     toThunksHelp []
 
 
-toThunksHelp : List String -> Runner -> List (() -> ( List String, List Expectation ))
+toThunksHelp : List String -> Runner -> List (() -> ( List String, ExpectationsOrEffects ))
 toThunksHelp labels runner =
     case runner of
         Runnable runnable ->
-            [ \() -> ( labels, Test.Runner.run runnable ) ]
+            [ \() -> ( labels, Expectations (Test.Runner.run runnable) ) ]
 
         Labeled label subRunner ->
             toThunksHelp (label :: labels) subRunner
@@ -186,8 +208,8 @@ decodeInitArgs args =
 
 {-| Run the tests and render the results as a Web page.
 -}
-run : RunnerOptions -> AppOptions msg model -> Test -> Program Value
-run { runs, seed } appOpts test =
+run : RunnerOptions -> AppOptions msg model -> BrowserTest -> Test -> Program Value
+run { runs, seed } appOpts browserTest test =
     let
         init args =
             let
@@ -228,6 +250,7 @@ run { runs, seed } appOpts test =
                     , report = snd initArgs
                     , runs = runs
                     , test = test
+                    , browserTest = browserTest
                     , init = appOpts.init
                     }
                 , cmd

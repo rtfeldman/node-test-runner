@@ -1,22 +1,23 @@
-module Test.Runner.Node exposing (run, runWithOptions)
+module Test.Runner.Node exposing (run, runWithOptions, runWithBrowserOptions, defaultOptions)
 
 {-| # Node Runner
 
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 1 if any failed.
 
-@docs run, runWithOptions
+@docs run, runWithOptions, runWithBrowserOptions, defaultOptions
 -}
 
 import Test.Reporter.Reporter exposing (TestReporter, Report(..), createReporter)
 import Test.Reporter.Result exposing (Failure, TestResult)
-import Test.Runner.Node.App as App
+import Test.Runner.Node.App as App exposing (ExpectationsOrEffects(..))
 import Dict exposing (Dict)
 import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
 import Set exposing (Set)
 import Task
 import Test exposing (Test)
+import Test.Browser exposing (..)
 import Time exposing (Time)
 
 
@@ -25,9 +26,10 @@ type alias TestId =
 
 
 type alias Model =
-    { available : Dict TestId (() -> ( List String, List Expectation ))
+    { available : Dict TestId (() -> ( List String, ExpectationsOrEffects ))
     , running : Set TestId
     , queue : List TestId
+    , maybePending : Maybe (Value -> EffectTest Value)
     , startTime : Time
     , finishTime : Maybe Time
     , completed : List TestResult
@@ -43,6 +45,7 @@ type Msg
     = Dispatch Time
     | Complete TestId ( List String, List Expectation ) Time Time
     | Finish Time
+    | Receive ReceivedValue
 
 
 warn : String -> a -> a
@@ -126,19 +129,70 @@ update emit msg ({ testReporter } as model) =
 
                         Just run ->
                             let
-                                complete =
-                                    Complete testId (run ()) startTime
-
                                 available =
                                     Dict.remove testId model.available
+
+                                ( maybePending, cmd ) =
+                                    runTest emit startTime testId (run ())
 
                                 newModel =
                                     { model
                                         | available = available
                                         , queue = newQueue
+                                        , maybePending = maybePending
                                     }
                             in
-                                ( newModel, Task.perform never complete Time.now )
+                                ( newModel, cmd )
+
+        Receive receivedValue ->
+            -- TODO do more interesting stuff with receivedValue
+            ( model, Cmd.none )
+
+
+runTest : Emitter Msg -> Time -> TestId -> ( List String, ExpectationsOrEffects ) -> ( Maybe (Value -> EffectTest Value), Cmd Msg )
+runTest emit startTime testId ( labels, expectationsOrEffects ) =
+    case expectationsOrEffects of
+        Expectations expectations ->
+            let
+                complete =
+                    Complete testId ( labels, expectations ) startTime
+            in
+                ( Nothing, Task.perform never complete Time.now )
+
+        Effects effectTest ->
+            -- TODO add the QUIT at the end
+            runEffectTest emit startTime testId ( labels, ChainedEffect initEffectTest (\_ -> effectTest) )
+
+
+runEffectTest : Emitter Msg -> Time -> TestId -> ( List String, EffectTest Value ) -> ( Maybe (Value -> EffectTest Value), Cmd Msg )
+runEffectTest emit startTime testId ( labels, effectTest ) =
+    case effectTest of
+        Expectation callback ->
+            -- TODO this is dumb, it should not take a callback obviously
+            -- callback Encode.null
+            ( Nothing, Cmd.none )
+
+        ChainedEffect currentTest runNextTest ->
+            -- TODO something is wrong here...we should not have a snd here.
+            ( Just runNextTest, snd (runEffectTest emit startTime testId ( labels, currentTest )) )
+
+        PortEffect cmdType payload handler ->
+            ( Nothing
+              -- TODO
+              --Just (\val -> handler val |> (Expectation val))
+            , emit
+                ( "WEBDRIVER"
+                , Encode.object
+                    [ ( "cmd", Encode.string cmdType )
+                    , ( "val", payload )
+                    ]
+                )
+            )
+
+
+initEffectTest : EffectTest Value
+initEffectTest =
+    PortEffect "INIT" (Encode.string "chrome") (\_ -> Expect.pass)
 
 
 never : Never -> a
@@ -155,13 +209,13 @@ init :
     Emitter Msg
     -> { initialSeed : Int
        , startTime : Time
-       , thunks : List (() -> ( List String, List Expectation ))
+       , thunks : List (() -> ( List String, ExpectationsOrEffects ))
        , report : Report
        }
     -> ( Model, Cmd Msg )
 init emit { startTime, initialSeed, thunks, report } =
     let
-        indexedThunks : List ( TestId, () -> ( List String, List Expectation ) )
+        indexedThunks : List ( TestId, () -> ( List String, ExpectationsOrEffects ) )
         indexedThunks =
             List.indexedMap (,) thunks
 
@@ -175,6 +229,7 @@ init emit { startTime, initialSeed, thunks, report } =
             { available = Dict.fromList indexedThunks
             , running = Set.empty
             , queue = List.map fst indexedThunks
+            , maybePending = Nothing
             , completed = []
             , startTime = startTime
             , finishTime = Nothing
@@ -232,4 +287,38 @@ runWithOptions { runs, seed } emit =
         { init = init emit
         , update = update emit
         , subscriptions = \_ -> Sub.none
+        }
+        (BrowserTest "" (\() -> Expectation (\_ -> Expect.pass)))
+
+
+type alias Receive msg =
+    (Value -> msg) -> Sub msg
+
+
+decodeReceiveToMsg : Value -> Msg
+decodeReceiveToMsg val =
+    let
+        _ =
+            Debug.log "val" val
+    in
+        -- TODO make ReceivedValue more interesting
+        Receive ReceivedValue
+
+
+type ReceivedValue
+    = ReceivedValue
+
+
+{-| Run the test using the provided options. If `Nothing` is provided for either
+`runs` or `seed`, it will fall back on the options used in [`run`](#run).
+-}
+runWithBrowserOptions : Options -> Emitter Msg -> Receive Msg -> BrowserTest -> Test -> Program Value
+runWithBrowserOptions { runs, seed } emit receive =
+    App.run
+        { runs = runs
+        , seed = seed
+        }
+        { init = init emit
+        , update = update emit
+        , subscriptions = \_ -> receive decodeReceiveToMsg
         }

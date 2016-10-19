@@ -4,6 +4,7 @@ import Test.Runner.Node exposing (run)
 import String
 import Expect
 import Test exposing (..)
+import Test.Browser
 import Fuzz exposing (..)
 import Json.Encode exposing (Value)
 import Char
@@ -11,16 +12,19 @@ import Char
 
 main : Program Value
 main =
-    [ testWithoutNums
-    , testOxfordify
-    , noDescription
-    , testExpectations
-    , testFailingFuzzTests
-    , testFuzz
-    , testShrinkables
-    ]
-        |> Test.concat
-        |> run emit
+    run emit tests (Test.Browser.test "" (\() -> []))
+
+
+tests =
+    Test.concat
+        [ testWithoutNums
+        , testOxfordify
+        , noDescription
+        , testExpectations
+        , testFailingFuzzTests
+        , testFuzz
+        , testShrinkables
+        ]
 
 
 port emit : ( String, Value ) -> Cmd msg

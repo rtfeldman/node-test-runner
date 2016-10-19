@@ -15,6 +15,7 @@ var compile    = require("node-elm-compiler").compile,
   minimist     = require("minimist"),
   firstline    = require("firstline"),
   findUp       = require("find-up"),
+  webdriver    = require("selenium-webdriver"),
   chokidar     = require("chokidar");
 
 var elm = {
@@ -107,6 +108,8 @@ if (args._[0] == "init") {
   process.exit(0);
 }
 
+
+
 function evalElmCode (compiledCode, testModuleName) {
   var Elm = function(module) { eval(compiledCode); return module.exports; }({});
 
@@ -175,6 +178,8 @@ function evalElmCode (compiledCode, testModuleName) {
   // Run the Elm app.
   var app = testModule.worker({seed: initialSeed, report: report});
 
+  var driver = null;
+
   // Receive messages from ports and translate them into appropriate JS calls.
   app.ports.emit.subscribe(function(msg) {
     var msgType = msg[0];
@@ -197,10 +202,78 @@ function evalElmCode (compiledCode, testModuleName) {
           console.log(JSON.stringify(data.message));
         }
 
+    } else if (msgType === "WEBDRIVER") {
+      try {
+        webdriverCommand(data);
+      } catch(err) {
+        sendWebdriverError(err);
+      }
     }
   });
-}
 
+  function sendWebdriverResponse(webdriverMsgType, data) {
+    app.ports.receive.send(["WEBDRIVER_" + webdriverMsgType, data]);
+  }
+
+  function sendWebdriverSuccess() {
+    sendWebdriverResponse("SUCCESS", null);
+  }
+
+  function sendWebdriverError(msg) {
+    console.log("Webdriver error", msg);
+    sendWebdriverResponse("ERROR", typeof msg === "string" ? msg : "Webdriver error.");
+  }
+
+  function webdriverCommand(data) {
+    if (data.cmd === "INIT") {
+      var browser = data.val;
+      console.log("INIT", browser);
+
+      try {
+        driver = new webdriver.Builder()
+          .withCapabilities(webdriver.Capabilities[browser]())
+          .build();
+
+        // TODO is this necessary?
+        driver.getWindowHandle();
+
+        sendWebdriverResponse("INITIALIZED", browser);
+      } catch (err) {
+        sendWebdriverError(
+          "Error initializing webdriver for browser \"" + browser + "\":" + err
+        );
+      }
+    } else if (driver === null) {
+      sendWebdriverError("Attempted to run Webdriver tests before webdriver had initialized.");
+    } else if (data.cmd === "VISIT") {
+      console.log("VISIT", data.val);
+      driver.get(data.val);
+
+      sendWebdriverSuccess();
+    } else if (data.cmd === "TITLE") {
+      driver.getTitle().then(
+        function(title) { sendWebdriverResponse("TITLE", title); }
+      );
+    } else if (data.cmd === "TEXT") {
+      driver.findElement({css: data.val}).getText().then(
+        function(text) { sendWebdriverResponse("TEXT", text); }
+      );
+    } else if (data.cmd === "CLICK_LINK") {
+      driver.findElement({linkText: data.val}).click()
+
+      sendWebdriverSuccess();
+    } else if (data.cmd === "URL") {
+      console.log("URL");
+      driver.getCurrentUrl().then(
+        function(url) { sendWebdriverResponse("URL", url)}
+      );
+    } else if (data.cmd === "FINISHED") {
+      driver.quit();
+
+      sendWebdriverSuccess();
+    }
+  }
+}
 
 var testFile = args._[0],
     cwd = __dirname,
