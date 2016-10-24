@@ -107,25 +107,57 @@ if (args._[0] == "init") {
   process.exit(0);
 }
 
+var findPotentialTest = /^var ([a-zA-Z0-9'_$]+) =/;
+
 function evalElmCode (compiledCode, testModuleName) {
-  var Elm = function(module) { eval(compiledCode); return module.exports; }({});
+  var Elm = function(module) {
+    var potentialTests = [];
+    var extraLines = [];
+    var foo = 0;
+
+    function addToPotentialTest (varName) {
+      // If we have a Test, push it to potentialTests.
+      return "if(typeof " + varName + " === 'object' && " + varName + " !== null && ['Labeled', 'Test', 'Batch'].indexOf(" + varName + ".ctor) !== -1) { potentialTests.push(" + varName + "); }";
+    };
+
+    // Generate a string that will be eval'd to populate potentialTests
+    var codeLines = compiledCode.trim().split("\n");
+    var newCompiledCode = codeLines.map(function(line) {
+      var matches = line.match(findPotentialTest);
+
+      if (line === "var Elm = {};") {
+        return extraLines.join(";\n") + line;
+      } else if (matches === null) {
+        return line;
+      } else {
+        extraLines.push(addToPotentialTest(matches[1]));
+        return line;
+      }
+    }).join("\n");
+
+    eval(newCompiledCode);
+
+    console.log("PT:", potentialTests);
+
+    return module.exports;
+  }({});
 
   // Make sure necessary things are defined.
   if (typeof Elm === 'undefined') { throw 'elm-io config error: Elm is not defined. Make sure you provide a file compiled by Elm!'; }
 
   function getTestModule() {
-      var module = Elm;
-      var moduleParts = testModuleName.split('.');
-      while (moduleParts.length) {
-          var modulePart = moduleParts.shift();
-          if (module[modulePart] === undefined) {
-              return undefined;
-          }
+    var module = Elm;
+    var moduleParts = testModuleName.split('.');
+    while (moduleParts.length) {
+        var modulePart = moduleParts.shift();
+        if (module[modulePart] === undefined) {
+            return undefined;
+        }
 
-          module = module[modulePart];
-      }
+        module = module[modulePart];
+    }
 
-      return module;
+    return module;
   }
 
   var testModule = getTestModule();
