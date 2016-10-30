@@ -11654,14 +11654,17 @@ var _rtfeldman$node_test_runner$Test_Runner_Node$runWithOptions = F2(
 			});
 	});
 
-var emit = _elm_lang$core$Native_Platform.outgoingPort(
-	'emit', function (v) { return [v._0, v._1]; }
-);
-
-var options = _rtfeldman$node_test_runner$Test_Runner_Node$defaultOptions;
-
+// inject.js is expecting this variable to be set.
 $$$testRunner$run =
   function(test) {
+    var options = _rtfeldman$node_test_runner$Test_Runner_Node$defaultOptions;
+
+    // This port must be named 'emit', although it's unclear why. It doesn't seem like
+    // changing the string 'emit' below should break everything, but it does.
+    var emit = _elm_lang$core$Native_Platform.outgoingPort(
+      'emit', function (v) { return [v._0, v._1]; }
+    );
+
 		return A3(
 			_rtfeldman$node_test_runner$Test_Runner_Node_App$run,
 			{runs: options.runs, seed: options.seed},
