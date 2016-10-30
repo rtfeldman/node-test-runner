@@ -14,7 +14,8 @@ module.exports = function() {
     minimist     = require("minimist"),
     firstline    = require("firstline"),
     findUp       = require("find-up"),
-    chokidar     = require("chokidar");
+    chokidar     = require("chokidar"),
+    injectRunner = require("./inject");
 
   var elm = {
     'elm-package': 'elm-package'
@@ -108,12 +109,13 @@ module.exports = function() {
 
   // Matches top-level `var` declarations, any of which might be a Test.
   var findPotentialTest = /^var\s+([a-zA-Z0-9'_$]+)\s+=/;
-  var hasTestImport = /^import\s+Test\s*(as\s+\S+)?\s*$/
+
+  var isMainDeclaration = /^_elm_lang\$core\$Native_Platform.addPublicModule\(Elm\['Main'\]/
 
   function evalElmCode (compiledCode, testModuleName) {
     var Elm = function(module) {
       var potentialTests = [];
-      var extraLines = [];
+      var extraLines = ["var $$$testRunner$tests = [];"];
       var foo = 0;
 
       function addToPotentialTest (varName) {
@@ -126,9 +128,8 @@ module.exports = function() {
       var newCompiledCode = codeLines.map(function(line) {
         var matches = line.match(findPotentialTest);
 
-        if (line === "var Elm = {};") {
-          return extraLines.join(";\n") + line;
-        } else if (line.match(hasTestImport)) {
+        if (isMainDeclaration.test(line)) {
+          return extraLines.join(";\n") + injectRunner();
         } else if (matches === null) {
           return line;
         } else {
@@ -137,31 +138,11 @@ module.exports = function() {
         }
       }).join("\n");
 
-      eval(newCompiledCode);
-
-      console.log("PT:", potentialTests);
-
-      // TODO require the boilerplate implementations of:
-      // the emit port
-      // run
-      // all the imports necessary to make that happen
-      //
-      // TODO give them userland-impossible names like _rtfeldman$node_test_runner$run
-      //
-      // TODO add a main like the following, except with potentialTests being passed as
-      // the argument to run...this will mean that when we finally eval the code,
-      // it will work like before!
-
-      var _rtfeldman$node_test_runner$Main$main = {
-          main: A2(
-                  _rtfeldman$node_test_runner$Test_Runner_Node$run,
-                  _rtfeldman$node_test_runner$Main$emit,
-                  _elm_community$elm_test$Test$concat(
-                          _elm_lang$core$Native_List.fromArray(
-                                  [_rtfeldman$node_test_runner$Main$plainExpectation]))),
-          flags: _elm_lang$core$Json_Decode$value
-      };
-
+      try {
+        eval(newCompiledCode);
+      } catch(err) {
+        console.error(err);
+      }
 
       return module.exports;
     }({});
