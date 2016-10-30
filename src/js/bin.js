@@ -119,8 +119,8 @@ module.exports = function() {
       var foo = 0;
 
       function addToPotentialTest (varName) {
-        // If we have a Test, push it to potentialTests.
-        return "if(typeof " + varName + " === 'object' && " + varName + " !== null && ['Labeled', 'Test', 'Batch'].indexOf(" + varName + ".ctor) !== -1) { potentialTests.push(" + varName + "); }";
+        // If we have a Test, push it to the master list.
+        return "if(typeof " + varName + " === 'object' && " + varName + " !== null && ['Labeled', 'Test', 'Batch'].indexOf(" + varName + ".ctor) !== -1) { $$$testRunner$tests.push(" + varName + "); }";
       };
 
       // Generate a string that will be eval'd to populate potentialTests
