@@ -1,4 +1,4 @@
-port module Main exposing (..)
+module Main exposing (..)
 
 import Test.Runner.Node exposing (run)
 import String
@@ -7,23 +7,6 @@ import Test exposing (..)
 import Fuzz exposing (..)
 import Json.Encode exposing (Value)
 import Char
-
-
-main : Program Value
-main =
-    [ testWithoutNums
-    , testOxfordify
-    , noDescription
-    , testExpectations
-    , testFailingFuzzTests
-    , testFuzz
-    , testShrinkables
-    ]
-        |> Test.concat
-        |> run emit
-
-
-port emit : ( String, Value ) -> Cmd msg
 
 
 withoutNums : String -> String
