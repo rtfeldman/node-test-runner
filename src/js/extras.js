@@ -1808,6 +1808,907 @@ var _elm_lang$core$Result$fromMaybe = F2(
 		}
 	});
 
+//import //
+
+var _elm_lang$core$Native_Platform = function() {
+
+
+// PROGRAMS
+
+function addPublicModule(object, name, main)
+{
+	var init = main ? makeEmbed(name, main) : mainIsUndefined(name);
+
+	object['worker'] = function worker(flags)
+	{
+		return init(undefined, flags, false);
+	}
+
+	object['embed'] = function embed(domNode, flags)
+	{
+		return init(domNode, flags, true);
+	}
+
+	object['fullscreen'] = function fullscreen(flags)
+	{
+		return init(document.body, flags, true);
+	};
+}
+
+
+// PROGRAM FAIL
+
+function mainIsUndefined(name)
+{
+	return function(domNode)
+	{
+		var message = 'Cannot initialize module `' + name +
+			'` because it has no `main` value!\nWhat should I show on screen?';
+		domNode.innerHTML = errorHtml(message);
+		throw new Error(message);
+	};
+}
+
+function errorHtml(message)
+{
+	return '<div style="padding-left:1em;">'
+		+ '<h2 style="font-weight:normal;"><b>Oops!</b> Something went wrong when starting your Elm program.</h2>'
+		+ '<pre style="padding-left:1em;">' + message + '</pre>'
+		+ '</div>';
+}
+
+
+// PROGRAM SUCCESS
+
+function makeEmbed(moduleName, main)
+{
+	return function embed(rootDomNode, flags, withRenderer)
+	{
+		try
+		{
+			var program = mainToProgram(moduleName, main);
+			if (!withRenderer)
+			{
+				program.renderer = dummyRenderer;
+			}
+			return makeEmbedHelp(moduleName, program, rootDomNode, flags);
+		}
+		catch (e)
+		{
+			rootDomNode.innerHTML = errorHtml(e.message);
+			throw e;
+		}
+	};
+}
+
+function dummyRenderer()
+{
+	return { update: function() {} };
+}
+
+
+// MAIN TO PROGRAM
+
+function mainToProgram(moduleName, wrappedMain)
+{
+	var main = wrappedMain.main;
+
+	if (typeof main.init === 'undefined')
+	{
+		var emptyBag = batch(_elm_lang$core$Native_List.Nil);
+		var noChange = _elm_lang$core$Native_Utils.Tuple2(
+			_elm_lang$core$Native_Utils.Tuple0,
+			emptyBag
+		);
+
+		return _elm_lang$virtual_dom$VirtualDom$programWithFlags({
+			init: function() { return noChange; },
+			view: function() { return main; },
+			update: F2(function() { return noChange; }),
+			subscriptions: function () { return emptyBag; }
+		});
+	}
+
+	var flags = wrappedMain.flags;
+	var init = flags
+		? initWithFlags(moduleName, main.init, flags)
+		: initWithoutFlags(moduleName, main.init);
+
+	return _elm_lang$virtual_dom$VirtualDom$programWithFlags({
+		init: init,
+		view: main.view,
+		update: main.update,
+		subscriptions: main.subscriptions,
+	});
+}
+
+function initWithoutFlags(moduleName, realInit)
+{
+	return function init(flags)
+	{
+		if (typeof flags !== 'undefined')
+		{
+			throw new Error(
+				'You are giving module `' + moduleName + '` an argument in JavaScript.\n'
+				+ 'This module does not take arguments though! You probably need to change the\n'
+				+ 'initialization code to something like `Elm.' + moduleName + '.fullscreen()`'
+			);
+		}
+		return realInit();
+	};
+}
+
+function initWithFlags(moduleName, realInit, flagDecoder)
+{
+	return function init(flags)
+	{
+		var result = A2(_elm_lang$core$Native_Json.run, flagDecoder, flags);
+		if (result.ctor === 'Err')
+		{
+			throw new Error(
+				'You are trying to initialize module `' + moduleName + '` with an unexpected argument.\n'
+				+ 'When trying to convert it to a usable Elm value, I run into this problem:\n\n'
+				+ result._0
+			);
+		}
+		return realInit(result._0);
+	};
+}
+
+
+// SETUP RUNTIME SYSTEM
+
+function makeEmbedHelp(moduleName, program, rootDomNode, flags)
+{
+	var init = program.init;
+	var update = program.update;
+	var subscriptions = program.subscriptions;
+	var view = program.view;
+	var makeRenderer = program.renderer;
+
+	// ambient state
+	var managers = {};
+	var renderer;
+
+	// init and update state in main process
+	var initApp = _elm_lang$core$Native_Scheduler.nativeBinding(function(callback) {
+		var results = init(flags);
+		var model = results._0;
+		renderer = makeRenderer(rootDomNode, enqueue, view(model));
+		var cmds = results._1;
+		var subs = subscriptions(model);
+		dispatchEffects(managers, cmds, subs);
+		callback(_elm_lang$core$Native_Scheduler.succeed(model));
+	});
+
+	function onMessage(msg, model)
+	{
+		return _elm_lang$core$Native_Scheduler.nativeBinding(function(callback) {
+			var results = A2(update, msg, model);
+			model = results._0;
+			renderer.update(view(model));
+			var cmds = results._1;
+			var subs = subscriptions(model);
+			dispatchEffects(managers, cmds, subs);
+			callback(_elm_lang$core$Native_Scheduler.succeed(model));
+		});
+	}
+
+	var mainProcess = spawnLoop(initApp, onMessage);
+
+	function enqueue(msg)
+	{
+		_elm_lang$core$Native_Scheduler.rawSend(mainProcess, msg);
+	}
+
+	var ports = setupEffects(managers, enqueue);
+
+	return ports ? { ports: ports } : {};
+}
+
+
+// EFFECT MANAGERS
+
+var effectManagers = {};
+
+function setupEffects(managers, callback)
+{
+	var ports;
+
+	// setup all necessary effect managers
+	for (var key in effectManagers)
+	{
+		var manager = effectManagers[key];
+
+		if (manager.isForeign)
+		{
+			ports = ports || {};
+			ports[key] = manager.tag === 'cmd'
+				? setupOutgoingPort(key)
+				: setupIncomingPort(key, callback);
+		}
+
+		managers[key] = makeManager(manager, callback);
+	}
+
+	return ports;
+}
+
+function makeManager(info, callback)
+{
+	var router = {
+		main: callback,
+		self: undefined
+	};
+
+	var tag = info.tag;
+	var onEffects = info.onEffects;
+	var onSelfMsg = info.onSelfMsg;
+
+	function onMessage(msg, state)
+	{
+		if (msg.ctor === 'self')
+		{
+			return A3(onSelfMsg, router, msg._0, state);
+		}
+
+		var fx = msg._0;
+		switch (tag)
+		{
+			case 'cmd':
+				return A3(onEffects, router, fx.cmds, state);
+
+			case 'sub':
+				return A3(onEffects, router, fx.subs, state);
+
+			case 'fx':
+				return A4(onEffects, router, fx.cmds, fx.subs, state);
+		}
+	}
+
+	var process = spawnLoop(info.init, onMessage);
+	router.self = process;
+	return process;
+}
+
+function sendToApp(router, msg)
+{
+	return _elm_lang$core$Native_Scheduler.nativeBinding(function(callback)
+	{
+		router.main(msg);
+		callback(_elm_lang$core$Native_Scheduler.succeed(_elm_lang$core$Native_Utils.Tuple0));
+	});
+}
+
+function sendToSelf(router, msg)
+{
+	return A2(_elm_lang$core$Native_Scheduler.send, router.self, {
+		ctor: 'self',
+		_0: msg
+	});
+}
+
+
+// HELPER for STATEFUL LOOPS
+
+function spawnLoop(init, onMessage)
+{
+	var andThen = _elm_lang$core$Native_Scheduler.andThen;
+
+	function loop(state)
+	{
+		var handleMsg = _elm_lang$core$Native_Scheduler.receive(function(msg) {
+			return onMessage(msg, state);
+		});
+		return A2(andThen, handleMsg, loop);
+	}
+
+	var task = A2(andThen, init, loop);
+
+	return _elm_lang$core$Native_Scheduler.rawSpawn(task);
+}
+
+
+// BAGS
+
+function leaf(home)
+{
+	return function(value)
+	{
+		return {
+			type: 'leaf',
+			home: home,
+			value: value
+		};
+	};
+}
+
+function batch(list)
+{
+	return {
+		type: 'node',
+		branches: list
+	};
+}
+
+function map(tagger, bag)
+{
+	return {
+		type: 'map',
+		tagger: tagger,
+		tree: bag
+	}
+}
+
+
+// PIPE BAGS INTO EFFECT MANAGERS
+
+function dispatchEffects(managers, cmdBag, subBag)
+{
+	var effectsDict = {};
+	gatherEffects(true, cmdBag, effectsDict, null);
+	gatherEffects(false, subBag, effectsDict, null);
+
+	for (var home in managers)
+	{
+		var fx = home in effectsDict
+			? effectsDict[home]
+			: {
+				cmds: _elm_lang$core$Native_List.Nil,
+				subs: _elm_lang$core$Native_List.Nil
+			};
+
+		_elm_lang$core$Native_Scheduler.rawSend(managers[home], { ctor: 'fx', _0: fx });
+	}
+}
+
+function gatherEffects(isCmd, bag, effectsDict, taggers)
+{
+	switch (bag.type)
+	{
+		case 'leaf':
+			var home = bag.home;
+			var effect = toEffect(isCmd, home, taggers, bag.value);
+			effectsDict[home] = insert(isCmd, effect, effectsDict[home]);
+			return;
+
+		case 'node':
+			var list = bag.branches;
+			while (list.ctor !== '[]')
+			{
+				gatherEffects(isCmd, list._0, effectsDict, taggers);
+				list = list._1;
+			}
+			return;
+
+		case 'map':
+			gatherEffects(isCmd, bag.tree, effectsDict, {
+				tagger: bag.tagger,
+				rest: taggers
+			});
+			return;
+	}
+}
+
+function toEffect(isCmd, home, taggers, value)
+{
+	function applyTaggers(x)
+	{
+		var temp = taggers;
+		while (temp)
+		{
+			x = temp.tagger(x);
+			temp = temp.rest;
+		}
+		return x;
+	}
+
+	var map = isCmd
+		? effectManagers[home].cmdMap
+		: effectManagers[home].subMap;
+
+	return A2(map, applyTaggers, value)
+}
+
+function insert(isCmd, newEffect, effects)
+{
+	effects = effects || {
+		cmds: _elm_lang$core$Native_List.Nil,
+		subs: _elm_lang$core$Native_List.Nil
+	};
+	if (isCmd)
+	{
+		effects.cmds = _elm_lang$core$Native_List.Cons(newEffect, effects.cmds);
+		return effects;
+	}
+	effects.subs = _elm_lang$core$Native_List.Cons(newEffect, effects.subs);
+	return effects;
+}
+
+
+// PORTS
+
+function checkPortName(name)
+{
+	if (name in effectManagers)
+	{
+		throw new Error('There can only be one port named `' + name + '`, but your program has multiple.');
+	}
+}
+
+
+// OUTGOING PORTS
+
+function outgoingPort(name, converter)
+{
+	checkPortName(name);
+	effectManagers[name] = {
+		tag: 'cmd',
+		cmdMap: outgoingPortMap,
+		converter: converter,
+		isForeign: true
+	};
+	return leaf(name);
+}
+
+var outgoingPortMap = F2(function cmdMap(tagger, value) {
+	return value;
+});
+
+function setupOutgoingPort(name)
+{
+	var subs = [];
+	var converter = effectManagers[name].converter;
+
+	// CREATE MANAGER
+
+	var init = _elm_lang$core$Native_Scheduler.succeed(null);
+
+	function onEffects(router, cmdList, state)
+	{
+		while (cmdList.ctor !== '[]')
+		{
+			var value = converter(cmdList._0);
+			for (var i = 0; i < subs.length; i++)
+			{
+				subs[i](value);
+			}
+			cmdList = cmdList._1;
+		}
+		return init;
+	}
+
+	effectManagers[name].init = init;
+	effectManagers[name].onEffects = F3(onEffects);
+
+	// PUBLIC API
+
+	function subscribe(callback)
+	{
+		subs.push(callback);
+	}
+
+	function unsubscribe(callback)
+	{
+		var index = subs.indexOf(callback);
+		if (index >= 0)
+		{
+			subs.splice(index, 1);
+		}
+	}
+
+	return {
+		subscribe: subscribe,
+		unsubscribe: unsubscribe
+	};
+}
+
+
+// INCOMING PORTS
+
+function incomingPort(name, converter)
+{
+	checkPortName(name);
+	effectManagers[name] = {
+		tag: 'sub',
+		subMap: incomingPortMap,
+		converter: converter,
+		isForeign: true
+	};
+	return leaf(name);
+}
+
+var incomingPortMap = F2(function subMap(tagger, finalTagger)
+{
+	return function(value)
+	{
+		return tagger(finalTagger(value));
+	};
+});
+
+function setupIncomingPort(name, callback)
+{
+	var sentBeforeInit = [];
+	var subs = _elm_lang$core$Native_List.Nil;
+	var converter = effectManagers[name].converter;
+	var currentOnEffects = preInitOnEffects;
+	var currentSend = preInitSend;
+
+	// CREATE MANAGER
+
+	var init = _elm_lang$core$Native_Scheduler.succeed(null);
+
+	function preInitOnEffects(router, subList, state)
+	{
+		var postInitResult = postInitOnEffects(router, subList, state);
+
+		for(var i = 0; i < sentBeforeInit.length; i++)
+		{
+			postInitSend(sentBeforeInit[i]);
+		}
+
+		sentBeforeInit = null; // to release objects held in queue
+		currentSend = postInitSend;
+		currentOnEffects = postInitOnEffects;
+		return postInitResult;
+	}
+
+	function postInitOnEffects(router, subList, state)
+	{
+		subs = subList;
+		return init;
+	}
+
+	function onEffects(router, subList, state)
+	{
+		return currentOnEffects(router, subList, state);
+	}
+
+	effectManagers[name].init = init;
+	effectManagers[name].onEffects = F3(onEffects);
+
+	// PUBLIC API
+
+	function preInitSend(value)
+	{
+		sentBeforeInit.push(value);
+	}
+
+	function postInitSend(incomingValue)
+	{
+		var result = A2(_elm_lang$core$Json_Decode$decodeValue, converter, incomingValue);
+		if (result.ctor === 'Err')
+		{
+			throw new Error('Trying to send an unexpected type of value through port `' + name + '`:\n' + result._0);
+		}
+
+		var value = result._0;
+		var temp = subs;
+		while (temp.ctor !== '[]')
+		{
+			callback(temp._0(value));
+			temp = temp._1;
+		}
+	}
+
+	function send(incomingValue)
+	{
+		currentSend(incomingValue);
+	}
+
+	return { send: send };
+}
+
+return {
+	// routers
+	sendToApp: F2(sendToApp),
+	sendToSelf: F2(sendToSelf),
+
+	// global setup
+	mainToProgram: mainToProgram,
+	effectManagers: effectManagers,
+	outgoingPort: outgoingPort,
+	incomingPort: incomingPort,
+	addPublicModule: addPublicModule,
+
+	// effect bags
+	leaf: leaf,
+	batch: batch,
+	map: F2(map)
+};
+
+}();
+
+//import Native.Utils //
+
+var _elm_lang$core$Native_Scheduler = function() {
+
+var MAX_STEPS = 10000;
+
+
+// TASKS
+
+function succeed(value)
+{
+	return {
+		ctor: '_Task_succeed',
+		value: value
+	};
+}
+
+function fail(error)
+{
+	return {
+		ctor: '_Task_fail',
+		value: error
+	};
+}
+
+function nativeBinding(callback)
+{
+	return {
+		ctor: '_Task_nativeBinding',
+		callback: callback,
+		cancel: null
+	};
+}
+
+function andThen(task, callback)
+{
+	return {
+		ctor: '_Task_andThen',
+		task: task,
+		callback: callback
+	};
+}
+
+function onError(task, callback)
+{
+	return {
+		ctor: '_Task_onError',
+		task: task,
+		callback: callback
+	};
+}
+
+function receive(callback)
+{
+	return {
+		ctor: '_Task_receive',
+		callback: callback
+	};
+}
+
+
+// PROCESSES
+
+function rawSpawn(task)
+{
+	var process = {
+		ctor: '_Process',
+		id: _elm_lang$core$Native_Utils.guid(),
+		root: task,
+		stack: null,
+		mailbox: []
+	};
+
+	enqueue(process);
+
+	return process;
+}
+
+function spawn(task)
+{
+	return nativeBinding(function(callback) {
+		var process = rawSpawn(task);
+		callback(succeed(process));
+	});
+}
+
+function rawSend(process, msg)
+{
+	process.mailbox.push(msg);
+	enqueue(process);
+}
+
+function send(process, msg)
+{
+	return nativeBinding(function(callback) {
+		rawSend(process, msg);
+		callback(succeed(_elm_lang$core$Native_Utils.Tuple0));
+	});
+}
+
+function kill(process)
+{
+	return nativeBinding(function(callback) {
+		var root = process.root;
+		if (root.ctor === '_Task_nativeBinding' && root.cancel)
+		{
+			root.cancel();
+		}
+
+		process.root = null;
+
+		callback(succeed(_elm_lang$core$Native_Utils.Tuple0));
+	});
+}
+
+function sleep(time)
+{
+	return nativeBinding(function(callback) {
+		var id = setTimeout(function() {
+			callback(succeed(_elm_lang$core$Native_Utils.Tuple0));
+		}, time);
+
+		return function() { clearTimeout(id); };
+	});
+}
+
+
+// STEP PROCESSES
+
+function step(numSteps, process)
+{
+	while (numSteps < MAX_STEPS)
+	{
+		var ctor = process.root.ctor;
+
+		if (ctor === '_Task_succeed')
+		{
+			while (process.stack && process.stack.ctor === '_Task_onError')
+			{
+				process.stack = process.stack.rest;
+			}
+			if (process.stack === null)
+			{
+				break;
+			}
+			process.root = process.stack.callback(process.root.value);
+			process.stack = process.stack.rest;
+			++numSteps;
+			continue;
+		}
+
+		if (ctor === '_Task_fail')
+		{
+			while (process.stack && process.stack.ctor === '_Task_andThen')
+			{
+				process.stack = process.stack.rest;
+			}
+			if (process.stack === null)
+			{
+				break;
+			}
+			process.root = process.stack.callback(process.root.value);
+			process.stack = process.stack.rest;
+			++numSteps;
+			continue;
+		}
+
+		if (ctor === '_Task_andThen')
+		{
+			process.stack = {
+				ctor: '_Task_andThen',
+				callback: process.root.callback,
+				rest: process.stack
+			};
+			process.root = process.root.task;
+			++numSteps;
+			continue;
+		}
+
+		if (ctor === '_Task_onError')
+		{
+			process.stack = {
+				ctor: '_Task_onError',
+				callback: process.root.callback,
+				rest: process.stack
+			};
+			process.root = process.root.task;
+			++numSteps;
+			continue;
+		}
+
+		if (ctor === '_Task_nativeBinding')
+		{
+			process.root.cancel = process.root.callback(function(newRoot) {
+				process.root = newRoot;
+				enqueue(process);
+			});
+
+			break;
+		}
+
+		if (ctor === '_Task_receive')
+		{
+			var mailbox = process.mailbox;
+			if (mailbox.length === 0)
+			{
+				break;
+			}
+
+			process.root = process.root.callback(mailbox.shift());
+			++numSteps;
+			continue;
+		}
+
+		throw new Error(ctor);
+	}
+
+	if (numSteps < MAX_STEPS)
+	{
+		return numSteps + 1;
+	}
+	enqueue(process);
+
+	return numSteps;
+}
+
+
+// WORK QUEUE
+
+var working = false;
+var workQueue = [];
+
+function enqueue(process)
+{
+	workQueue.push(process);
+
+	if (!working)
+	{
+		setTimeout(work, 0);
+		working = true;
+	}
+}
+
+function work()
+{
+	var numSteps = 0;
+	var process;
+	while (numSteps < MAX_STEPS && (process = workQueue.shift()))
+	{
+		if (process.root)
+		{
+			numSteps = step(numSteps, process);
+		}
+	}
+	if (!process)
+	{
+		working = false;
+		return;
+	}
+	setTimeout(work, 0);
+}
+
+
+return {
+	succeed: succeed,
+	fail: fail,
+	nativeBinding: nativeBinding,
+	andThen: F2(andThen),
+	onError: F2(onError),
+	receive: receive,
+
+	spawn: spawn,
+	kill: kill,
+	sleep: sleep,
+	send: F2(send),
+
+	rawSpawn: rawSpawn,
+	rawSend: rawSend
+};
+
+}();
+var _elm_lang$core$Platform$hack = _elm_lang$core$Native_Scheduler.succeed;
+var _elm_lang$core$Platform$sendToSelf = _elm_lang$core$Native_Platform.sendToSelf;
+var _elm_lang$core$Platform$sendToApp = _elm_lang$core$Native_Platform.sendToApp;
+var _elm_lang$core$Platform$Program = {ctor: 'Program'};
+var _elm_lang$core$Platform$Task = {ctor: 'Task'};
+var _elm_lang$core$Platform$ProcessId = {ctor: 'ProcessId'};
+var _elm_lang$core$Platform$Router = {ctor: 'Router'};
+
+var _elm_lang$core$Platform_Cmd$batch = _elm_lang$core$Native_Platform.batch;
 var _elm_lang$core$Platform_Cmd$none = _elm_lang$core$Platform_Cmd$batch(
 	_elm_lang$core$Native_List.fromArray(
 		[]));
@@ -1820,11 +2721,14 @@ _elm_lang$core$Platform_Cmd_ops['!'] = F2(
 			_1: _elm_lang$core$Platform_Cmd$batch(commands)
 		};
 	});
+var _elm_lang$core$Platform_Cmd$map = _elm_lang$core$Native_Platform.map;
 var _elm_lang$core$Platform_Cmd$Cmd = {ctor: 'Cmd'};
 
+var _elm_lang$core$Platform_Sub$batch = _elm_lang$core$Native_Platform.batch;
 var _elm_lang$core$Platform_Sub$none = _elm_lang$core$Platform_Sub$batch(
 	_elm_lang$core$Native_List.fromArray(
 		[]));
+var _elm_lang$core$Platform_Sub$map = _elm_lang$core$Native_Platform.map;
 var _elm_lang$core$Platform_Sub$Sub = {ctor: 'Sub'};
 
 //import Native.List //
@@ -3057,6 +3961,7 @@ var _elm_lang$core$Task$onSelfMsg = F3(
 		return _elm_lang$core$Task$succeed(
 			{ctor: '_Tuple0'});
 	});
+var _elm_lang$core$Task$command = _elm_lang$core$Native_Platform.leaf('Task');
 var _elm_lang$core$Task$T = function (a) {
 	return {ctor: 'T', _0: a};
 };
@@ -5653,6 +6558,103 @@ var _elm_community$elm_lazy_list$Lazy_List$zip = _elm_community$elm_lazy_list$La
 		function (v0, v1) {
 			return {ctor: '_Tuple2', _0: v0, _1: v1};
 		}));
+var _elm_community$elm_lazy_list$Lazy_List$product2 = F2(
+	function (list1, list2) {
+		return _elm_lang$lazy$Lazy$lazy(
+			function (_p73) {
+				var _p74 = _p73;
+				var _p75 = _elm_lang$lazy$Lazy$force(list1);
+				if (_p75.ctor === 'Nil') {
+					return _elm_community$elm_lazy_list$Lazy_List$Nil;
+				} else {
+					var _p76 = _elm_lang$lazy$Lazy$force(list2);
+					if (_p76.ctor === 'Nil') {
+						return _elm_community$elm_lazy_list$Lazy_List$Nil;
+					} else {
+						return _elm_lang$lazy$Lazy$force(
+							A2(
+								_elm_community$elm_lazy_list$Lazy_List_ops['+++'],
+								A2(
+									_elm_community$elm_lazy_list$Lazy_List$map,
+									F2(
+										function (v0, v1) {
+											return {ctor: '_Tuple2', _0: v0, _1: v1};
+										})(_p75._0),
+									list2),
+								A2(_elm_community$elm_lazy_list$Lazy_List$product2, _p75._1, list2)));
+					}
+				}
+			});
+	});
+var _elm_community$elm_lazy_list$Lazy_List$product3 = F3(
+	function (list1, list2, list3) {
+		return _elm_lang$lazy$Lazy$lazy(
+			function (_p77) {
+				var _p78 = _p77;
+				var _p79 = _elm_lang$lazy$Lazy$force(list1);
+				if (_p79.ctor === 'Nil') {
+					return _elm_community$elm_lazy_list$Lazy_List$Nil;
+				} else {
+					return _elm_lang$lazy$Lazy$force(
+						A2(
+							_elm_community$elm_lazy_list$Lazy_List_ops['+++'],
+							A2(
+								_elm_community$elm_lazy_list$Lazy_List$map,
+								function (_p80) {
+									var _p81 = _p80;
+									return {ctor: '_Tuple3', _0: _p79._0, _1: _p81._0, _2: _p81._1};
+								},
+								A2(_elm_community$elm_lazy_list$Lazy_List$product2, list2, list3)),
+							A3(_elm_community$elm_lazy_list$Lazy_List$product3, _p79._1, list2, list3)));
+				}
+			});
+	});
+var _elm_community$elm_lazy_list$Lazy_List$product4 = F4(
+	function (list1, list2, list3, list4) {
+		return _elm_lang$lazy$Lazy$lazy(
+			function (_p82) {
+				var _p83 = _p82;
+				var _p84 = _elm_lang$lazy$Lazy$force(list1);
+				if (_p84.ctor === 'Nil') {
+					return _elm_community$elm_lazy_list$Lazy_List$Nil;
+				} else {
+					return _elm_lang$lazy$Lazy$force(
+						A2(
+							_elm_community$elm_lazy_list$Lazy_List_ops['+++'],
+							A2(
+								_elm_community$elm_lazy_list$Lazy_List$map,
+								function (_p85) {
+									var _p86 = _p85;
+									return {ctor: '_Tuple4', _0: _p84._0, _1: _p86._0, _2: _p86._1, _3: _p86._2};
+								},
+								A3(_elm_community$elm_lazy_list$Lazy_List$product3, list2, list3, list4)),
+							A4(_elm_community$elm_lazy_list$Lazy_List$product4, _p84._1, list2, list3, list4)));
+				}
+			});
+	});
+var _elm_community$elm_lazy_list$Lazy_List$product5 = F5(
+	function (list1, list2, list3, list4, list5) {
+		return _elm_lang$lazy$Lazy$lazy(
+			function (_p87) {
+				var _p88 = _p87;
+				var _p89 = _elm_lang$lazy$Lazy$force(list1);
+				if (_p89.ctor === 'Nil') {
+					return _elm_community$elm_lazy_list$Lazy_List$Nil;
+				} else {
+					return _elm_lang$lazy$Lazy$force(
+						A2(
+							_elm_community$elm_lazy_list$Lazy_List_ops['+++'],
+							A2(
+								_elm_community$elm_lazy_list$Lazy_List$map,
+								function (_p90) {
+									var _p91 = _p90;
+									return {ctor: '_Tuple5', _0: _p89._0, _1: _p91._0, _2: _p91._1, _3: _p91._2, _4: _p91._3};
+								},
+								A4(_elm_community$elm_lazy_list$Lazy_List$product4, list2, list3, list4, list5)),
+							A5(_elm_community$elm_lazy_list$Lazy_List$product5, _p89._1, list2, list3, list4, list5)));
+				}
+			});
+	});
 
 var _elm_community$elm_test$Test_Expectation$Fail = F2(
 	function (a, b) {
@@ -6607,12 +7609,32 @@ var _mgold$elm_random_pcg$Random_Pcg$step = F2(
 		var _p7 = _p6;
 		return _p7._0(seed);
 	});
+var _mgold$elm_random_pcg$Random_Pcg$retry = F3(
+	function (generator, predicate, seed) {
+		retry:
+		while (true) {
+			var _p8 = A2(_mgold$elm_random_pcg$Random_Pcg$step, generator, seed);
+			var candidate = _p8._0;
+			var newSeed = _p8._1;
+			if (predicate(candidate)) {
+				return {ctor: '_Tuple2', _0: candidate, _1: newSeed};
+			} else {
+				var _v8 = generator,
+					_v9 = predicate,
+					_v10 = newSeed;
+				generator = _v8;
+				predicate = _v9;
+				seed = _v10;
+				continue retry;
+			}
+		}
+	});
 var _mgold$elm_random_pcg$Random_Pcg$Generator = function (a) {
 	return {ctor: 'Generator', _0: a};
 };
 var _mgold$elm_random_pcg$Random_Pcg$list = F2(
-	function (n, _p8) {
-		var _p9 = _p8;
+	function (n, _p9) {
+		var _p10 = _p9;
 		return _mgold$elm_random_pcg$Random_Pcg$Generator(
 			function (seed) {
 				return A4(
@@ -6620,7 +7642,7 @@ var _mgold$elm_random_pcg$Random_Pcg$list = F2(
 					_elm_lang$core$Native_List.fromArray(
 						[]),
 					n,
-					_p9._0,
+					_p10._0,
 					seed);
 			});
 	});
@@ -6631,13 +7653,13 @@ var _mgold$elm_random_pcg$Random_Pcg$constant = function (value) {
 		});
 };
 var _mgold$elm_random_pcg$Random_Pcg$map = F2(
-	function (func, _p10) {
-		var _p11 = _p10;
+	function (func, _p11) {
+		var _p12 = _p11;
 		return _mgold$elm_random_pcg$Random_Pcg$Generator(
 			function (seed0) {
-				var _p12 = _p11._0(seed0);
-				var a = _p12._0;
-				var seed1 = _p12._1;
+				var _p13 = _p12._0(seed0);
+				var a = _p13._0;
+				var seed1 = _p13._1;
 				return {
 					ctor: '_Tuple2',
 					_0: func(a),
@@ -6646,17 +7668,17 @@ var _mgold$elm_random_pcg$Random_Pcg$map = F2(
 			});
 	});
 var _mgold$elm_random_pcg$Random_Pcg$map2 = F3(
-	function (func, _p14, _p13) {
-		var _p15 = _p14;
-		var _p16 = _p13;
+	function (func, _p15, _p14) {
+		var _p16 = _p15;
+		var _p17 = _p14;
 		return _mgold$elm_random_pcg$Random_Pcg$Generator(
 			function (seed0) {
-				var _p17 = _p15._0(seed0);
-				var a = _p17._0;
-				var seed1 = _p17._1;
-				var _p18 = _p16._0(seed1);
-				var b = _p18._0;
-				var seed2 = _p18._1;
+				var _p18 = _p16._0(seed0);
+				var a = _p18._0;
+				var seed1 = _p18._1;
+				var _p19 = _p17._0(seed1);
+				var b = _p19._0;
+				var seed2 = _p19._1;
 				return {
 					ctor: '_Tuple2',
 					_0: A2(func, a, b),
@@ -6681,21 +7703,21 @@ var _mgold$elm_random_pcg$Random_Pcg$andMap = _mgold$elm_random_pcg$Random_Pcg$m
 			return x(y);
 		}));
 var _mgold$elm_random_pcg$Random_Pcg$map3 = F4(
-	function (func, _p21, _p20, _p19) {
-		var _p22 = _p21;
-		var _p23 = _p20;
-		var _p24 = _p19;
+	function (func, _p22, _p21, _p20) {
+		var _p23 = _p22;
+		var _p24 = _p21;
+		var _p25 = _p20;
 		return _mgold$elm_random_pcg$Random_Pcg$Generator(
 			function (seed0) {
-				var _p25 = _p22._0(seed0);
-				var a = _p25._0;
-				var seed1 = _p25._1;
-				var _p26 = _p23._0(seed1);
-				var b = _p26._0;
-				var seed2 = _p26._1;
-				var _p27 = _p24._0(seed2);
-				var c = _p27._0;
-				var seed3 = _p27._1;
+				var _p26 = _p23._0(seed0);
+				var a = _p26._0;
+				var seed1 = _p26._1;
+				var _p27 = _p24._0(seed1);
+				var b = _p27._0;
+				var seed2 = _p27._1;
+				var _p28 = _p25._0(seed2);
+				var c = _p28._0;
+				var seed3 = _p28._1;
 				return {
 					ctor: '_Tuple2',
 					_0: A3(func, a, b, c),
@@ -6704,25 +7726,25 @@ var _mgold$elm_random_pcg$Random_Pcg$map3 = F4(
 			});
 	});
 var _mgold$elm_random_pcg$Random_Pcg$map4 = F5(
-	function (func, _p31, _p30, _p29, _p28) {
-		var _p32 = _p31;
-		var _p33 = _p30;
-		var _p34 = _p29;
-		var _p35 = _p28;
+	function (func, _p32, _p31, _p30, _p29) {
+		var _p33 = _p32;
+		var _p34 = _p31;
+		var _p35 = _p30;
+		var _p36 = _p29;
 		return _mgold$elm_random_pcg$Random_Pcg$Generator(
 			function (seed0) {
-				var _p36 = _p32._0(seed0);
-				var a = _p36._0;
-				var seed1 = _p36._1;
-				var _p37 = _p33._0(seed1);
-				var b = _p37._0;
-				var seed2 = _p37._1;
-				var _p38 = _p34._0(seed2);
-				var c = _p38._0;
-				var seed3 = _p38._1;
-				var _p39 = _p35._0(seed3);
-				var d = _p39._0;
-				var seed4 = _p39._1;
+				var _p37 = _p33._0(seed0);
+				var a = _p37._0;
+				var seed1 = _p37._1;
+				var _p38 = _p34._0(seed1);
+				var b = _p38._0;
+				var seed2 = _p38._1;
+				var _p39 = _p35._0(seed2);
+				var c = _p39._0;
+				var seed3 = _p39._1;
+				var _p40 = _p36._0(seed3);
+				var d = _p40._0;
+				var seed4 = _p40._1;
 				return {
 					ctor: '_Tuple2',
 					_0: A4(func, a, b, c, d),
@@ -6731,29 +7753,29 @@ var _mgold$elm_random_pcg$Random_Pcg$map4 = F5(
 			});
 	});
 var _mgold$elm_random_pcg$Random_Pcg$map5 = F6(
-	function (func, _p44, _p43, _p42, _p41, _p40) {
-		var _p45 = _p44;
-		var _p46 = _p43;
-		var _p47 = _p42;
-		var _p48 = _p41;
-		var _p49 = _p40;
+	function (func, _p45, _p44, _p43, _p42, _p41) {
+		var _p46 = _p45;
+		var _p47 = _p44;
+		var _p48 = _p43;
+		var _p49 = _p42;
+		var _p50 = _p41;
 		return _mgold$elm_random_pcg$Random_Pcg$Generator(
 			function (seed0) {
-				var _p50 = _p45._0(seed0);
-				var a = _p50._0;
-				var seed1 = _p50._1;
-				var _p51 = _p46._0(seed1);
-				var b = _p51._0;
-				var seed2 = _p51._1;
-				var _p52 = _p47._0(seed2);
-				var c = _p52._0;
-				var seed3 = _p52._1;
-				var _p53 = _p48._0(seed3);
-				var d = _p53._0;
-				var seed4 = _p53._1;
-				var _p54 = _p49._0(seed4);
-				var e = _p54._0;
-				var seed5 = _p54._1;
+				var _p51 = _p46._0(seed0);
+				var a = _p51._0;
+				var seed1 = _p51._1;
+				var _p52 = _p47._0(seed1);
+				var b = _p52._0;
+				var seed2 = _p52._1;
+				var _p53 = _p48._0(seed2);
+				var c = _p53._0;
+				var seed3 = _p53._1;
+				var _p54 = _p49._0(seed3);
+				var d = _p54._0;
+				var seed4 = _p54._1;
+				var _p55 = _p50._0(seed4);
+				var e = _p55._0;
+				var seed5 = _p55._1;
 				return {
 					ctor: '_Tuple2',
 					_0: A5(func, a, b, c, d, e),
@@ -6762,25 +7784,16 @@ var _mgold$elm_random_pcg$Random_Pcg$map5 = F6(
 			});
 	});
 var _mgold$elm_random_pcg$Random_Pcg$andThen = F2(
-	function (_p55, callback) {
-		var _p56 = _p55;
+	function (_p56, callback) {
+		var _p57 = _p56;
 		return _mgold$elm_random_pcg$Random_Pcg$Generator(
 			function (seed) {
-				var _p57 = _p56._0(seed);
-				var result = _p57._0;
-				var newSeed = _p57._1;
-				var _p58 = callback(result);
-				var generateB = _p58._0;
+				var _p58 = _p57._0(seed);
+				var result = _p58._0;
+				var newSeed = _p58._1;
+				var _p59 = callback(result);
+				var generateB = _p59._0;
 				return generateB(newSeed);
-			});
-	});
-var _mgold$elm_random_pcg$Random_Pcg$filter = F2(
-	function (predicate, generator) {
-		return A2(
-			_mgold$elm_random_pcg$Random_Pcg$andThen,
-			generator,
-			function (a) {
-				return predicate(a) ? _mgold$elm_random_pcg$Random_Pcg$constant(a) : A2(_mgold$elm_random_pcg$Random_Pcg$filter, predicate, generator);
 			});
 	});
 var _mgold$elm_random_pcg$Random_Pcg$maybe = F2(
@@ -6792,23 +7805,28 @@ var _mgold$elm_random_pcg$Random_Pcg$maybe = F2(
 				return b ? A2(_mgold$elm_random_pcg$Random_Pcg$map, _elm_lang$core$Maybe$Just, genA) : _mgold$elm_random_pcg$Random_Pcg$constant(_elm_lang$core$Maybe$Nothing);
 			});
 	});
+var _mgold$elm_random_pcg$Random_Pcg$filter = F2(
+	function (predicate, generator) {
+		return _mgold$elm_random_pcg$Random_Pcg$Generator(
+			A2(_mgold$elm_random_pcg$Random_Pcg$retry, generator, predicate));
+	});
 var _mgold$elm_random_pcg$Random_Pcg$Seed = F2(
 	function (a, b) {
 		return {ctor: 'Seed', _0: a, _1: b};
 	});
-var _mgold$elm_random_pcg$Random_Pcg$next = function (_p59) {
-	var _p60 = _p59;
-	var _p61 = _p60._1;
+var _mgold$elm_random_pcg$Random_Pcg$next = function (_p60) {
+	var _p61 = _p60;
+	var _p62 = _p61._1;
 	return A2(
 		_mgold$elm_random_pcg$Random_Pcg$Seed,
-		A2(_elm_lang$core$Bitwise$shiftRightLogical, (_p60._0 * 1664525) + _p61, 0),
-		_p61);
+		A2(_elm_lang$core$Bitwise$shiftRightLogical, (_p61._0 * 1664525) + _p62, 0),
+		_p62);
 };
 var _mgold$elm_random_pcg$Random_Pcg$initialSeed = function (x) {
-	var _p62 = _mgold$elm_random_pcg$Random_Pcg$next(
+	var _p63 = _mgold$elm_random_pcg$Random_Pcg$next(
 		A2(_mgold$elm_random_pcg$Random_Pcg$Seed, 0, 1013904223));
-	var state1 = _p62._0;
-	var incr = _p62._1;
+	var state1 = _p63._0;
+	var incr = _p63._1;
 	var state2 = A2(_elm_lang$core$Bitwise$shiftRightLogical, state1 + x, 0);
 	return _mgold$elm_random_pcg$Random_Pcg$next(
 		A2(_mgold$elm_random_pcg$Random_Pcg$Seed, state2, incr));
@@ -6821,13 +7839,13 @@ var _mgold$elm_random_pcg$Random_Pcg$generate = F2(
 			toMsg,
 			A2(
 				_elm_lang$core$Task$map,
-				function (_p63) {
+				function (_p64) {
 					return _elm_lang$core$Basics$fst(
 						A2(
 							_mgold$elm_random_pcg$Random_Pcg$step,
 							generator,
 							_mgold$elm_random_pcg$Random_Pcg$initialSeed(
-								_elm_lang$core$Basics$round(_p63))));
+								_elm_lang$core$Basics$round(_p64))));
 				},
 				_elm_lang$core$Time$now));
 	});
@@ -6835,9 +7853,9 @@ var _mgold$elm_random_pcg$Random_Pcg$int = F2(
 	function (a, b) {
 		return _mgold$elm_random_pcg$Random_Pcg$Generator(
 			function (seed0) {
-				var _p64 = (_elm_lang$core$Native_Utils.cmp(a, b) < 0) ? {ctor: '_Tuple2', _0: a, _1: b} : {ctor: '_Tuple2', _0: b, _1: a};
-				var lo = _p64._0;
-				var hi = _p64._1;
+				var _p65 = (_elm_lang$core$Native_Utils.cmp(a, b) < 0) ? {ctor: '_Tuple2', _0: a, _1: b} : {ctor: '_Tuple2', _0: b, _1: a};
+				var lo = _p65._0;
+				var hi = _p65._1;
 				var range = (hi - lo) + 1;
 				if (_elm_lang$core$Native_Utils.eq(
 					A2(_elm_lang$core$Bitwise$and, range, range - 1),
@@ -6867,8 +7885,8 @@ var _mgold$elm_random_pcg$Random_Pcg$int = F2(
 							var seedN = _mgold$elm_random_pcg$Random_Pcg$next(seed);
 							var x = _mgold$elm_random_pcg$Random_Pcg$peel(seed);
 							if (_elm_lang$core$Native_Utils.cmp(x, threshhold) < 0) {
-								var _v26 = seedN;
-								seed = _v26;
+								var _v29 = seedN;
+								seed = _v29;
 								continue accountForBias;
 							} else {
 								return {
@@ -6913,17 +7931,17 @@ var _mgold$elm_random_pcg$Random_Pcg$sample = function () {
 		function (k, ys) {
 			find:
 			while (true) {
-				var _p65 = ys;
-				if (_p65.ctor === '[]') {
+				var _p66 = ys;
+				if (_p66.ctor === '[]') {
 					return _elm_lang$core$Maybe$Nothing;
 				} else {
 					if (_elm_lang$core$Native_Utils.eq(k, 0)) {
-						return _elm_lang$core$Maybe$Just(_p65._0);
+						return _elm_lang$core$Maybe$Just(_p66._0);
 					} else {
-						var _v28 = k - 1,
-							_v29 = _p65._1;
-						k = _v28;
-						ys = _v29;
+						var _v31 = k - 1,
+							_v32 = _p66._1;
+						k = _v31;
+						ys = _v32;
 						continue find;
 					}
 				}
@@ -6967,35 +7985,35 @@ var _mgold$elm_random_pcg$Random_Pcg$frequency = function (pairs) {
 		function (choices, n) {
 			pick:
 			while (true) {
-				var _p66 = choices;
-				if ((_p66.ctor === '::') && (_p66._0.ctor === '_Tuple2')) {
-					var _p67 = _p66._0._0;
-					if (_elm_lang$core$Native_Utils.cmp(n, _p67) < 1) {
-						return _p66._0._1;
+				var _p67 = choices;
+				if ((_p67.ctor === '::') && (_p67._0.ctor === '_Tuple2')) {
+					var _p68 = _p67._0._0;
+					if (_elm_lang$core$Native_Utils.cmp(n, _p68) < 1) {
+						return _p67._0._1;
 					} else {
-						var _v31 = _p66._1,
-							_v32 = n - _p67;
-						choices = _v31;
-						n = _v32;
+						var _v34 = _p67._1,
+							_v35 = n - _p68;
+						choices = _v34;
+						n = _v35;
 						continue pick;
 					}
 				} else {
 					return _elm_lang$core$Native_Utils.crashCase(
 						'Random.Pcg',
 						{
-							start: {line: 683, column: 13},
-							end: {line: 691, column: 77}
+							start: {line: 688, column: 13},
+							end: {line: 696, column: 77}
 						},
-						_p66)('Empty list passed to Random.Pcg.frequency!');
+						_p67)('Empty list passed to Random.Pcg.frequency!');
 				}
 			}
 		});
 	var total = _elm_lang$core$List$sum(
 		A2(
 			_elm_lang$core$List$map,
-			function (_p69) {
+			function (_p70) {
 				return _elm_lang$core$Basics$abs(
-					_elm_lang$core$Basics$fst(_p69));
+					_elm_lang$core$Basics$fst(_p70));
 			},
 			pairs));
 	return A2(
@@ -7015,7 +8033,7 @@ var _mgold$elm_random_pcg$Random_Pcg$choices = function (gens) {
 var _mgold$elm_random_pcg$Random_Pcg$independentSeed = _mgold$elm_random_pcg$Random_Pcg$Generator(
 	function (seed0) {
 		var gen = A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, 4294967295);
-		var _p70 = A2(
+		var _p71 = A2(
 			_mgold$elm_random_pcg$Random_Pcg$step,
 			A4(
 				_mgold$elm_random_pcg$Random_Pcg$map3,
@@ -7027,12 +8045,12 @@ var _mgold$elm_random_pcg$Random_Pcg$independentSeed = _mgold$elm_random_pcg$Ran
 				gen,
 				gen),
 			seed0);
-		var state = _p70._0._0;
-		var b = _p70._0._1;
-		var c = _p70._0._2;
-		var seed1 = _p70._1;
+		var state = _p71._0._0;
+		var b = _p71._0._1;
+		var c = _p71._0._2;
+		var seed1 = _p71._1;
 		var incr = A2(
-			_elm_lang$core$Bitwise$and,
+			_elm_lang$core$Bitwise$or,
 			A2(_elm_lang$core$Bitwise$xor, b, c),
 			1);
 		return {
@@ -7043,9 +8061,9 @@ var _mgold$elm_random_pcg$Random_Pcg$independentSeed = _mgold$elm_random_pcg$Ran
 		};
 	});
 var _mgold$elm_random_pcg$Random_Pcg$fastForward = F2(
-	function (delta0, _p71) {
-		var _p72 = _p71;
-		var _p75 = _p72._1;
+	function (delta0, _p72) {
+		var _p73 = _p72;
+		var _p76 = _p73._1;
 		var helper = F6(
 			function (accMult, accPlus, curMult, curPlus, delta, repeat) {
 				helper:
@@ -7053,7 +8071,7 @@ var _mgold$elm_random_pcg$Random_Pcg$fastForward = F2(
 					var newDelta = A2(_elm_lang$core$Bitwise$shiftRightLogical, delta, 1);
 					var curMult$ = A2(_mgold$elm_random_pcg$Random_Pcg$mul32, curMult, curMult);
 					var curPlus$ = A2(_mgold$elm_random_pcg$Random_Pcg$mul32, curMult + 1, curPlus);
-					var _p73 = _elm_lang$core$Native_Utils.eq(
+					var _p74 = _elm_lang$core$Native_Utils.eq(
 						A2(_elm_lang$core$Bitwise$and, delta, 1),
 						1) ? {
 						ctor: '_Tuple2',
@@ -7063,53 +8081,53 @@ var _mgold$elm_random_pcg$Random_Pcg$fastForward = F2(
 							A2(_mgold$elm_random_pcg$Random_Pcg$mul32, accPlus, curMult) + curPlus,
 							0)
 					} : {ctor: '_Tuple2', _0: accMult, _1: accPlus};
-					var accMult$ = _p73._0;
-					var accPlus$ = _p73._1;
+					var accMult$ = _p74._0;
+					var accPlus$ = _p74._1;
 					if (_elm_lang$core$Native_Utils.eq(newDelta, 0)) {
 						if ((_elm_lang$core$Native_Utils.cmp(delta0, 0) < 0) && repeat) {
-							var _v34 = accMult$,
-								_v35 = accPlus$,
-								_v36 = curMult$,
-								_v37 = curPlus$,
-								_v38 = -1,
-								_v39 = false;
-							accMult = _v34;
-							accPlus = _v35;
-							curMult = _v36;
-							curPlus = _v37;
-							delta = _v38;
-							repeat = _v39;
+							var _v37 = accMult$,
+								_v38 = accPlus$,
+								_v39 = curMult$,
+								_v40 = curPlus$,
+								_v41 = -1,
+								_v42 = false;
+							accMult = _v37;
+							accPlus = _v38;
+							curMult = _v39;
+							curPlus = _v40;
+							delta = _v41;
+							repeat = _v42;
 							continue helper;
 						} else {
 							return {ctor: '_Tuple2', _0: accMult$, _1: accPlus$};
 						}
 					} else {
-						var _v40 = accMult$,
-							_v41 = accPlus$,
-							_v42 = curMult$,
-							_v43 = curPlus$,
-							_v44 = newDelta,
-							_v45 = repeat;
-						accMult = _v40;
-						accPlus = _v41;
-						curMult = _v42;
-						curPlus = _v43;
-						delta = _v44;
-						repeat = _v45;
+						var _v43 = accMult$,
+							_v44 = accPlus$,
+							_v45 = curMult$,
+							_v46 = curPlus$,
+							_v47 = newDelta,
+							_v48 = repeat;
+						accMult = _v43;
+						accPlus = _v44;
+						curMult = _v45;
+						curPlus = _v46;
+						delta = _v47;
+						repeat = _v48;
 						continue helper;
 					}
 				}
 			});
-		var _p74 = A6(helper, 1, 0, 1664525, _p75, delta0, true);
-		var accMultFinal = _p74._0;
-		var accPlusFinal = _p74._1;
+		var _p75 = A6(helper, 1, 0, 1664525, _p76, delta0, true);
+		var accMultFinal = _p75._0;
+		var accPlusFinal = _p75._1;
 		return A2(
 			_mgold$elm_random_pcg$Random_Pcg$Seed,
 			A2(
 				_elm_lang$core$Bitwise$shiftRightLogical,
-				A2(_mgold$elm_random_pcg$Random_Pcg$mul32, accMultFinal, _p72._0) + accPlusFinal,
+				A2(_mgold$elm_random_pcg$Random_Pcg$mul32, accMultFinal, _p73._0) + accPlusFinal,
 				0),
-			_p75);
+			_p76);
 	});
 var _mgold$elm_random_pcg$Random_Pcg$fromJson = _elm_lang$core$Json_Decode$oneOf(
 	_elm_lang$core$Native_List.fromArray(
@@ -7118,21 +8136,19 @@ var _mgold$elm_random_pcg$Random_Pcg$fromJson = _elm_lang$core$Json_Decode$oneOf
 			A2(_elm_lang$core$Json_Decode$map, _mgold$elm_random_pcg$Random_Pcg$initialSeed, _elm_lang$core$Json_Decode$int)
 		]));
 
+var _elm_community$elm_test$Util$lengthString = F2(
+	function (charGenerator, stringLength) {
+		return A2(
+			_mgold$elm_random_pcg$Random_Pcg$map,
+			_elm_lang$core$String$fromList,
+			A2(_mgold$elm_random_pcg$Random_Pcg$list, stringLength, charGenerator));
+	});
 var _elm_community$elm_test$Util$rangeLengthString = F3(
 	function (minLength, maxLength, charGenerator) {
-		var string = F2(
-			function (stringLength, charGenerator) {
-				return A2(
-					_mgold$elm_random_pcg$Random_Pcg$map,
-					_elm_lang$core$String$fromList,
-					A2(_mgold$elm_random_pcg$Random_Pcg$list, stringLength, charGenerator));
-			});
 		return A2(
 			_mgold$elm_random_pcg$Random_Pcg$andThen,
 			A2(_mgold$elm_random_pcg$Random_Pcg$int, minLength, maxLength),
-			function (len) {
-				return A2(string, len, charGenerator);
-			});
+			_elm_community$elm_test$Util$lengthString(charGenerator));
 	});
 var _elm_community$elm_test$Util$rangeLengthList = F3(
 	function (minLength, maxLength, generator) {
@@ -8071,42 +9087,964 @@ var _elm_community$shrink$Shrink$shrink = F3(
 			originalVal);
 	});
 
+var _elm_community$elm_test$RoseTree$children = function (_p0) {
+	var _p1 = _p0;
+	return _p1._1;
+};
+var _elm_community$elm_test$RoseTree$root = function (_p2) {
+	var _p3 = _p2;
+	return _p3._0;
+};
+var _elm_community$elm_test$RoseTree$Rose = F2(
+	function (a, b) {
+		return {ctor: 'Rose', _0: a, _1: b};
+	});
+var _elm_community$elm_test$RoseTree$singleton = function (a) {
+	return A2(_elm_community$elm_test$RoseTree$Rose, a, _elm_community$elm_lazy_list$Lazy_List$empty);
+};
+var _elm_community$elm_test$RoseTree$addChild = F2(
+	function (child, _p4) {
+		var _p5 = _p4;
+		return A2(
+			_elm_community$elm_test$RoseTree$Rose,
+			_p5._0,
+			A2(_elm_community$elm_lazy_list$Lazy_List_ops[':::'], child, _p5._1));
+	});
+var _elm_community$elm_test$RoseTree$map = F2(
+	function (f, _p6) {
+		var _p7 = _p6;
+		return A2(
+			_elm_community$elm_test$RoseTree$Rose,
+			f(_p7._0),
+			A2(
+				_elm_community$elm_lazy_list$Lazy_List$map,
+				_elm_community$elm_test$RoseTree$map(f),
+				_p7._1));
+	});
+var _elm_community$elm_test$RoseTree$flatten = function (_p8) {
+	var _p9 = _p8;
+	return A2(
+		_elm_community$elm_test$RoseTree$Rose,
+		_p9._0._0,
+		A2(
+			_elm_community$elm_lazy_list$Lazy_List_ops['+++'],
+			_p9._0._1,
+			A2(_elm_community$elm_lazy_list$Lazy_List$map, _elm_community$elm_test$RoseTree$flatten, _p9._1)));
+};
+
+var _elm_community$elm_test$Fuzz_Internal$unpackGenTree = function (_p0) {
+	var _p1 = _p0;
+	var _p2 = _p1._0(false);
+	if (_p2.ctor === 'Shrink') {
+		return _p2._0;
+	} else {
+		return A2(
+			_elm_lang$core$Native_Utils.crash(
+				'Fuzz.Internal',
+				{
+					start: {line: 58, column: 13},
+					end: {line: 58, column: 24}
+				}),
+			'This shouldn\'t happen: Fuzz.Internal.unpackGenTree',
+			_p2);
+	}
+};
+var _elm_community$elm_test$Fuzz_Internal$unpackGenVal = function (_p3) {
+	var _p4 = _p3;
+	var _p5 = _p4._0(true);
+	if (_p5.ctor === 'Gen') {
+		return _p5._0;
+	} else {
+		return A2(
+			_elm_lang$core$Native_Utils.crash(
+				'Fuzz.Internal',
+				{
+					start: {line: 48, column: 13},
+					end: {line: 48, column: 24}
+				}),
+			'This shouldn\'t happen: Fuzz.Internal.unpackGenVal',
+			_p5);
+	}
+};
 var _elm_community$elm_test$Fuzz_Internal$Fuzzer = function (a) {
 	return {ctor: 'Fuzzer', _0: a};
 };
-
-var _elm_community$elm_test$Fuzz$toGeneratorFrequency = function (_p0) {
-	var _p1 = _p0;
-	return {ctor: '_Tuple2', _0: _p1._0, _1: _p1._1._0.generator};
+var _elm_community$elm_test$Fuzz_Internal$Shrink = function (a) {
+	return {ctor: 'Shrink', _0: a};
 };
+var _elm_community$elm_test$Fuzz_Internal$Gen = function (a) {
+	return {ctor: 'Gen', _0: a};
+};
+
 var _elm_community$elm_test$Fuzz$okOrCrash = function (result) {
-	var _p2 = result;
-	if (_p2.ctor === 'Ok') {
-		return _p2._0;
+	var _p0 = result;
+	if (_p0.ctor === 'Ok') {
+		return _p0._0;
 	} else {
 		return _elm_lang$core$Native_Utils.crashCase(
 			'Fuzz',
 			{
-				start: {line: 376, column: 5},
-				end: {line: 381, column: 28}
+				start: {line: 784, column: 5},
+				end: {line: 789, column: 28}
 			},
-			_p2)(_p2._0);
+			_p0)(_p0._0);
 	}
+};
+var _elm_community$elm_test$Fuzz$frequency = function (list) {
+	return _elm_lang$core$List$isEmpty(list) ? _elm_lang$core$Result$Err('You must provide at least one frequency pair.') : (A2(
+		_elm_lang$core$List$any,
+		function (_p2) {
+			var _p3 = _p2;
+			return _elm_lang$core$Native_Utils.cmp(_p3._0, 0) < 0;
+		},
+		list) ? _elm_lang$core$Result$Err('No frequency weights can be less than 0.') : ((_elm_lang$core$Native_Utils.cmp(
+		_elm_lang$core$List$sum(
+			A2(_elm_lang$core$List$map, _elm_lang$core$Basics$fst, list)),
+		0) < 1) ? _elm_lang$core$Result$Err('Frequency weights must sum to more than 0.') : _elm_lang$core$Result$Ok(
+		_elm_community$elm_test$Fuzz_Internal$Fuzzer(
+			function (noShrink) {
+				return noShrink ? _elm_community$elm_test$Fuzz_Internal$Gen(
+					_mgold$elm_random_pcg$Random_Pcg$frequency(
+						A2(
+							_elm_lang$core$List$map,
+							function (_p4) {
+								var _p5 = _p4;
+								return {
+									ctor: '_Tuple2',
+									_0: _p5._0,
+									_1: _elm_community$elm_test$Fuzz_Internal$unpackGenVal(_p5._1)
+								};
+							},
+							list))) : _elm_community$elm_test$Fuzz_Internal$Shrink(
+					_mgold$elm_random_pcg$Random_Pcg$frequency(
+						A2(
+							_elm_lang$core$List$map,
+							function (_p6) {
+								var _p7 = _p6;
+								return {
+									ctor: '_Tuple2',
+									_0: _p7._0,
+									_1: _elm_community$elm_test$Fuzz_Internal$unpackGenTree(_p7._1)
+								};
+							},
+							list)));
+			}))));
+};
+var _elm_community$elm_test$Fuzz$frequencyOrCrash = function (_p8) {
+	return _elm_community$elm_test$Fuzz$okOrCrash(
+		_elm_community$elm_test$Fuzz$frequency(_p8));
+};
+var _elm_community$elm_test$Fuzz$unwindLazyList = function (lazyListOfGenerators) {
+	var _p9 = _elm_community$elm_lazy_list$Lazy_List$headAndTail(lazyListOfGenerators);
+	if (_p9.ctor === 'Nothing') {
+		return _mgold$elm_random_pcg$Random_Pcg$constant(_elm_community$elm_lazy_list$Lazy_List$empty);
+	} else {
+		return A3(
+			_mgold$elm_random_pcg$Random_Pcg$map2,
+			_elm_community$elm_lazy_list$Lazy_List$cons,
+			_p9._0._0,
+			_elm_community$elm_test$Fuzz$unwindLazyList(_p9._0._1));
+	}
+};
+var _elm_community$elm_test$Fuzz$unwindRoseTree = function (_p10) {
+	var _p11 = _p10;
+	var _p13 = _p11._0;
+	var _p12 = _elm_community$elm_lazy_list$Lazy_List$headAndTail(_p11._1);
+	if (_p12.ctor === 'Nothing') {
+		return A2(_mgold$elm_random_pcg$Random_Pcg$map, _elm_community$elm_test$RoseTree$singleton, _p13);
+	} else {
+		return A5(
+			_mgold$elm_random_pcg$Random_Pcg$map4,
+			F4(
+				function (a, b, c, d) {
+					return A2(
+						_elm_community$elm_test$RoseTree$Rose,
+						a,
+						A2(
+							_elm_community$elm_lazy_list$Lazy_List$cons,
+							A2(_elm_community$elm_test$RoseTree$Rose, b, c),
+							d));
+				}),
+			_p13,
+			_p12._0._0._0,
+			_elm_community$elm_test$Fuzz$unwindLazyList(
+				A2(_elm_community$elm_lazy_list$Lazy_List$map, _elm_community$elm_test$Fuzz$unwindRoseTree, _p12._0._0._1)),
+			_elm_community$elm_test$Fuzz$unwindLazyList(
+				A2(_elm_community$elm_lazy_list$Lazy_List$map, _elm_community$elm_test$Fuzz$unwindRoseTree, _p12._0._1)));
+	}
+};
+var _elm_community$elm_test$Fuzz$andThenRoseTrees = F2(
+	function (transform, genTree) {
+		return A2(
+			_mgold$elm_random_pcg$Random_Pcg$andThen,
+			genTree,
+			function (_p14) {
+				var _p15 = _p14;
+				var genOtherChildren = A2(
+					_mgold$elm_random_pcg$Random_Pcg$map,
+					_elm_community$elm_lazy_list$Lazy_List$map(_elm_community$elm_test$RoseTree$flatten),
+					_elm_community$elm_test$Fuzz$unwindLazyList(
+						A2(
+							_elm_community$elm_lazy_list$Lazy_List$map,
+							function (rt) {
+								return _elm_community$elm_test$Fuzz$unwindRoseTree(
+									A2(
+										_elm_community$elm_test$RoseTree$map,
+										function (_p16) {
+											return _elm_community$elm_test$Fuzz_Internal$unpackGenTree(
+												transform(_p16));
+										},
+										rt));
+							},
+							_p15._1)));
+				return A3(
+					_mgold$elm_random_pcg$Random_Pcg$map2,
+					F2(
+						function (_p17, otherChildren) {
+							var _p18 = _p17;
+							return A2(
+								_elm_community$elm_test$RoseTree$Rose,
+								_p18._0,
+								A2(_elm_community$elm_lazy_list$Lazy_List$append, _p18._1, otherChildren));
+						}),
+					_elm_community$elm_test$Fuzz_Internal$unpackGenTree(
+						transform(_p15._0)),
+					genOtherChildren);
+			});
+	});
+var _elm_community$elm_test$Fuzz$andThen = F2(
+	function (transform, _p19) {
+		var _p20 = _p19;
+		return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+			function (noShrink) {
+				var _p21 = _p20._0(noShrink);
+				if (_p21.ctor === 'Gen') {
+					return _elm_community$elm_test$Fuzz_Internal$Gen(
+						A2(
+							_mgold$elm_random_pcg$Random_Pcg$andThen,
+							_p21._0,
+							function (_p22) {
+								return _elm_community$elm_test$Fuzz_Internal$unpackGenVal(
+									transform(_p22));
+							}));
+				} else {
+					return _elm_community$elm_test$Fuzz_Internal$Shrink(
+						A2(_elm_community$elm_test$Fuzz$andThenRoseTrees, transform, _p21._0));
+				}
+			});
+	});
+var _elm_community$elm_test$Fuzz$map = F2(
+	function (transform, _p23) {
+		var _p24 = _p23;
+		return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+			function (noShrink) {
+				var _p25 = _p24._0(noShrink);
+				if (_p25.ctor === 'Gen') {
+					return _elm_community$elm_test$Fuzz_Internal$Gen(
+						A2(_mgold$elm_random_pcg$Random_Pcg$map, transform, _p25._0));
+				} else {
+					return _elm_community$elm_test$Fuzz_Internal$Shrink(
+						A2(
+							_mgold$elm_random_pcg$Random_Pcg$map,
+							_elm_community$elm_test$RoseTree$map(transform),
+							_p25._0));
+				}
+			});
+	});
+var _elm_community$elm_test$Fuzz$constant = function (x) {
+	return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+		function (noShrink) {
+			return noShrink ? _elm_community$elm_test$Fuzz_Internal$Gen(
+				_mgold$elm_random_pcg$Random_Pcg$constant(x)) : _elm_community$elm_test$Fuzz_Internal$Shrink(
+				_mgold$elm_random_pcg$Random_Pcg$constant(
+					_elm_community$elm_test$RoseTree$singleton(x)));
+		});
+};
+var _elm_community$elm_test$Fuzz$tupleShrinkHelp5 = F5(
+	function (rose1, rose2, rose3, rose4, rose5) {
+		var shrink5 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A5(_elm_community$elm_test$Fuzz$tupleShrinkHelp5, rose1, rose2, rose3, rose4, subtree);
+			},
+			_elm_community$elm_test$RoseTree$children(rose5));
+		var shrink4 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A5(_elm_community$elm_test$Fuzz$tupleShrinkHelp5, rose1, rose2, rose3, subtree, rose5);
+			},
+			_elm_community$elm_test$RoseTree$children(rose4));
+		var shrink3 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A5(_elm_community$elm_test$Fuzz$tupleShrinkHelp5, rose1, rose2, subtree, rose4, rose5);
+			},
+			_elm_community$elm_test$RoseTree$children(rose3));
+		var shrink2 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A5(_elm_community$elm_test$Fuzz$tupleShrinkHelp5, rose1, subtree, rose3, rose4, rose5);
+			},
+			_elm_community$elm_test$RoseTree$children(rose2));
+		var shrink1 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A5(_elm_community$elm_test$Fuzz$tupleShrinkHelp5, subtree, rose2, rose3, rose4, rose5);
+			},
+			_elm_community$elm_test$RoseTree$children(rose1));
+		var root = {
+			ctor: '_Tuple5',
+			_0: _elm_community$elm_test$RoseTree$root(rose1),
+			_1: _elm_community$elm_test$RoseTree$root(rose2),
+			_2: _elm_community$elm_test$RoseTree$root(rose3),
+			_3: _elm_community$elm_test$RoseTree$root(rose4),
+			_4: _elm_community$elm_test$RoseTree$root(rose5)
+		};
+		return A2(
+			_elm_community$elm_test$RoseTree$Rose,
+			root,
+			A2(
+				_elm_community$elm_lazy_list$Lazy_List$append,
+				shrink1,
+				A2(
+					_elm_community$elm_lazy_list$Lazy_List$append,
+					shrink2,
+					A2(
+						_elm_community$elm_lazy_list$Lazy_List$append,
+						shrink3,
+						A2(_elm_community$elm_lazy_list$Lazy_List$append, shrink4, shrink5)))));
+	});
+var _elm_community$elm_test$Fuzz$tuple5 = function (_p26) {
+	var _p27 = _p26;
+	return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+		function (noShrink) {
+			var _p28 = {
+				ctor: '_Tuple5',
+				_0: _p27._0._0(noShrink),
+				_1: _p27._1._0(noShrink),
+				_2: _p27._2._0(noShrink),
+				_3: _p27._3._0(noShrink),
+				_4: _p27._4._0(noShrink)
+			};
+			_v14_2:
+			do {
+				if (_p28.ctor === '_Tuple5') {
+					if (_p28._0.ctor === 'Gen') {
+						if ((((_p28._1.ctor === 'Gen') && (_p28._2.ctor === 'Gen')) && (_p28._3.ctor === 'Gen')) && (_p28._4.ctor === 'Gen')) {
+							return _elm_community$elm_test$Fuzz_Internal$Gen(
+								A6(
+									_mgold$elm_random_pcg$Random_Pcg$map5,
+									F5(
+										function (v0, v1, v2, v3, v4) {
+											return {ctor: '_Tuple5', _0: v0, _1: v1, _2: v2, _3: v3, _4: v4};
+										}),
+									_p28._0._0,
+									_p28._1._0,
+									_p28._2._0,
+									_p28._3._0,
+									_p28._4._0));
+						} else {
+							break _v14_2;
+						}
+					} else {
+						if ((((_p28._1.ctor === 'Shrink') && (_p28._2.ctor === 'Shrink')) && (_p28._3.ctor === 'Shrink')) && (_p28._4.ctor === 'Shrink')) {
+							return _elm_community$elm_test$Fuzz_Internal$Shrink(
+								A6(_mgold$elm_random_pcg$Random_Pcg$map5, _elm_community$elm_test$Fuzz$tupleShrinkHelp5, _p28._0._0, _p28._1._0, _p28._2._0, _p28._3._0, _p28._4._0));
+						} else {
+							break _v14_2;
+						}
+					}
+				} else {
+					break _v14_2;
+				}
+			} while(false);
+			return A2(
+				_elm_lang$core$Native_Utils.crash(
+					'Fuzz',
+					{
+						start: {line: 569, column: 21},
+						end: {line: 569, column: 32}
+					}),
+				'This shouldn\'t happen: Fuzz.tuple5',
+				_p28);
+		});
+};
+var _elm_community$elm_test$Fuzz$map5 = F6(
+	function (transform, fuzzA, fuzzB, fuzzC, fuzzD, fuzzE) {
+		return A2(
+			_elm_community$elm_test$Fuzz$map,
+			function (_p29) {
+				var _p30 = _p29;
+				return A5(transform, _p30._0, _p30._1, _p30._2, _p30._3, _p30._4);
+			},
+			_elm_community$elm_test$Fuzz$tuple5(
+				{ctor: '_Tuple5', _0: fuzzA, _1: fuzzB, _2: fuzzC, _3: fuzzD, _4: fuzzE}));
+	});
+var _elm_community$elm_test$Fuzz$tupleShrinkHelp4 = F4(
+	function (rose1, rose2, rose3, rose4) {
+		var shrink4 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A4(_elm_community$elm_test$Fuzz$tupleShrinkHelp4, rose1, rose2, rose3, subtree);
+			},
+			_elm_community$elm_test$RoseTree$children(rose4));
+		var shrink3 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A4(_elm_community$elm_test$Fuzz$tupleShrinkHelp4, rose1, rose2, subtree, rose4);
+			},
+			_elm_community$elm_test$RoseTree$children(rose3));
+		var shrink2 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A4(_elm_community$elm_test$Fuzz$tupleShrinkHelp4, rose1, subtree, rose3, rose4);
+			},
+			_elm_community$elm_test$RoseTree$children(rose2));
+		var shrink1 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A4(_elm_community$elm_test$Fuzz$tupleShrinkHelp4, subtree, rose2, rose3, rose4);
+			},
+			_elm_community$elm_test$RoseTree$children(rose1));
+		var root = {
+			ctor: '_Tuple4',
+			_0: _elm_community$elm_test$RoseTree$root(rose1),
+			_1: _elm_community$elm_test$RoseTree$root(rose2),
+			_2: _elm_community$elm_test$RoseTree$root(rose3),
+			_3: _elm_community$elm_test$RoseTree$root(rose4)
+		};
+		return A2(
+			_elm_community$elm_test$RoseTree$Rose,
+			root,
+			A2(
+				_elm_community$elm_lazy_list$Lazy_List$append,
+				shrink1,
+				A2(
+					_elm_community$elm_lazy_list$Lazy_List$append,
+					shrink2,
+					A2(_elm_community$elm_lazy_list$Lazy_List$append, shrink3, shrink4))));
+	});
+var _elm_community$elm_test$Fuzz$tuple4 = function (_p31) {
+	var _p32 = _p31;
+	return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+		function (noShrink) {
+			var _p33 = {
+				ctor: '_Tuple4',
+				_0: _p32._0._0(noShrink),
+				_1: _p32._1._0(noShrink),
+				_2: _p32._2._0(noShrink),
+				_3: _p32._3._0(noShrink)
+			};
+			_v17_2:
+			do {
+				if (_p33.ctor === '_Tuple4') {
+					if (_p33._0.ctor === 'Gen') {
+						if (((_p33._1.ctor === 'Gen') && (_p33._2.ctor === 'Gen')) && (_p33._3.ctor === 'Gen')) {
+							return _elm_community$elm_test$Fuzz_Internal$Gen(
+								A5(
+									_mgold$elm_random_pcg$Random_Pcg$map4,
+									F4(
+										function (v0, v1, v2, v3) {
+											return {ctor: '_Tuple4', _0: v0, _1: v1, _2: v2, _3: v3};
+										}),
+									_p33._0._0,
+									_p33._1._0,
+									_p33._2._0,
+									_p33._3._0));
+						} else {
+							break _v17_2;
+						}
+					} else {
+						if (((_p33._1.ctor === 'Shrink') && (_p33._2.ctor === 'Shrink')) && (_p33._3.ctor === 'Shrink')) {
+							return _elm_community$elm_test$Fuzz_Internal$Shrink(
+								A5(_mgold$elm_random_pcg$Random_Pcg$map4, _elm_community$elm_test$Fuzz$tupleShrinkHelp4, _p33._0._0, _p33._1._0, _p33._2._0, _p33._3._0));
+						} else {
+							break _v17_2;
+						}
+					}
+				} else {
+					break _v17_2;
+				}
+			} while(false);
+			return A2(
+				_elm_lang$core$Native_Utils.crash(
+					'Fuzz',
+					{
+						start: {line: 526, column: 21},
+						end: {line: 526, column: 32}
+					}),
+				'This shouldn\'t happen: Fuzz.tuple4',
+				_p33);
+		});
+};
+var _elm_community$elm_test$Fuzz$map4 = F5(
+	function (transform, fuzzA, fuzzB, fuzzC, fuzzD) {
+		return A2(
+			_elm_community$elm_test$Fuzz$map,
+			function (_p34) {
+				var _p35 = _p34;
+				return A4(transform, _p35._0, _p35._1, _p35._2, _p35._3);
+			},
+			_elm_community$elm_test$Fuzz$tuple4(
+				{ctor: '_Tuple4', _0: fuzzA, _1: fuzzB, _2: fuzzC, _3: fuzzD}));
+	});
+var _elm_community$elm_test$Fuzz$tupleShrinkHelp3 = F3(
+	function (_p38, _p37, _p36) {
+		var _p39 = _p38;
+		var _p44 = _p39;
+		var _p40 = _p37;
+		var _p43 = _p40;
+		var _p41 = _p36;
+		var _p42 = _p41;
+		var shrink3 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A3(_elm_community$elm_test$Fuzz$tupleShrinkHelp3, _p44, _p43, subtree);
+			},
+			_p41._1);
+		var shrink2 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A3(_elm_community$elm_test$Fuzz$tupleShrinkHelp3, _p44, subtree, _p42);
+			},
+			_p40._1);
+		var shrink1 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A3(_elm_community$elm_test$Fuzz$tupleShrinkHelp3, subtree, _p43, _p42);
+			},
+			_p39._1);
+		var root = {ctor: '_Tuple3', _0: _p39._0, _1: _p40._0, _2: _p41._0};
+		return A2(
+			_elm_community$elm_test$RoseTree$Rose,
+			root,
+			A2(
+				_elm_community$elm_lazy_list$Lazy_List$append,
+				shrink1,
+				A2(_elm_community$elm_lazy_list$Lazy_List$append, shrink2, shrink3)));
+	});
+var _elm_community$elm_test$Fuzz$tuple3 = function (_p45) {
+	var _p46 = _p45;
+	return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+		function (noShrink) {
+			var _p47 = {
+				ctor: '_Tuple3',
+				_0: _p46._0._0(noShrink),
+				_1: _p46._1._0(noShrink),
+				_2: _p46._2._0(noShrink)
+			};
+			_v23_2:
+			do {
+				if (_p47.ctor === '_Tuple3') {
+					if (_p47._0.ctor === 'Gen') {
+						if ((_p47._1.ctor === 'Gen') && (_p47._2.ctor === 'Gen')) {
+							return _elm_community$elm_test$Fuzz_Internal$Gen(
+								A4(
+									_mgold$elm_random_pcg$Random_Pcg$map3,
+									F3(
+										function (v0, v1, v2) {
+											return {ctor: '_Tuple3', _0: v0, _1: v1, _2: v2};
+										}),
+									_p47._0._0,
+									_p47._1._0,
+									_p47._2._0));
+						} else {
+							break _v23_2;
+						}
+					} else {
+						if ((_p47._1.ctor === 'Shrink') && (_p47._2.ctor === 'Shrink')) {
+							return _elm_community$elm_test$Fuzz_Internal$Shrink(
+								A4(_mgold$elm_random_pcg$Random_Pcg$map3, _elm_community$elm_test$Fuzz$tupleShrinkHelp3, _p47._0._0, _p47._1._0, _p47._2._0));
+						} else {
+							break _v23_2;
+						}
+					}
+				} else {
+					break _v23_2;
+				}
+			} while(false);
+			return A2(
+				_elm_lang$core$Native_Utils.crash(
+					'Fuzz',
+					{
+						start: {line: 487, column: 21},
+						end: {line: 487, column: 32}
+					}),
+				'This shouldn\'t happen: Fuzz.tuple3',
+				_p47);
+		});
+};
+var _elm_community$elm_test$Fuzz$map3 = F4(
+	function (transform, fuzzA, fuzzB, fuzzC) {
+		return A2(
+			_elm_community$elm_test$Fuzz$map,
+			function (_p48) {
+				var _p49 = _p48;
+				return A3(transform, _p49._0, _p49._1, _p49._2);
+			},
+			_elm_community$elm_test$Fuzz$tuple3(
+				{ctor: '_Tuple3', _0: fuzzA, _1: fuzzB, _2: fuzzC}));
+	});
+var _elm_community$elm_test$Fuzz$tupleShrinkHelp = F2(
+	function (_p51, _p50) {
+		var _p52 = _p51;
+		var _p53 = _p50;
+		var shrink2 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A2(_elm_community$elm_test$Fuzz$tupleShrinkHelp, _p52, subtree);
+			},
+			_p53._1);
+		var shrink1 = A2(
+			_elm_community$elm_lazy_list$Lazy_List$map,
+			function (subtree) {
+				return A2(_elm_community$elm_test$Fuzz$tupleShrinkHelp, subtree, _p53);
+			},
+			_p52._1);
+		var root = {ctor: '_Tuple2', _0: _p52._0, _1: _p53._0};
+		return A2(
+			_elm_community$elm_test$RoseTree$Rose,
+			root,
+			A2(_elm_community$elm_lazy_list$Lazy_List$append, shrink1, shrink2));
+	});
+var _elm_community$elm_test$Fuzz$tuple = function (_p54) {
+	var _p55 = _p54;
+	return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+		function (noShrink) {
+			var _p56 = {
+				ctor: '_Tuple2',
+				_0: _p55._0._0(noShrink),
+				_1: _p55._1._0(noShrink)
+			};
+			_v28_2:
+			do {
+				if (_p56.ctor === '_Tuple2') {
+					if (_p56._0.ctor === 'Gen') {
+						if (_p56._1.ctor === 'Gen') {
+							return _elm_community$elm_test$Fuzz_Internal$Gen(
+								A3(
+									_mgold$elm_random_pcg$Random_Pcg$map2,
+									F2(
+										function (v0, v1) {
+											return {ctor: '_Tuple2', _0: v0, _1: v1};
+										}),
+									_p56._0._0,
+									_p56._1._0));
+						} else {
+							break _v28_2;
+						}
+					} else {
+						if (_p56._1.ctor === 'Shrink') {
+							return _elm_community$elm_test$Fuzz_Internal$Shrink(
+								A3(_mgold$elm_random_pcg$Random_Pcg$map2, _elm_community$elm_test$Fuzz$tupleShrinkHelp, _p56._0._0, _p56._1._0));
+						} else {
+							break _v28_2;
+						}
+					}
+				} else {
+					break _v28_2;
+				}
+			} while(false);
+			return A2(
+				_elm_lang$core$Native_Utils.crash(
+					'Fuzz',
+					{
+						start: {line: 445, column: 21},
+						end: {line: 445, column: 32}
+					}),
+				'This shouldn\'t happen: Fuzz.tuple',
+				_p56);
+		});
+};
+var _elm_community$elm_test$Fuzz$map2 = F3(
+	function (transform, fuzzA, fuzzB) {
+		return A2(
+			_elm_community$elm_test$Fuzz$map,
+			function (_p57) {
+				var _p58 = _p57;
+				return A2(transform, _p58._0, _p58._1);
+			},
+			_elm_community$elm_test$Fuzz$tuple(
+				{ctor: '_Tuple2', _0: fuzzA, _1: fuzzB}));
+	});
+var _elm_community$elm_test$Fuzz$andMap = _elm_community$elm_test$Fuzz$map2(
+	F2(
+		function (x, y) {
+			return x(y);
+		}));
+var _elm_community$elm_test$Fuzz$listShrinkHelp = function (listOfTrees) {
+	var shorter = F3(
+		function (windowSize, aList, recursing) {
+			if ((_elm_lang$core$Native_Utils.cmp(
+				windowSize,
+				_elm_lang$core$List$length(aList)) > 0) || (_elm_lang$core$Native_Utils.eq(
+				windowSize,
+				_elm_lang$core$List$length(aList)) && _elm_lang$core$Basics$not(recursing))) {
+				return _elm_community$elm_lazy_list$Lazy_List$empty;
+			} else {
+				var _p59 = aList;
+				if (_p59.ctor === '[]') {
+					return _elm_community$elm_lazy_list$Lazy_List$empty;
+				} else {
+					return A2(
+						_elm_community$elm_lazy_list$Lazy_List$cons,
+						A2(_elm_lang$core$List$take, windowSize, aList),
+						A3(shorter, windowSize, _p59._1, true));
+				}
+			}
+		});
+	var shrinkOne = F2(
+		function (prefix, list) {
+			var _p60 = list;
+			if (_p60.ctor === '[]') {
+				return _elm_community$elm_lazy_list$Lazy_List$empty;
+			} else {
+				return A2(
+					_elm_community$elm_lazy_list$Lazy_List$map,
+					function (childTree) {
+						return _elm_community$elm_test$Fuzz$listShrinkHelp(
+							A2(
+								_elm_lang$core$Basics_ops['++'],
+								prefix,
+								A2(_elm_lang$core$List_ops['::'], childTree, _p60._1)));
+					},
+					_p60._0._1);
+			}
+		});
+	var root = A2(_elm_lang$core$List$map, _elm_community$elm_test$RoseTree$root, listOfTrees);
+	var n = _elm_lang$core$List$length(listOfTrees);
+	var shrunkenVals = A2(
+		_elm_community$elm_lazy_list$Lazy_List$flatMap,
+		function (i) {
+			return A2(
+				shrinkOne,
+				A2(_elm_lang$core$List$take, i, listOfTrees),
+				A2(_elm_lang$core$List$drop, i, listOfTrees));
+		},
+		A2(
+			_elm_community$elm_lazy_list$Lazy_List$take,
+			n,
+			A2(
+				_elm_community$elm_lazy_list$Lazy_List$map,
+				function (i) {
+					return i - 1;
+				},
+				_elm_community$elm_lazy_list$Lazy_List$numbers)));
+	var shortened = A2(
+		_elm_community$elm_lazy_list$Lazy_List$map,
+		_elm_community$elm_test$Fuzz$listShrinkHelp,
+		A2(
+			_elm_community$elm_lazy_list$Lazy_List$flatMap,
+			function (len) {
+				return A3(shorter, len, listOfTrees, false);
+			},
+			(_elm_lang$core$Native_Utils.cmp(n, 6) > 0) ? A2(
+				_elm_community$elm_lazy_list$Lazy_List$takeWhile,
+				function (x) {
+					return _elm_lang$core$Native_Utils.cmp(x, 0) > 0;
+				},
+				A2(
+					_elm_community$elm_lazy_list$Lazy_List$iterate,
+					function (n) {
+						return (n / 2) | 0;
+					},
+					n)) : _elm_community$elm_lazy_list$Lazy_List$fromList(
+				_elm_lang$core$Native_List.range(1, n))));
+	return A2(
+		_elm_community$elm_test$RoseTree$Rose,
+		root,
+		A2(
+			_elm_community$elm_lazy_list$Lazy_List$cons,
+			_elm_community$elm_test$RoseTree$singleton(
+				_elm_lang$core$Native_List.fromArray(
+					[])),
+			A2(_elm_community$elm_lazy_list$Lazy_List$append, shortened, shrunkenVals)));
+};
+var _elm_community$elm_test$Fuzz$list = function (_p61) {
+	var _p62 = _p61;
+	var genLength = _mgold$elm_random_pcg$Random_Pcg$frequency(
+		_elm_lang$core$Native_List.fromArray(
+			[
+				{
+				ctor: '_Tuple2',
+				_0: 1,
+				_1: _mgold$elm_random_pcg$Random_Pcg$constant(0)
+			},
+				{
+				ctor: '_Tuple2',
+				_0: 1,
+				_1: _mgold$elm_random_pcg$Random_Pcg$constant(1)
+			},
+				{
+				ctor: '_Tuple2',
+				_0: 3,
+				_1: A2(_mgold$elm_random_pcg$Random_Pcg$int, 2, 10)
+			},
+				{
+				ctor: '_Tuple2',
+				_0: 2,
+				_1: A2(_mgold$elm_random_pcg$Random_Pcg$int, 10, 100)
+			},
+				{
+				ctor: '_Tuple2',
+				_0: 0.5,
+				_1: A2(_mgold$elm_random_pcg$Random_Pcg$int, 100, 400)
+			}
+			]));
+	return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+		function (noShrink) {
+			var _p63 = _p62._0(noShrink);
+			if (_p63.ctor === 'Gen') {
+				return _elm_community$elm_test$Fuzz_Internal$Gen(
+					A3(
+						_elm_lang$core$Basics$flip,
+						_mgold$elm_random_pcg$Random_Pcg$andThen,
+						function (i) {
+							return A2(_mgold$elm_random_pcg$Random_Pcg$list, i, _p63._0);
+						},
+						genLength));
+			} else {
+				return _elm_community$elm_test$Fuzz_Internal$Shrink(
+					A2(
+						_mgold$elm_random_pcg$Random_Pcg$map,
+						_elm_community$elm_test$Fuzz$listShrinkHelp,
+						A3(
+							_elm_lang$core$Basics$flip,
+							_mgold$elm_random_pcg$Random_Pcg$andThen,
+							function (i) {
+								return A2(_mgold$elm_random_pcg$Random_Pcg$list, i, _p63._0);
+							},
+							genLength)));
+			}
+		});
+};
+var _elm_community$elm_test$Fuzz$array = function (fuzzer) {
+	return A2(
+		_elm_community$elm_test$Fuzz$map,
+		_elm_lang$core$Array$fromList,
+		_elm_community$elm_test$Fuzz$list(fuzzer));
+};
+var _elm_community$elm_test$Fuzz$result = F2(
+	function (_p65, _p64) {
+		var _p66 = _p65;
+		var _p67 = _p64;
+		return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+			function (noShrink) {
+				var _p68 = {
+					ctor: '_Tuple2',
+					_0: _p66._0(noShrink),
+					_1: _p67._0(noShrink)
+				};
+				_v36_2:
+				do {
+					if (_p68.ctor === '_Tuple2') {
+						if (_p68._0.ctor === 'Gen') {
+							if (_p68._1.ctor === 'Gen') {
+								return _elm_community$elm_test$Fuzz_Internal$Gen(
+									A4(
+										_mgold$elm_random_pcg$Random_Pcg$map3,
+										F3(
+											function (useError, err, val) {
+												return useError ? _elm_lang$core$Result$Err(err) : _elm_lang$core$Result$Ok(val);
+											}),
+										_mgold$elm_random_pcg$Random_Pcg$oneIn(4),
+										_p68._0._0,
+										_p68._1._0));
+							} else {
+								break _v36_2;
+							}
+						} else {
+							if (_p68._1.ctor === 'Shrink') {
+								return _elm_community$elm_test$Fuzz_Internal$Shrink(
+									A4(
+										_mgold$elm_random_pcg$Random_Pcg$map3,
+										F3(
+											function (useError, errorTree, valueTree) {
+												return useError ? A2(_elm_community$elm_test$RoseTree$map, _elm_lang$core$Result$Err, errorTree) : A2(_elm_community$elm_test$RoseTree$map, _elm_lang$core$Result$Ok, valueTree);
+											}),
+										_mgold$elm_random_pcg$Random_Pcg$oneIn(4),
+										_p68._0._0,
+										_p68._1._0));
+							} else {
+								break _v36_2;
+							}
+						}
+					} else {
+						break _v36_2;
+					}
+				} while(false);
+				return A2(
+					_elm_lang$core$Native_Utils.crash(
+						'Fuzz',
+						{
+							start: {line: 331, column: 21},
+							end: {line: 331, column: 32}
+						}),
+					'This shouldn\'t happen: Fuzz.result',
+					_p68);
+			});
+	});
+var _elm_community$elm_test$Fuzz$maybe = function (_p69) {
+	var _p70 = _p69;
+	return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+		function (noShrink) {
+			var _p71 = _p70._0(noShrink);
+			if (_p71.ctor === 'Gen') {
+				return _elm_community$elm_test$Fuzz_Internal$Gen(
+					A3(
+						_mgold$elm_random_pcg$Random_Pcg$map2,
+						F2(
+							function (useNothing, val) {
+								return useNothing ? _elm_lang$core$Maybe$Nothing : _elm_lang$core$Maybe$Just(val);
+							}),
+						_mgold$elm_random_pcg$Random_Pcg$oneIn(4),
+						_p71._0));
+			} else {
+				return _elm_community$elm_test$Fuzz_Internal$Shrink(
+					A3(
+						_mgold$elm_random_pcg$Random_Pcg$map2,
+						F2(
+							function (useNothing, tree) {
+								return useNothing ? _elm_community$elm_test$RoseTree$singleton(_elm_lang$core$Maybe$Nothing) : A2(
+									_elm_community$elm_test$RoseTree$addChild,
+									_elm_community$elm_test$RoseTree$singleton(_elm_lang$core$Maybe$Nothing),
+									A2(_elm_community$elm_test$RoseTree$map, _elm_lang$core$Maybe$Just, tree));
+							}),
+						_mgold$elm_random_pcg$Random_Pcg$oneIn(4),
+						_p71._0));
+			}
+		});
 };
 var _elm_community$elm_test$Fuzz$charGenerator = A2(
 	_mgold$elm_random_pcg$Random_Pcg$map,
 	_elm_lang$core$Char$fromCode,
 	A2(_mgold$elm_random_pcg$Random_Pcg$int, 32, 126));
+var _elm_community$elm_test$Fuzz$unit = _elm_community$elm_test$Fuzz_Internal$Fuzzer(
+	function (noShrink) {
+		return noShrink ? _elm_community$elm_test$Fuzz_Internal$Gen(
+			_mgold$elm_random_pcg$Random_Pcg$constant(
+				{ctor: '_Tuple0'})) : _elm_community$elm_test$Fuzz_Internal$Shrink(
+			_mgold$elm_random_pcg$Random_Pcg$constant(
+				_elm_community$elm_test$RoseTree$singleton(
+					{ctor: '_Tuple0'})));
+	});
 var _elm_community$elm_test$Fuzz$custom = F2(
 	function (generator, shrinker) {
+		var shrinkTree = function (a) {
+			return A2(
+				_elm_community$elm_test$RoseTree$Rose,
+				a,
+				A2(
+					_elm_community$elm_lazy_list$Lazy_List$map,
+					shrinkTree,
+					shrinker(a)));
+		};
 		return _elm_community$elm_test$Fuzz_Internal$Fuzzer(
-			{generator: generator, shrinker: shrinker});
+			function (noShrink) {
+				return noShrink ? _elm_community$elm_test$Fuzz_Internal$Gen(generator) : _elm_community$elm_test$Fuzz_Internal$Shrink(
+					A2(_mgold$elm_random_pcg$Random_Pcg$map, shrinkTree, generator));
+			});
 	});
-var _elm_community$elm_test$Fuzz$unit = A2(
-	_elm_community$elm_test$Fuzz$custom,
-	_mgold$elm_random_pcg$Random_Pcg$constant(
-		{ctor: '_Tuple0'}),
-	_elm_community$shrink$Shrink$noShrink);
 var _elm_community$elm_test$Fuzz$bool = A2(_elm_community$elm_test$Fuzz$custom, _mgold$elm_random_pcg$Random_Pcg$bool, _elm_community$shrink$Shrink$bool);
 var _elm_community$elm_test$Fuzz$order = function () {
 	var intToOrder = function (i) {
@@ -8148,14 +10086,32 @@ var _elm_community$elm_test$Fuzz$int = function () {
 	return A2(_elm_community$elm_test$Fuzz$custom, generator, _elm_community$shrink$Shrink$int);
 }();
 var _elm_community$elm_test$Fuzz$intRange = F2(
-	function (min, max) {
+	function (lo, hi) {
 		return A2(
 			_elm_community$elm_test$Fuzz$custom,
-			A2(_mgold$elm_random_pcg$Random_Pcg$int, min, max),
+			_mgold$elm_random_pcg$Random_Pcg$frequency(
+				_elm_lang$core$Native_List.fromArray(
+					[
+						{
+						ctor: '_Tuple2',
+						_0: 8,
+						_1: A2(_mgold$elm_random_pcg$Random_Pcg$int, lo, hi)
+					},
+						{
+						ctor: '_Tuple2',
+						_0: 1,
+						_1: _mgold$elm_random_pcg$Random_Pcg$constant(lo)
+					},
+						{
+						ctor: '_Tuple2',
+						_0: 1,
+						_1: _mgold$elm_random_pcg$Random_Pcg$constant(hi)
+					}
+					])),
 			A2(
 				_elm_community$shrink$Shrink$keepIf,
 				function (i) {
-					return (_elm_lang$core$Native_Utils.cmp(i, min) > -1) && (_elm_lang$core$Native_Utils.cmp(i, max) < 1);
+					return (_elm_lang$core$Native_Utils.cmp(i, lo) > -1) && (_elm_lang$core$Native_Utils.cmp(i, hi) < 1);
 				},
 				_elm_community$shrink$Shrink$int));
 	});
@@ -8198,14 +10154,32 @@ var _elm_community$elm_test$Fuzz$float = function () {
 	return A2(_elm_community$elm_test$Fuzz$custom, generator, _elm_community$shrink$Shrink$float);
 }();
 var _elm_community$elm_test$Fuzz$floatRange = F2(
-	function (min, max) {
+	function (lo, hi) {
 		return A2(
 			_elm_community$elm_test$Fuzz$custom,
-			A2(_mgold$elm_random_pcg$Random_Pcg$float, min, max),
+			_mgold$elm_random_pcg$Random_Pcg$frequency(
+				_elm_lang$core$Native_List.fromArray(
+					[
+						{
+						ctor: '_Tuple2',
+						_0: 8,
+						_1: A2(_mgold$elm_random_pcg$Random_Pcg$float, lo, hi)
+					},
+						{
+						ctor: '_Tuple2',
+						_0: 1,
+						_1: _mgold$elm_random_pcg$Random_Pcg$constant(lo)
+					},
+						{
+						ctor: '_Tuple2',
+						_0: 1,
+						_1: _mgold$elm_random_pcg$Random_Pcg$constant(hi)
+					}
+					])),
 			A2(
 				_elm_community$shrink$Shrink$keepIf,
 				function (i) {
-					return (_elm_lang$core$Native_Utils.cmp(i, min) > -1) && (_elm_lang$core$Native_Utils.cmp(i, max) < 1);
+					return (_elm_lang$core$Native_Utils.cmp(i, lo) > -1) && (_elm_lang$core$Native_Utils.cmp(i, hi) < 1);
 				},
 				_elm_community$shrink$Shrink$float));
 	});
@@ -8232,240 +10206,36 @@ var _elm_community$elm_test$Fuzz$percentage = function () {
 	return A2(_elm_community$elm_test$Fuzz$custom, generator, _elm_community$shrink$Shrink$float);
 }();
 var _elm_community$elm_test$Fuzz$char = A2(_elm_community$elm_test$Fuzz$custom, _elm_community$elm_test$Fuzz$charGenerator, _elm_community$shrink$Shrink$character);
-var _elm_community$elm_test$Fuzz$string = A2(
-	_elm_community$elm_test$Fuzz$custom,
-	A3(_elm_community$elm_test$Util$rangeLengthString, 0, 10, _elm_community$elm_test$Fuzz$charGenerator),
-	_elm_community$shrink$Shrink$string);
-var _elm_community$elm_test$Fuzz$maybe = function (_p4) {
-	var _p5 = _p4;
-	var genBool = A2(
-		_mgold$elm_random_pcg$Random_Pcg$map,
-		_elm_lang$core$Basics$not,
-		_mgold$elm_random_pcg$Random_Pcg$oneIn(4));
-	return A2(
-		_elm_community$elm_test$Fuzz$custom,
-		A2(_mgold$elm_random_pcg$Random_Pcg$maybe, genBool, _p5._0.generator),
-		_elm_community$shrink$Shrink$maybe(_p5._0.shrinker));
-};
-var _elm_community$elm_test$Fuzz$result = F2(
-	function (_p7, _p6) {
-		var _p8 = _p7;
-		var _p11 = _p8._0;
-		var _p9 = _p6;
-		var _p10 = _p9._0;
-		return A2(
-			_elm_community$elm_test$Fuzz$custom,
-			A2(
-				_mgold$elm_random_pcg$Random_Pcg$andThen,
-				_mgold$elm_random_pcg$Random_Pcg$bool,
-				function (b) {
-					return b ? A2(_mgold$elm_random_pcg$Random_Pcg$map, _elm_lang$core$Result$Err, _p11.generator) : A2(_mgold$elm_random_pcg$Random_Pcg$map, _elm_lang$core$Result$Ok, _p10.generator);
-				}),
-			A2(_elm_community$shrink$Shrink$result, _p11.shrinker, _p10.shrinker));
-	});
-var _elm_community$elm_test$Fuzz$list = function (_p12) {
-	var _p13 = _p12;
-	var _p14 = _p13._0.generator;
-	return A2(
-		_elm_community$elm_test$Fuzz$custom,
+var _elm_community$elm_test$Fuzz$string = function () {
+	var generator = A2(
+		_mgold$elm_random_pcg$Random_Pcg$andThen,
 		_mgold$elm_random_pcg$Random_Pcg$frequency(
 			_elm_lang$core$Native_List.fromArray(
 				[
 					{
 					ctor: '_Tuple2',
-					_0: 1,
-					_1: _mgold$elm_random_pcg$Random_Pcg$constant(
-						_elm_lang$core$Native_List.fromArray(
-							[]))
-				},
-					{
-					ctor: '_Tuple2',
-					_0: 1,
-					_1: A2(
-						_mgold$elm_random_pcg$Random_Pcg$map,
-						function (x) {
-							return _elm_lang$core$Native_List.fromArray(
-								[x]);
-						},
-						_p14)
-				},
-					{
-					ctor: '_Tuple2',
 					_0: 3,
-					_1: A3(_elm_community$elm_test$Util$rangeLengthList, 2, 10, _p14)
+					_1: A2(_mgold$elm_random_pcg$Random_Pcg$int, 1, 10)
 				},
 					{
 					ctor: '_Tuple2',
-					_0: 2,
-					_1: A3(_elm_community$elm_test$Util$rangeLengthList, 10, 100, _p14)
+					_0: 0.2,
+					_1: _mgold$elm_random_pcg$Random_Pcg$constant(0)
 				},
 					{
 					ctor: '_Tuple2',
-					_0: 0.5,
-					_1: A3(_elm_community$elm_test$Util$rangeLengthList, 100, 400, _p14)
+					_0: 1,
+					_1: A2(_mgold$elm_random_pcg$Random_Pcg$int, 11, 50)
+				},
+					{
+					ctor: '_Tuple2',
+					_0: 1,
+					_1: A2(_mgold$elm_random_pcg$Random_Pcg$int, 50, 1000)
 				}
 				])),
-		_elm_community$shrink$Shrink$list(_p13._0.shrinker));
-};
-var _elm_community$elm_test$Fuzz$array = function (_p15) {
-	var _p16 = _p15;
-	var _p17 = _p16._0.generator;
-	return A2(
-		_elm_community$elm_test$Fuzz$custom,
-		_mgold$elm_random_pcg$Random_Pcg$frequency(
-			_elm_lang$core$Native_List.fromArray(
-				[
-					{
-					ctor: '_Tuple2',
-					_0: 1,
-					_1: _mgold$elm_random_pcg$Random_Pcg$constant(_elm_lang$core$Array$empty)
-				},
-					{
-					ctor: '_Tuple2',
-					_0: 1,
-					_1: A2(
-						_mgold$elm_random_pcg$Random_Pcg$map,
-						_elm_lang$core$Array$repeat(1),
-						_p17)
-				},
-					{
-					ctor: '_Tuple2',
-					_0: 3,
-					_1: A3(_elm_community$elm_test$Util$rangeLengthArray, 2, 10, _p17)
-				},
-					{
-					ctor: '_Tuple2',
-					_0: 2,
-					_1: A3(_elm_community$elm_test$Util$rangeLengthArray, 10, 100, _p17)
-				},
-					{
-					ctor: '_Tuple2',
-					_0: 0.5,
-					_1: A3(_elm_community$elm_test$Util$rangeLengthArray, 100, 400, _p17)
-				}
-				])),
-		_elm_community$shrink$Shrink$array(_p16._0.shrinker));
-};
-var _elm_community$elm_test$Fuzz$tuple = function (_p18) {
-	var _p19 = _p18;
-	var _p21 = _p19._1._0;
-	var _p20 = _p19._0._0;
-	return A2(
-		_elm_community$elm_test$Fuzz$custom,
-		A3(
-			_mgold$elm_random_pcg$Random_Pcg$map2,
-			F2(
-				function (v0, v1) {
-					return {ctor: '_Tuple2', _0: v0, _1: v1};
-				}),
-			_p20.generator,
-			_p21.generator),
-		_elm_community$shrink$Shrink$tuple(
-			{ctor: '_Tuple2', _0: _p20.shrinker, _1: _p21.shrinker}));
-};
-var _elm_community$elm_test$Fuzz$tuple3 = function (_p22) {
-	var _p23 = _p22;
-	var _p26 = _p23._2._0;
-	var _p25 = _p23._1._0;
-	var _p24 = _p23._0._0;
-	return A2(
-		_elm_community$elm_test$Fuzz$custom,
-		A4(
-			_mgold$elm_random_pcg$Random_Pcg$map3,
-			F3(
-				function (v0, v1, v2) {
-					return {ctor: '_Tuple3', _0: v0, _1: v1, _2: v2};
-				}),
-			_p24.generator,
-			_p25.generator,
-			_p26.generator),
-		_elm_community$shrink$Shrink$tuple3(
-			{ctor: '_Tuple3', _0: _p24.shrinker, _1: _p25.shrinker, _2: _p26.shrinker}));
-};
-var _elm_community$elm_test$Fuzz$tuple4 = function (_p27) {
-	var _p28 = _p27;
-	var _p32 = _p28._3._0;
-	var _p31 = _p28._2._0;
-	var _p30 = _p28._1._0;
-	var _p29 = _p28._0._0;
-	return A2(
-		_elm_community$elm_test$Fuzz$custom,
-		A5(
-			_mgold$elm_random_pcg$Random_Pcg$map4,
-			F4(
-				function (v0, v1, v2, v3) {
-					return {ctor: '_Tuple4', _0: v0, _1: v1, _2: v2, _3: v3};
-				}),
-			_p29.generator,
-			_p30.generator,
-			_p31.generator,
-			_p32.generator),
-		_elm_community$shrink$Shrink$tuple4(
-			{ctor: '_Tuple4', _0: _p29.shrinker, _1: _p30.shrinker, _2: _p31.shrinker, _3: _p32.shrinker}));
-};
-var _elm_community$elm_test$Fuzz$tuple5 = function (_p33) {
-	var _p34 = _p33;
-	var _p39 = _p34._4._0;
-	var _p38 = _p34._3._0;
-	var _p37 = _p34._2._0;
-	var _p36 = _p34._1._0;
-	var _p35 = _p34._0._0;
-	return A2(
-		_elm_community$elm_test$Fuzz$custom,
-		A6(
-			_mgold$elm_random_pcg$Random_Pcg$map5,
-			F5(
-				function (v0, v1, v2, v3, v4) {
-					return {ctor: '_Tuple5', _0: v0, _1: v1, _2: v2, _3: v3, _4: v4};
-				}),
-			_p35.generator,
-			_p36.generator,
-			_p37.generator,
-			_p38.generator,
-			_p39.generator),
-		_elm_community$shrink$Shrink$tuple5(
-			{ctor: '_Tuple5', _0: _p35.shrinker, _1: _p36.shrinker, _2: _p37.shrinker, _3: _p38.shrinker, _4: _p39.shrinker}));
-};
-var _elm_community$elm_test$Fuzz$map = F2(
-	function (f, _p40) {
-		var _p41 = _p40;
-		return A2(
-			_elm_community$elm_test$Fuzz$custom,
-			A2(_mgold$elm_random_pcg$Random_Pcg$map, f, _p41._0.generator),
-			_elm_community$shrink$Shrink$noShrink);
-	});
-var _elm_community$elm_test$Fuzz$frequency = function (list) {
-	var _p42 = _elm_lang$core$List$head(list);
-	if (_p42.ctor === 'Nothing') {
-		return _elm_lang$core$Result$Err('You must provide at least one frequency pair.');
-	} else {
-		if (A2(
-			_elm_lang$core$List$any,
-			function (_p43) {
-				var _p44 = _p43;
-				return _elm_lang$core$Native_Utils.cmp(_p44._0, 0) < 0;
-			},
-			list)) {
-			return _elm_lang$core$Result$Err('No frequency weights can be less than 0.');
-		} else {
-			if (_elm_lang$core$Native_Utils.cmp(
-				_elm_lang$core$List$sum(
-					A2(_elm_lang$core$List$map, _elm_lang$core$Basics$fst, list)),
-				0) < 1) {
-				return _elm_lang$core$Result$Err('Frequency weights must sum to more than 0.');
-			} else {
-				var generator = _mgold$elm_random_pcg$Random_Pcg$frequency(
-					A2(_elm_lang$core$List$map, _elm_community$elm_test$Fuzz$toGeneratorFrequency, list));
-				return _elm_lang$core$Result$Ok(
-					A2(_elm_community$elm_test$Fuzz$custom, generator, _p42._0._1._0.shrinker));
-			}
-		}
-	}
-};
-var _elm_community$elm_test$Fuzz$frequencyOrCrash = function (_p45) {
-	return _elm_community$elm_test$Fuzz$okOrCrash(
-		_elm_community$elm_test$Fuzz$frequency(_p45));
-};
+		_elm_community$elm_test$Util$lengthString(_elm_community$elm_test$Fuzz$charGenerator));
+	return A2(_elm_community$elm_test$Fuzz$custom, generator, _elm_community$shrink$Shrink$string);
+}();
 
 var _elm_community$elm_test$Test_Internal$isFail = F2(
 	function (x, y) {
@@ -8476,19 +10246,41 @@ var _elm_community$elm_test$Test_Internal$formatExpectation = function (_p0) {
 	return A2(_elm_community$elm_test$Test_Expectation$withGiven, _p1._0, _p1._1);
 };
 var _elm_community$elm_test$Test_Internal$shrinkAndAdd = F4(
-	function (shrinker, getExpectation, val, dict) {
-		var result = A3(
-			_elm_community$shrink$Shrink$shrink,
-			function (_p2) {
-				return _elm_community$elm_test$Test_Internal$isFail(
-					getExpectation(_p2));
-			},
-			shrinker,
-			val);
+	function (rootTree, getExpectation, root$sExpectation, dict) {
+		var shrink = F2(
+			function (oldExpectation, _p2) {
+				shrink:
+				while (true) {
+					var _p3 = _p2;
+					var _p6 = _p3._0;
+					var _p4 = _elm_community$elm_lazy_list$Lazy_List$headAndTail(_p3._1);
+					if (_p4.ctor === 'Just') {
+						var _p5 = getExpectation(_p4._0._0._0);
+						if (_p5.ctor === 'Pass') {
+							var _v4 = oldExpectation,
+								_v5 = A2(_elm_community$elm_test$RoseTree$Rose, _p6, _p4._0._1);
+							oldExpectation = _v4;
+							_p2 = _v5;
+							continue shrink;
+						} else {
+							var _v6 = _p5,
+								_v7 = _p4._0._0;
+							oldExpectation = _v6;
+							_p2 = _v7;
+							continue shrink;
+						}
+					} else {
+						return {ctor: '_Tuple2', _0: _p6, _1: oldExpectation};
+					}
+				}
+			});
+		var _p7 = A2(shrink, root$sExpectation, rootTree);
+		var result = _p7._0;
+		var finalExpectation = _p7._1;
 		return A3(
 			_elm_lang$core$Dict$insert,
 			_elm_lang$core$Basics$toString(result),
-			getExpectation(result),
+			finalExpectation,
 			dict);
 	});
 var _elm_community$elm_test$Test_Internal$Batch = function (a) {
@@ -8500,28 +10292,28 @@ var _elm_community$elm_test$Test_Internal$Labeled = F2(
 	});
 var _elm_community$elm_test$Test_Internal$filterHelp = F3(
 	function (lastCheckPassed, isKeepable, test) {
-		var _p3 = test;
-		switch (_p3.ctor) {
+		var _p8 = test;
+		switch (_p8.ctor) {
 			case 'Test':
 				return lastCheckPassed ? test : _elm_community$elm_test$Test_Internal$Batch(
 					_elm_lang$core$Native_List.fromArray(
 						[]));
 			case 'Labeled':
-				var _p4 = _p3._0;
+				var _p9 = _p8._0;
 				return A2(
 					_elm_community$elm_test$Test_Internal$Labeled,
-					_p4,
+					_p9,
 					A3(
 						_elm_community$elm_test$Test_Internal$filterHelp,
-						isKeepable(_p4),
+						isKeepable(_p9),
 						isKeepable,
-						_p3._1));
+						_p8._1));
 			default:
 				return _elm_community$elm_test$Test_Internal$Batch(
 					A2(
 						_elm_lang$core$List$map,
 						A2(_elm_community$elm_test$Test_Internal$filterHelp, lastCheckPassed, isKeepable),
-						_p3._0));
+						_p8._0));
 		}
 	});
 var _elm_community$elm_test$Test_Internal$filter = _elm_community$elm_test$Test_Internal$filterHelp(false);
@@ -8529,27 +10321,36 @@ var _elm_community$elm_test$Test_Internal$Test = function (a) {
 	return {ctor: 'Test', _0: a};
 };
 var _elm_community$elm_test$Test_Internal$fuzzTest = F3(
-	function (_p5, desc, getExpectation) {
-		var _p6 = _p5;
+	function (fuzzer, desc, getExpectation) {
 		var getFailures = F3(
 			function (failures, currentSeed, remainingRuns) {
 				getFailures:
 				while (true) {
-					var _p7 = A2(_mgold$elm_random_pcg$Random_Pcg$step, _p6._0.generator, currentSeed);
-					var val = _p7._0;
-					var nextSeed = _p7._1;
-					var newFailures = _elm_lang$core$Native_Utils.eq(
-						getExpectation(val),
-						_elm_community$elm_test$Test_Expectation$Pass) ? failures : A4(_elm_community$elm_test$Test_Internal$shrinkAndAdd, _p6._0.shrinker, getExpectation, val, failures);
+					var genVal = _elm_community$elm_test$Fuzz_Internal$unpackGenVal(fuzzer);
+					var _p10 = A2(_mgold$elm_random_pcg$Random_Pcg$step, genVal, currentSeed);
+					var value = _p10._0;
+					var nextSeed = _p10._1;
+					var newFailures = function () {
+						var _p11 = getExpectation(value);
+						if (_p11.ctor === 'Pass') {
+							return failures;
+						} else {
+							var genTree = _elm_community$elm_test$Fuzz_Internal$unpackGenTree(fuzzer);
+							var _p12 = A2(_mgold$elm_random_pcg$Random_Pcg$step, genTree, currentSeed);
+							var rosetree = _p12._0;
+							var nextSeedAgain = _p12._1;
+							return A4(_elm_community$elm_test$Test_Internal$shrinkAndAdd, rosetree, getExpectation, _p11, failures);
+						}
+					}();
 					if (_elm_lang$core$Native_Utils.eq(remainingRuns, 1)) {
 						return newFailures;
 					} else {
-						var _v3 = newFailures,
-							_v4 = nextSeed,
-							_v5 = remainingRuns - 1;
-						failures = _v3;
-						currentSeed = _v4;
-						remainingRuns = _v5;
+						var _v10 = newFailures,
+							_v11 = nextSeed,
+							_v12 = remainingRuns - 1;
+						failures = _v10;
+						currentSeed = _v11;
+						remainingRuns = _v12;
 						continue getFailures;
 					}
 				}
@@ -9061,6 +10862,26 @@ var _elm_lang$core$Set$partition = F2(
 		};
 	});
 
+var _elm_community$json_extra$Json_Decode_Extra$sequence = function (decoders) {
+	return A2(
+		_elm_lang$core$Json_Decode$customDecoder,
+		_elm_lang$core$Json_Decode$list(_elm_lang$core$Json_Decode$value),
+		function (jsonValues) {
+			return (!_elm_lang$core$Native_Utils.eq(
+				_elm_lang$core$List$length(jsonValues),
+				_elm_lang$core$List$length(decoders))) ? _elm_lang$core$Result$Err('Number of decoders does not match number of values') : A3(
+				_elm_lang$core$List$foldr,
+				_elm_lang$core$Result$map2(
+					F2(
+						function (x, y) {
+							return A2(_elm_lang$core$List_ops['::'], x, y);
+						})),
+				_elm_lang$core$Result$Ok(
+					_elm_lang$core$Native_List.fromArray(
+						[])),
+				A3(_elm_lang$core$List$map2, _elm_lang$core$Json_Decode$decodeValue, decoders, jsonValues));
+		});
+};
 var _elm_community$json_extra$Json_Decode_Extra$lazy = function (getDecoder) {
 	return A2(
 		_elm_lang$core$Json_Decode$customDecoder,
@@ -10432,7 +12253,7 @@ function applyPatch(domNode, patch)
 	switch (patch.type)
 	{
 		case 'p-redraw':
-			return redraw(domNode, patch.data, patch.eventNode);
+			return applyPatchRedraw(domNode, patch.data, patch.eventNode);
 
 		case 'p-facts':
 			applyFacts(domNode, patch.eventNode, patch.data);
@@ -10481,57 +12302,7 @@ function applyPatch(domNode, patch)
 			return domNode;
 
 		case 'p-reorder':
-			var data = patch.data;
-
-			// end inserts
-			var endInserts = data.endInserts;
-			var end;
-			if (typeof endInserts !== 'undefined')
-			{
-				if (endInserts.length === 1)
-				{
-					var insert = endInserts[0];
-					var entry = insert.entry;
-					var end = entry.tag === 'move'
-						? entry.data
-						: render(entry.vnode, patch.eventNode);
-				}
-				else
-				{
-					end = document.createDocumentFragment();
-					for (var i = 0; i < endInserts.length; i++)
-					{
-						var insert = endInserts[i];
-						var entry = insert.entry;
-						var node = entry.tag === 'move'
-							? entry.data
-							: render(entry.vnode, patch.eventNode);
-						end.appendChild(node);
-					}
-				}
-			}
-
-			// removals
-			domNode = applyPatchesHelp(domNode, data.patches);
-
-			// inserts
-			var inserts = data.inserts;
-			for (var i = 0; i < inserts.length; i++)
-			{
-				var insert = inserts[i];
-				var entry = insert.entry;
-				var node = entry.tag === 'move'
-					? entry.data
-					: render(entry.vnode, patch.eventNode);
-				domNode.insertBefore(node, domNode.childNodes[insert.index]);
-			}
-
-			if (typeof end !== 'undefined')
-			{
-				domNode.appendChild(end);
-			}
-
-			return domNode;
+			return applyPatchReorder(domNode, patch);
 
 		case 'p-custom':
 			var impl = patch.data;
@@ -10543,7 +12314,7 @@ function applyPatch(domNode, patch)
 }
 
 
-function redraw(domNode, vNode, eventNode)
+function applyPatchRedraw(domNode, vNode, eventNode)
 {
 	var parentNode = domNode.parentNode;
 	var newNode = render(vNode, eventNode);
@@ -10558,6 +12329,59 @@ function redraw(domNode, vNode, eventNode)
 		parentNode.replaceChild(newNode, domNode);
 	}
 	return newNode;
+}
+
+
+function applyPatchReorder(domNode, patch)
+{
+	var data = patch.data;
+
+	// remove end inserts
+	var frag = applyPatchReorderEndInsertsHelp(data.endInserts, patch);
+
+	// removals
+	domNode = applyPatchesHelp(domNode, data.patches);
+
+	// inserts
+	var inserts = data.inserts;
+	for (var i = 0; i < inserts.length; i++)
+	{
+		var insert = inserts[i];
+		var entry = insert.entry;
+		var node = entry.tag === 'move'
+			? entry.data
+			: render(entry.vnode, patch.eventNode);
+		domNode.insertBefore(node, domNode.childNodes[insert.index]);
+	}
+
+	// add end inserts
+	if (typeof frag !== 'undefined')
+	{
+		domNode.appendChild(frag);
+	}
+
+	return domNode;
+}
+
+
+function applyPatchReorderEndInsertsHelp(endInserts, patch)
+{
+	if (typeof endInserts === 'undefined')
+	{
+		return;
+	}
+
+	var frag = document.createDocumentFragment();
+	for (var i = 0; i < endInserts.length; i++)
+	{
+		var insert = endInserts[i];
+		var entry = insert.entry;
+		frag.appendChild(entry.tag === 'move'
+			? entry.data
+			: render(entry.vnode, patch.eventNode)
+		);
+	}
+	return frag;
 }
 
 
@@ -11641,7 +13465,6 @@ var _rtfeldman$node_test_runner$Test_Runner_Node$init = F2(
 var _rtfeldman$node_test_runner$Test_Runner_Node$runWithOptions = F2(
 	function (_p13, emit) {
 		var _p14 = _p13;
-
 		return A2(
 			_rtfeldman$node_test_runner$Test_Runner_Node_App$run,
 			{runs: _p14.runs, seed: _p14.seed},
@@ -11653,6 +13476,361 @@ var _rtfeldman$node_test_runner$Test_Runner_Node$runWithOptions = F2(
 				}
 			});
 	});
+var _rtfeldman$node_test_runner$Test_Runner_Node$run = _rtfeldman$node_test_runner$Test_Runner_Node$runWithOptions(_rtfeldman$node_test_runner$Test_Runner_Node$defaultOptions);
+
+var _rtfeldman$node_test_runner$Main$testShrinkables = A2(
+	_elm_community$elm_test$Test$describe,
+	'Some tests that should fail and produce shrunken values',
+	_elm_lang$core$Native_List.fromArray(
+		[
+			A2(
+			_elm_community$elm_test$Test$describe,
+			'a randomly generated integer',
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A3(
+					_elm_community$elm_test$Test$fuzz,
+					_elm_community$elm_test$Fuzz$int,
+					'is for sure exactly 0',
+					_elm_community$elm_test$Expect$equal(0)),
+					A3(
+					_elm_community$elm_test$Test$fuzz,
+					_elm_community$elm_test$Fuzz$int,
+					'is <42',
+					_elm_community$elm_test$Expect$lessThan(42)),
+					A3(
+					_elm_community$elm_test$Test$fuzz,
+					_elm_community$elm_test$Fuzz$int,
+					'is also >42',
+					_elm_community$elm_test$Expect$greaterThan(42))
+				])),
+			A2(
+			_elm_community$elm_test$Test$describe,
+			'a randomly generated string',
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A3(
+					_elm_community$elm_test$Test$fuzz,
+					_elm_community$elm_test$Fuzz$string,
+					'equals its reverse',
+					function (str) {
+						return A2(
+							_elm_community$elm_test$Expect$equal,
+							str,
+							_elm_lang$core$String$reverse(str));
+					})
+				]))
+		]));
+var _rtfeldman$node_test_runner$Main$testFailingFuzzTests = A2(
+	_elm_community$elm_test$Test$describe,
+	'the first element in this fuzz tuple',
+	_elm_lang$core$Native_List.fromArray(
+		[
+			A4(
+			_elm_community$elm_test$Test$fuzz2,
+			_elm_community$elm_test$Fuzz$string,
+			_elm_community$elm_test$Fuzz$string,
+			'is always \"foo\"',
+			F2(
+				function (str1, str2) {
+					return A2(_elm_community$elm_test$Expect$equal, 'foo', str1);
+				}))
+		]));
+var _rtfeldman$node_test_runner$Main$noDescription = A2(
+	_elm_community$elm_test$Test$test,
+	'',
+	function (_p0) {
+		var _p1 = _p0;
+		return A2(_elm_community$elm_test$Expect$equal, 'No description', 'Whatsoever!');
+	});
+var _rtfeldman$node_test_runner$Main$oxfordify = F3(
+	function (_p4, _p3, _p2) {
+		return 'Alice, Bob, and Claire';
+	});
+var _rtfeldman$node_test_runner$Main$testFuzz = A2(
+	_elm_community$elm_test$Test$describe,
+	'fuzzing',
+	_elm_lang$core$Native_List.fromArray(
+		[
+			A4(
+			_elm_community$elm_test$Test$fuzz2,
+			_elm_community$elm_test$Fuzz$string,
+			_elm_community$elm_test$Fuzz$string,
+			'empty list etc',
+			F2(
+				function (name, punctuation) {
+					return A2(
+						_elm_community$elm_test$Expect$onFail,
+						'given an empty list, did not return an empty string',
+						A2(
+							_elm_community$elm_test$Expect$equal,
+							'',
+							A3(
+								_rtfeldman$node_test_runner$Main$oxfordify,
+								'This sentence is empty',
+								'.',
+								_elm_lang$core$Native_List.fromArray(
+									[]))));
+				})),
+			A4(
+			_elm_community$elm_test$Test$fuzz2,
+			_elm_community$elm_test$Fuzz$string,
+			_elm_community$elm_test$Fuzz$string,
+			'further testing',
+			F2(
+				function (name, punctuation) {
+					return A2(
+						_elm_community$elm_test$Expect$equal,
+						'This sentence contains one item.',
+						A3(
+							_rtfeldman$node_test_runner$Main$oxfordify,
+							'This sentence contains ',
+							'.',
+							_elm_lang$core$Native_List.fromArray(
+								['one item'])));
+				})),
+			A4(
+			_elm_community$elm_test$Test$fuzz2,
+			_elm_community$elm_test$Fuzz$string,
+			_elm_community$elm_test$Fuzz$string,
+			'custom onFail here',
+			F2(
+				function (name, punctuation) {
+					return A2(
+						_elm_community$elm_test$Expect$onFail,
+						'given an empty list, did not return an empty string',
+						A2(
+							_elm_community$elm_test$Expect$equal,
+							'This sentence contains one item and two item.',
+							A3(
+								_rtfeldman$node_test_runner$Main$oxfordify,
+								'This sentence contains ',
+								'.',
+								_elm_lang$core$Native_List.fromArray(
+									['one item', 'two item']))));
+				})),
+			A4(
+			_elm_community$elm_test$Test$fuzz2,
+			_elm_community$elm_test$Fuzz$string,
+			_elm_community$elm_test$Fuzz$string,
+			'This is a test.',
+			F2(
+				function (name, punctuation) {
+					return A2(
+						_elm_community$elm_test$Expect$onFail,
+						'given a list of length 3, did not return an oxford-style sentence',
+						A2(
+							_elm_community$elm_test$Expect$equal,
+							'This sentence contains one item, two item, and three item.',
+							A3(
+								_rtfeldman$node_test_runner$Main$oxfordify,
+								'This sentence contains ',
+								'.',
+								_elm_lang$core$Native_List.fromArray(
+									['one item', 'two item', 'three item']))));
+				}))
+		]));
+var _rtfeldman$node_test_runner$Main$testOxfordify = A2(
+	_elm_community$elm_test$Test$describe,
+	'oxfordify',
+	_elm_lang$core$Native_List.fromArray(
+		[
+			A2(
+			_elm_community$elm_test$Test$describe,
+			'given an empty sentence',
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A2(
+					_elm_community$elm_test$Test$test,
+					'returns an empty string',
+					function (_p5) {
+						var _p6 = _p5;
+						return A2(
+							_elm_community$elm_test$Expect$equal,
+							'',
+							A3(
+								_rtfeldman$node_test_runner$Main$oxfordify,
+								'This sentence is empty',
+								'.',
+								_elm_lang$core$Native_List.fromArray(
+									[])));
+					})
+				])),
+			A2(
+			_elm_community$elm_test$Test$describe,
+			'given a sentence with one item',
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A2(
+					_elm_community$elm_test$Test$test,
+					'still contains one item',
+					function (_p7) {
+						var _p8 = _p7;
+						return A2(
+							_elm_community$elm_test$Expect$equal,
+							'This sentence contains one item.',
+							A3(
+								_rtfeldman$node_test_runner$Main$oxfordify,
+								'This sentence contains ',
+								'.',
+								_elm_lang$core$Native_List.fromArray(
+									['one item'])));
+					})
+				])),
+			A2(
+			_elm_community$elm_test$Test$describe,
+			'given a sentence with multiple items',
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A2(
+					_elm_community$elm_test$Test$test,
+					'returns an oxford-style sentence',
+					function (_p9) {
+						var _p10 = _p9;
+						return A2(
+							_elm_community$elm_test$Expect$equal,
+							'This sentence contains one item and two item.',
+							A3(
+								_rtfeldman$node_test_runner$Main$oxfordify,
+								'This sentence contains ',
+								'.',
+								_elm_lang$core$Native_List.fromArray(
+									['one item', 'two item'])));
+					}),
+					A2(
+					_elm_community$elm_test$Test$test,
+					'returns an oxford-style sentence',
+					function (_p11) {
+						var _p12 = _p11;
+						return A2(
+							_elm_community$elm_test$Expect$equal,
+							'This sentence contains one item, two item, and three item.',
+							A3(
+								_rtfeldman$node_test_runner$Main$oxfordify,
+								'This sentence contains ',
+								'.',
+								_elm_lang$core$Native_List.fromArray(
+									['one item', 'two item', 'three item'])));
+					})
+				]))
+		]));
+var _rtfeldman$node_test_runner$Main$testExpectations = A2(
+	_elm_community$elm_test$Test$describe,
+	'basic expectations',
+	_elm_lang$core$Native_List.fromArray(
+		[
+			A2(
+			_elm_community$elm_test$Test$test,
+			'this should succeed',
+			function (_p13) {
+				var _p14 = _p13;
+				return A2(_elm_community$elm_test$Expect$equal, ' blah', 'blah');
+			}),
+			A2(
+			_elm_community$elm_test$Test$test,
+			'this should fail',
+			function (_p15) {
+				var _p16 = _p15;
+				return A2(_elm_community$elm_test$Expect$equal, 'someting else', 'something');
+			}),
+			A2(
+			_elm_community$elm_test$Test$test,
+			'another failure',
+			function (_p17) {
+				var _p18 = _p17;
+				return A2(_elm_community$elm_test$Expect$equal, 'forty-three', 'forty-two');
+			})
+		]));
+var _rtfeldman$node_test_runner$Main$withoutNums = _elm_lang$core$String$filter(
+	function (ch) {
+		return _elm_lang$core$Basics$not(
+			_elm_lang$core$Char$isDigit(ch) || _elm_lang$core$Native_Utils.eq(
+				ch,
+				_elm_lang$core$Native_Utils.chr('.')));
+	});
+var _rtfeldman$node_test_runner$Main$testWithoutNums = A2(
+	_elm_community$elm_test$Test$describe,
+	'withoutNums',
+	_elm_lang$core$Native_List.fromArray(
+		[
+			A4(
+			_elm_community$elm_test$Test$fuzzWith,
+			{runs: 100},
+			_elm_community$elm_test$Fuzz$tuple3(
+				{ctor: '_Tuple3', _0: _elm_community$elm_test$Fuzz$string, _1: _elm_community$elm_test$Fuzz$float, _2: _elm_community$elm_test$Fuzz$string}),
+			'adding numbers to strings has no effect',
+			function (_p19) {
+				var _p20 = _p19;
+				var _p22 = _p20._2;
+				var _p21 = _p20._0;
+				return A2(
+					_elm_community$elm_test$Expect$equal,
+					_rtfeldman$node_test_runner$Main$withoutNums(
+						A2(_elm_lang$core$Basics_ops['++'], _p21, _p22)),
+					_rtfeldman$node_test_runner$Main$withoutNums(
+						A2(
+							_elm_lang$core$Basics_ops['++'],
+							_p21,
+							A2(
+								_elm_lang$core$Basics_ops['++'],
+								_elm_lang$core$Basics$toString(_p20._1),
+								_p22))));
+			})
+		]));
+// var _rtfeldman$node_test_runner$Main$emit = _elm_lang$core$Native_Platform.outgoingPort(
+// 	'emit',
+// 	function (v) {
+// 		return [v._0, v._1];
+// 	});
+// var _rtfeldman$node_test_runner$Main$main = {
+// 	main: A2(
+// 		_rtfeldman$node_test_runner$Test_Runner_Node$run,
+// 		_rtfeldman$node_test_runner$Main$emit,
+// 		_elm_community$elm_test$Test$concat(
+// 			_elm_lang$core$Native_List.fromArray(
+// 				[_rtfeldman$node_test_runner$Main$testWithoutNums, _rtfeldman$node_test_runner$Main$testOxfordify, _rtfeldman$node_test_runner$Main$noDescription, _rtfeldman$node_test_runner$Main$testExpectations, _rtfeldman$node_test_runner$Main$testFailingFuzzTests, _rtfeldman$node_test_runner$Main$testFuzz, _rtfeldman$node_test_runner$Main$testShrinkables]))),
+// 	flags: _elm_lang$core$Json_Decode$value
+// };
+
+// var Elm = {};
+// Elm['Main'] = Elm['Main'] || {};
+// _elm_lang$core$Native_Platform.addPublicModule(Elm['Main'], 'Main', typeof _rtfeldman$node_test_runner$Main$main === 'undefined' ? null : _rtfeldman$node_test_runner$Main$main);
+//
+// if (typeof define === "function" && define['amd'])
+// {
+//   define([], function() { return Elm; });
+//   return;
+// }
+//
+// if (typeof module === "object")
+// {
+//   module['exports'] = Elm;
+//   return;
+// }
+//
+// var globalElm = this['Elm'];
+// if (typeof globalElm === "undefined")
+// {
+//   this['Elm'] = Elm;
+//   return;
+// }
+//
+// for (var publicModule in Elm)
+// {
+//   if (publicModule in globalElm)
+//   {
+//     throw new Error('There are two Elm modules called `' + publicModule + '` on this page! Rename one of them.');
+//   }
+//   globalElm[publicModule] = Elm[publicModule];
+// }
+
+
+// Steps to build this file:
+// 1. Run elm-make --output=foo.js EmptyTests.elm
+// 2. Open foo.js and replace this file with its contents.
+// 3. Add this to the top of the file: var $$$testRunner$run;
+// 4. Comment out the things that are commented out above.
+// 5. Add the content below.
 
 // inject.js is expecting this variable to be set.
 $$$testRunner$run =
@@ -11676,4 +13854,3 @@ $$$testRunner$run =
       test);
   };
 }).call(this);
-
