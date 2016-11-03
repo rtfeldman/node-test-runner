@@ -201,10 +201,7 @@ init emit { startTime, initialSeed, thunks, report } =
 Fuzz tests use a default run count of 100, and an initial seed based on the
 system time when the test runs begin.
 -}
-run :
-    Emitter Msg
-    -> Test
-    -> Program Value (App.Model Msg Model) (App.Msg Msg)
+run : Emitter Msg -> Test -> TestProgram
 run =
     runWithOptions defaultOptions
 
@@ -233,7 +230,7 @@ runWithOptions :
     { a | runs : Int, seed : Maybe Int }
     -> Emitter Msg
     -> Test
-    -> Program Value (App.Model Msg Model) (App.Msg Msg)
+    -> TestProgram
 runWithOptions { runs, seed } emit =
     App.run
         { runs = runs
