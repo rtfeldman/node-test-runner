@@ -19,6 +19,7 @@ import Set exposing (Set)
 import Task
 import Time exposing (Time)
 import Tuple
+import Platform
 
 
 type alias TestId =
@@ -39,7 +40,7 @@ type alias Model =
 {-| A program which will run tests and report their results.
 -}
 type alias TestProgram =
-    Program Value (App.Model Msg Model) (App.Msg Msg)
+    Platform.Program Value (App.Model Msg Model) (App.Msg Msg)
 
 
 type alias Emitter msg =
