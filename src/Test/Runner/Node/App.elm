@@ -10,13 +10,13 @@ import Test.Reporter.Reporter as Reporter
 import Test exposing (Test)
 import Test.Runner exposing (Runner(..))
 import Expect exposing (Expectation)
-import Html exposing (Html, text)
 import Task
 import Random.Pcg
 import Time exposing (Time)
 import Json.Decode as Decode exposing (Value, Decoder)
 import String
 import Tuple
+import Platform
 
 
 type Msg subMsg
@@ -242,9 +242,8 @@ run { runs, seed } appOpts test =
                 , cmd
                 )
     in
-        Html.programWithFlags
+        Platform.programWithFlags
             { init = init
             , update = initOrUpdate
-            , view = \_ -> Html.text "This should be run in Node, not in a browser!"
             , subscriptions = subscriptions appOpts.subscriptions
             }
