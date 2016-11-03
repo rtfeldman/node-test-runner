@@ -6,7 +6,7 @@ module Test.Runner.Node.App exposing (run, Model, Msg)
 
 -}
 
-import Test.Reporter.Reporter as Reporter
+import Test.Reporter.Reporter as Reporter exposing (Report(ChalkReport))
 import Test exposing (Test)
 import Test.Runner exposing (Runner(..))
 import Expect exposing (Expectation)
@@ -185,12 +185,16 @@ decodeReport decoder =
 
 decodeInitArgs : Value -> Result String ( Maybe Int, Reporter.Report )
 decodeInitArgs args =
-    Decode.decodeValue
-        (Decode.map2 (,)
-            (Decode.field "seed" (Decode.nullable intFromString))
-            (Decode.field "report" (decodeReport Decode.string))
-        )
-        args
+    args
+        |> Decode.decodeValue
+            (Decode.oneOf
+                [ Decode.null ( Nothing, ChalkReport )
+                , (Decode.map2 (,)
+                    (Decode.field "seed" (Decode.nullable intFromString))
+                    (Decode.field "report" (decodeReport Decode.string))
+                  )
+                ]
+            )
 
 
 {-| Run the tests and render the results as a Web page.
@@ -206,7 +210,7 @@ run { runs, seed } appOpts test =
                 initArgs : ( Maybe Int, Reporter.Report )
                 initArgs =
                     case ( decodeInitArgs args, seed ) of
-                        -- ( decodeValue (maybeNull intFromString) maybeInitialSeed, seed ) of
+                        -- ( decodeValue (nullable intFromString) maybeInitialSeed, seed ) of
                         -- The --seed argument didn't decode
                         ( Err str, _ ) ->
                             Debug.crash ("Invalid --seed argument: " ++ str)
