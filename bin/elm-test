@@ -108,6 +108,12 @@ if (args._[0] == "init") {
 }
 
 function evalElmCode (compiledCode, testModuleName) {
+  // Apply Node polyfills as necessary.
+  var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
+  var document = {body: {}, createTextNode: function() {}};
+  if (typeof XMLHttpRequest === 'undefined') { XMLHttpRequest = function() { return { addEventListener: function() {}, open: function() {}, send: function() {} }; }; }
+  if (typeof FormData === 'undefined') { FormData = function () { this._data = []; }; FormData.prototype.append = function () { this._data.push(Array.prototype.slice.call(arguments)); }; }
+
   var Elm = function(module) { eval(compiledCode); return module.exports; }({});
 
   // Make sure necessary things are defined.
@@ -139,13 +145,7 @@ function evalElmCode (compiledCode, testModuleName) {
 
 
 
-
-  // Apply Node polyfills as necessary.
-  var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
-  var document = {body: {}, createTextNode: function() {}};
   pathToMake = args.compiler;
-  if (typeof XMLHttpRequest === 'undefined') { XMLHttpRequest = function() { return { addEventListener: function() {}, open: function() {}, send: function() {} }; }; }
-  if (typeof FormData === 'undefined') { FormData = function () { this._data = []; }; FormData.prototype.append = function () { this._data.push(Array.prototype.slice.call(arguments)); }; }
 
   // Fix Windows Unicode problems. Credit to https://github.com/sindresorhus/figures for the Windows compat idea!
   var windowsSubstitutions = [[/[↓✗►]/g, '>'], [/╵│╷╹┃╻/g, '|'], [/═/g, '='],, [/▔/g, '-'], [/✔/g, '√']];

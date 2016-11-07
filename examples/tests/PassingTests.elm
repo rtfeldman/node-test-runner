@@ -6,6 +6,11 @@ import Test exposing (..)
 import Json.Encode exposing (Value)
 
 
+-- Native.Polyfilled is only for testing node-test-runner
+
+import Native.Polyfilled
+
+
 main : Program Value
 main =
     [ plainExpectation ]
