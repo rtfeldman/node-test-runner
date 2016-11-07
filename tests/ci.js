@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 require('shelljs/global');
+var _ = require('lodash');
+var fs = require('fs-extra');
 
 var filename = __filename.replace(__dirname + '/', '');
 
@@ -50,17 +52,26 @@ assertTestFailure('FailingTests.elm');
 cd('../..');
 
 echo(filename + ': Testing elm-test init...');
+rm('-Rf', 'tmp');
 mkdir('-p', 'tmp');
 cd('tmp');
 exec('elm-test init --yes');
 cd('tests');
+// use local node-test-runner
+var tmpPackage = fs.readJsonSync('./elm-package.json');
+tmpPackage['source-directories'].push('../../src');
+var keys = _.reject(_.keys(tmpPackage.dependencies), function(name) {
+  return name === "rtfeldman/node-test-runner";
+});
+tmpPackage.dependencies = _.pick(tmpPackage.dependencies, keys);
+fs.writeJsonSync('./elm-package.json', tmpPackage);
 exec('elm-package install --yes');
 cd('..');
 assertTestFailure();
 
 // update failing test to passing test
 sed('-i', /should fail/, 'should pass', 'tests/Tests.elm');
-sed('-i', /Expect.fail "failed as expected!"/, 'Expect.pass', 'tests/Tests.elm');
+sed('-i', /Expect.fail "Failed as expected!"/, 'Expect.pass', 'tests/Tests.elm');
 rm('-Rf', 'tests/elm-stuff');
 cd('tests');
 exec('elm-package install --yes');
