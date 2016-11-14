@@ -1,23 +1,25 @@
-module Test.Runner.Node exposing (run, runWithOptions)
+module Test.Runner.Node exposing (run, runWithOptions, TestProgram)
 
 {-| # Node Runner
 
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 1 if any failed.
 
-@docs run, runWithOptions
+@docs run, runWithOptions, TestProgram
 -}
 
 import Test.Reporter.Reporter exposing (TestReporter, Report(..), createReporter)
 import Test.Reporter.Result exposing (Failure, TestResult)
 import Test.Runner.Node.App as App
+import Test exposing (Test)
 import Dict exposing (Dict)
 import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
 import Set exposing (Set)
 import Task
-import Test exposing (Test)
 import Time exposing (Time)
+import Tuple
+import Platform
 
 
 type alias TestId =
@@ -33,6 +35,12 @@ type alias Model =
     , completed : List TestResult
     , testReporter : TestReporter
     }
+
+
+{-| A program which will run tests and report their results.
+-}
+type alias TestProgram =
+    Platform.Program Value (App.Model Msg Model) (App.Msg Msg)
 
 
 type alias Emitter msg =
@@ -116,7 +124,7 @@ update emit msg ({ testReporter } as model) =
         Dispatch startTime ->
             case model.queue of
                 [] ->
-                    ( model, Task.perform never Finish Time.now )
+                    ( model, Task.perform Finish Time.now )
 
                 testId :: newQueue ->
                     case Dict.get testId model.available of
@@ -138,17 +146,12 @@ update emit msg ({ testReporter } as model) =
                                         , queue = newQueue
                                     }
                             in
-                                ( newModel, Task.perform never complete Time.now )
-
-
-never : Never -> a
-never a =
-    never a
+                                ( newModel, Task.perform complete Time.now )
 
 
 dispatch : Cmd Msg
 dispatch =
-    Task.perform never Dispatch Time.now
+    Task.perform Dispatch Time.now
 
 
 init :
@@ -174,7 +177,7 @@ init emit { startTime, initialSeed, thunks, report } =
         model =
             { available = Dict.fromList indexedThunks
             , running = Set.empty
-            , queue = List.map fst indexedThunks
+            , queue = List.map Tuple.first indexedThunks
             , completed = []
             , startTime = startTime
             , finishTime = Nothing
@@ -198,7 +201,7 @@ init emit { startTime, initialSeed, thunks, report } =
 Fuzz tests use a default run count of 100, and an initial seed based on the
 system time when the test runs begin.
 -}
-run : Emitter Msg -> Test -> Program Value
+run : Emitter Msg -> Test -> TestProgram
 run =
     runWithOptions defaultOptions
 
@@ -223,7 +226,11 @@ type alias Options =
 {-| Run the test using the provided options. If `Nothing` is provided for either
 `runs` or `seed`, it will fall back on the options used in [`run`](#run).
 -}
-runWithOptions : Options -> Emitter Msg -> Test -> Program Value
+runWithOptions :
+    { a | runs : Int, seed : Maybe Int }
+    -> Emitter Msg
+    -> Test
+    -> TestProgram
 runWithOptions { runs, seed } emit =
     App.run
         { runs = runs

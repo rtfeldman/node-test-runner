@@ -1,4 +1,4 @@
-module Test.Runner.Node.App exposing (run)
+module Test.Runner.Node.App exposing (run, Model, Msg)
 
 {-| Test runner for a Node app
 
@@ -6,18 +6,17 @@ module Test.Runner.Node.App exposing (run)
 
 -}
 
-import Test.Reporter.Reporter as Reporter
+import Test.Reporter.Reporter as Reporter exposing (Report(ChalkReport))
 import Test exposing (Test)
 import Test.Runner exposing (Runner(..))
 import Expect exposing (Expectation)
-import Html exposing (Html, text)
-import Html.App
 import Task
 import Random.Pcg
 import Time exposing (Time)
-import Json.Decode exposing (Value, Decoder, string, decodeValue, decodeString, customDecoder, object2, (:=), andThen)
-import Json.Decode.Extra exposing (maybeNull)
+import Json.Decode as Decode exposing (Value, Decoder)
 import String
+import Tuple
+import Platform
 
 
 type Msg subMsg
@@ -51,7 +50,7 @@ timeToNumericSeed time =
         |> floor
         |> Random.Pcg.initialSeed
         |> Random.Pcg.step (Random.Pcg.int 100 Random.Pcg.maxInt)
-        |> fst
+        |> Tuple.first
 
 
 fromNever : Never -> a
@@ -155,49 +154,63 @@ toThunksHelp labels runner =
 
 intFromString : Decoder Int
 intFromString =
-    customDecoder string String.toInt
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case String.toInt str of
+                    Ok num ->
+                        Decode.succeed num
+
+                    Err err ->
+                        Decode.fail err
+            )
 
 
 decodeReport : Decoder String -> Decoder Reporter.Report
 decodeReport decoder =
-    customDecoder decoder
-        (\str ->
-            case str of
-                "json" ->
-                    Result.Ok Reporter.JsonReport
+    decoder
+        |> Decode.andThen
+            (\str ->
+                case str of
+                    "json" ->
+                        Decode.succeed Reporter.JsonReport
 
-                "chalk" ->
-                    Result.Ok Reporter.ChalkReport
+                    "chalk" ->
+                        Decode.succeed Reporter.ChalkReport
 
-                _ ->
-                    Result.Err <| "Invalid --report argument: " ++ str
-        )
+                    _ ->
+                        Decode.fail <| "Invalid --report argument: " ++ str
+            )
 
 
 decodeInitArgs : Value -> Result String ( Maybe Int, Reporter.Report )
 decodeInitArgs args =
-    decodeValue
-        (object2 (,)
-            ("seed" := (maybeNull intFromString))
-            ("report" := decodeReport string)
-        )
-        args
+    args
+        |> Decode.decodeValue
+            (Decode.oneOf
+                [ Decode.null ( Nothing, ChalkReport )
+                , (Decode.map2 (,)
+                    (Decode.field "seed" (Decode.nullable intFromString))
+                    (Decode.field "report" (decodeReport Decode.string))
+                  )
+                ]
+            )
 
 
 {-| Run the tests and render the results as a Web page.
 -}
-run : RunnerOptions -> AppOptions msg model -> Test -> Program Value
+run : RunnerOptions -> AppOptions msg model -> Test -> Program Value (Model msg model) (Msg msg)
 run { runs, seed } appOpts test =
     let
         init args =
             let
                 cmd =
-                    Task.perform fromNever Init Time.now
+                    Task.perform Init Time.now
 
                 initArgs : ( Maybe Int, Reporter.Report )
                 initArgs =
                     case ( decodeInitArgs args, seed ) of
-                        -- ( decodeValue (maybeNull intFromString) maybeInitialSeed, seed ) of
+                        -- ( decodeValue (nullable intFromString) maybeInitialSeed, seed ) of
                         -- The --seed argument didn't decode
                         ( Err str, _ ) ->
                             Debug.crash ("Invalid --seed argument: " ++ str)
@@ -224,8 +237,8 @@ run { runs, seed } appOpts test =
                             ( Nothing, report )
             in
                 ( Uninitialized appOpts.update
-                    { maybeInitialSeed = fst initArgs
-                    , report = snd initArgs
+                    { maybeInitialSeed = Tuple.first initArgs
+                    , report = Tuple.second initArgs
                     , runs = runs
                     , test = test
                     , init = appOpts.init
@@ -233,9 +246,8 @@ run { runs, seed } appOpts test =
                 , cmd
                 )
     in
-        Html.App.programWithFlags
+        Platform.programWithFlags
             { init = init
             , update = initOrUpdate
-            , view = \_ -> Html.text "This should be run in Node, not in a browser!"
             , subscriptions = subscriptions appOpts.subscriptions
             }
