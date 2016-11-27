@@ -299,10 +299,14 @@ findUp('elm-package.json', { cwd: path.dirname(testFile) })
                         }
                     } else {
                         testModulePromise.then(function (testModuleName) {
-                            try { 
+                            try {
                                 evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), testModuleName);
-                            } catch (e) {
-                                console.error("Evaluating the Elm code gave an error preventing startup:\n", e); 
+                            } catch (err) {
+                                console.error("The test run failed because it encountered a runtime exception:\n\n", err);
+
+                                if (!args.watch) {
+                                    process.exit(2);
+                                }
                             }
                         });
                     }
