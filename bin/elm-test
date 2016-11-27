@@ -49,10 +49,12 @@ if (args.version) {
 }
 
 var report = "chalk";
-if (args.report !== undefined) {
-  report = args.report;
+if (args.report === "chalk" || args.report == "json") {
+    report = args.report;
+} else if (args.report !== undefined) {
+    console.error("The --report option must be given either 'chalk' or 'json'");
+    process.exit(1);
 }
-
 
 checkNodeVersion();
 
