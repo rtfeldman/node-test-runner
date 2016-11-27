@@ -299,7 +299,11 @@ findUp('elm-package.json', { cwd: path.dirname(testFile) })
                         }
                     } else {
                         testModulePromise.then(function (testModuleName) {
-                            evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), testModuleName);
+                            try { 
+                                evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), testModuleName);
+                            } catch (e) {
+                                console.error("Evaluating the Elm code gave an error preventing startup:\n", e); 
+                            }
                         });
                     }
                 });
