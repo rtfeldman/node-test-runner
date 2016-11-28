@@ -16,6 +16,8 @@ var compile    = require("node-elm-compiler").compile,
   firstline    = require("firstline"),
   findUp       = require("find-up"),
   chokidar     = require("chokidar");
+  jsdiff       = require('diff');
+
 
 var elm = {
   'elm-package': 'elm-package'
@@ -194,19 +196,36 @@ function evalElmCode (compiledCode, testModuleName) {
       }
     } else if (msgType === "STARTED" || msgType === "TEST_COMPLETED")  {
         if (data.format === "CHALK") {
-          console.log(chalkify(data.message));
+          var matches = data.message[data.message.length - 1].text.match(/(.*)\n.*\n.*Expect.equal.*\n.*\n(.+)/)
+            if(matches) {
+              console.log(chalkify(data.message.slice(0, -1)));
+              console.log(chalkify([{styles: ["gray"], text:"Found unexpected differences (added parts are in green, missing parts are in red):"}]));
+              var colorDiff = colorDiffify(matches[1], matches[2]);
+              console.log(chalkify(colorDiff));
+              console.log("\n");
+            } else {
+              console.log(chalkify(data.message));
+            }
         } else {
           console.log(JSON.stringify(data.message));
         }
-
     }
   });
+
+  function colorDiffify(one, other) {
+    var diff = jsdiff.diffWords(one, other);
+
+    return diff.map(function(part){
+      var color = part.added ? 'bgGreen' :
+        part.removed ? 'bgRed' : 'grey';
+      return {styles: [color], text: part.value}
+    });
+  }
 }
 
-
 var testFile = args._[0],
-    cwd = __dirname,
-    pathToMake = undefined;
+cwd = __dirname,
+pathToMake = undefined;
 
 function spawnCompiler(cmd, args, opts) {
   var compilerOpts =
