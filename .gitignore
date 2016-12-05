@@ -27,3 +27,4 @@ build/Release
 node_modules
 elm-stuff
 tmp
+examples/tests/Doc
