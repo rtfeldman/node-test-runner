@@ -21,7 +21,7 @@ Then add your tests to Tests.elm.
 ### Configuration
 
 The `--compiler` flag can be used to use a version of the Elm compiler that
-has not been install globally.
+has not been installed globally.
 
 ```
 npm install elm
