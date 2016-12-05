@@ -55,4 +55,4 @@ This uses [`elm-doc-test`][1] under the hood. See `examples` or the [README.md](
 elm-test --doctest
 ```
 
-[1] : https://github.com/stoeffel/elm-doc-test
+[1]: https://github.com/stoeffel/elm-doc-test
