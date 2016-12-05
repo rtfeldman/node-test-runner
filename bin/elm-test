@@ -15,7 +15,8 @@ var compile    = require("node-elm-compiler").compile,
   minimist     = require("minimist"),
   firstline    = require("firstline"),
   findUp       = require("find-up"),
-  chokidar     = require("chokidar");
+  chokidar     = require("chokidar"),
+  doctest      = require("elm-doc-test/bin/modes");
 
 var elm = {
   'elm-package': 'elm-package'
@@ -47,6 +48,14 @@ if (args.help) {
 
 if (args.version) {
   console.log(require(path.join(__dirname, "..", "package.json")).version);
+  process.exit(0);
+}
+
+if (args.doctest) {
+  var doctestModel = doctest.init(args);
+  console.log(doctestModel.config)
+  doctestModel.run(doctestModel.config);
+  console.log(doctestModel.config)
   process.exit(0);
 }
 
