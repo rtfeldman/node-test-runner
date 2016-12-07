@@ -70,9 +70,9 @@ install:
       cd ..;
     fi
 before_script:
-  - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 elm-make ./src/elm/TestRunner.elm
+  - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 elm-make ./tests/Main.elm
 
 script:
-  - elm-test ./src/elm/TestRunner.elm
+  - elm-test ./tests/Main.elm
 
 ```
