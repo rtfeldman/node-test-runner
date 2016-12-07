@@ -34,14 +34,45 @@ elm-test --compiler ./node_modules/.bin/elm-make
 If you want to run your tests on Travis CI, here's a good starter `.travis.yml`:
 
 ```yml
-language: node_js
-node_js:
-  - "5"
+sudo: false
+
+cache:
+  directories:
+    - elm-stuff/build-artifacts
+    - elm-stuff/packages
+    - sysconfcpus
+os:
+  - linux
+
+env:
+  matrix:
+    - ELM_VERSION=0.18.0 TARGET_NODE_VERSION=node
+
+before_install:
+  - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+
 install:
-  - npm install -g elm
-  - npm install -g elm-test
-  - elm-package install -y
-  - pushd tests && elm-package install -y && popd
+  - nvm install $TARGET_NODE_VERSION
+  - nvm use $TARGET_NODE_VERSION
+  - node --version
+  - npm --version
+  - npm install -g elm@$ELM_VERSION elm-test
+  - git clone https://github.com/NoRedInk/elm-ops-tooling
+  - elm-ops-tooling/with_retry.rb elm package install --yes
+  # Faster compile on Travis.
+  - |
+    if [ ! -d sysconfcpus/bin ];
+    then
+      git clone https://github.com/obmarg/libsysconfcpus.git;
+      cd libsysconfcpus;
+      ./configure --prefix=$TRAVIS_BUILD_DIR/sysconfcpus;
+      make && make install;
+      cd ..;
+    fi
+before_script:
+  - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 elm-make ./src/elm/TestRunner.elm
+
 script:
-  - elm-test
+  - elm-test ./src/elm/TestRunner.elm
+
 ```
