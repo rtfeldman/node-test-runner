@@ -21,7 +21,7 @@ Then add your tests to Tests.elm.
 ### Configuration
 
 The `--compiler` flag can be used to use a version of the Elm compiler that
-has not been install globally.
+has not been installed globally.
 
 ```
 npm install elm
@@ -45,3 +45,14 @@ install:
 script:
   - elm-test
 ```
+
+### Doc-Tests
+
+You can use `elm-test` to run your [doc-tests][1].
+This uses [`elm-doc-test`][1] under the hood. See `examples` or the [README.md](https://github.com/stoeffel/elm-doc-test/blob/master/Readme.md) of [`elm-doc-test`][1].
+
+```bash
+elm-test --doctest
+```
+
+[1]: https://github.com/stoeffel/elm-doc-test
