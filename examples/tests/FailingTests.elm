@@ -1,6 +1,5 @@
-port module Main exposing (..)
+module FailingTests exposing (..)
 
-import Test.Runner.Node exposing (run, TestProgram)
 import String
 import Expect
 import Test exposing (..)
@@ -9,8 +8,8 @@ import Json.Encode exposing (Value)
 import Char
 
 
-main : TestProgram
-main =
+tests : Test
+tests =
     [ testWithoutNums
     , testOxfordify
     , noDescription
@@ -20,10 +19,6 @@ main =
     , testShrinkables
     ]
         |> Test.concat
-        |> run emit
-
-
-port emit : ( String, Value ) -> Cmd msg
 
 
 withoutNums : String -> String
