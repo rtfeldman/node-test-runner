@@ -19,6 +19,7 @@ process.on('uncaughtException', function(error) {
 
 var compile    = require("node-elm-compiler").compile,
   fs           = require("fs-extra"),
+  glob         = require("glob"),
   chalk        = require("chalk"),
   builder      = require("xmlbuilder"),
   path         = require("path"),
@@ -47,6 +48,15 @@ var args = minimist(process.argv.slice(2), {
     boolean: [ 'yes', 'warn', 'version', 'help', 'watch'],
     string: [ 'compiler', 'seed', 'report' ]
 });
+
+var globPattern = args._[0] || "tests/**/*.elm";
+var testFilenames = glob.sync(
+    globPattern,
+    {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
+  ).map(function(filename) { return path.resolve(filename); }),
+  pathToMake = undefined;
+var testFilenameSet = new Set(testFilenames);
+
 
 if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
@@ -239,7 +249,6 @@ function runElmTest() {
 
 
   var testsPath = args._[0],
-      cwd = __dirname,
       pathToMake = undefined;
 
   function spawnCompiler(cmd, args, opts) {
@@ -247,10 +256,6 @@ function runElmTest() {
         _.defaults({stdio: [process.stdin, report === "chalk" ? process.stdout : 'ignore', process.stderr] }, opts);
 
     return spawn(cmd, args, compilerOpts);
-  }
-
-  if (typeof testsPath === "undefined") {
-    testsPath = "tests/"
   }
 
   if (args.compiler !== undefined) {
@@ -267,10 +272,8 @@ function runElmTest() {
       console.log(msg);
     }
   }
-  console.log(path.join(process.cwd(), testsPath))
 
   var elmRootDir = process.cwd();
-  console.log(elmRootDir)
   var elmPackagePath = path.join(elmRootDir, "elm-package.json");
   if (fs.realpathSync(elmRootDir) !== fs.realpathSync(process.cwd())) {
       process.chdir(elmRootDir);
@@ -283,7 +286,6 @@ function runElmTest() {
   var generatedSrc = path.join(newElmPackageDir, "src");
 
   var elmPackageContents;
-  console.log(elmPackagePath);
 
   try {
     elmPackageContents = JSON.parse(fs.readFileSync(elmPackagePath, "utf8"));
@@ -297,10 +299,11 @@ function runElmTest() {
   elmPackageContents["native-modules"] = true;
 
   // Make all the source-directories absolute, and introduce a new one.
-  elmPackageContents["source-directories"] =
-    (elmPackageContents["source-directories"] || []).map(function(src) {
-      return path.resolve(src)
-    }).concat([generatedSrc]);
+  var sourceDirs = (elmPackageContents["source-directories"] || []).map(function(src) {
+    return path.resolve(src)
+  });
+
+  elmPackageContents["source-directories"] = [generatedSrc].concat(sourceDirs)
 
   fs.mkdirpSync(newElmPackageDir);
 
@@ -314,9 +317,52 @@ function runElmTest() {
 
   process.chdir(newElmPackageDir);
 
-  // TODO stop hardcoding this
+  // only search testFilenames for tests, but search all of source-directories
+  // for doctests.
+  // Don't bother searching a file for doctests if it's in testFilenames!
+  var srcFiles = new Set();
+  var visitedDirectories = new Set();
+
+  function isElmFile(filename) {
+    return /\.elm$/.test(filename);
+  }
+
+  function addSrcFiles(srcPath, isRoot) {
+    if (!visitedDirectories.has(srcPath) &&
+      // Ignore elm-stuff/ and files that start with .
+      !/(^\.|\/elm-stuff\/)/.test(srcPath)
+    ) {
+      visitedDirectories.add(srcPath);
+
+      fs.readdirSync(srcPath).forEach(function(filename) {
+        // Ignore the Native directory - it can't have tests in it.
+        var isNativeDir = filename === "Native" && isRoot;
+
+        if (!isNativeDir) {
+          var filePath = path.join(srcPath, filename);
+          var stats = fs.lstatSync(filePath);
+
+          if (stats.isDirectory()) {
+            addSrcFiles(filePath, false);
+          } else if ((stats.isFile() || stats.isSymbolicLink()) && isElmFile(filename)) {
+            srcFiles.add(filePath);
+          }
+        }
+      });
+    }
+  }
+
+  sourceDirs.forEach(function(srcDir) { return addSrcFiles(srcDir, true); });
+
+  // doctestFiles is the set of src files that are not already known test files
+  var doctestFiles = new Set([...srcFiles].filter(function(srcFile) {
+    return !testFilenameSet.has(srcFile);
+  }));
   var imports = ["import FailingTests", "import Doc.Tests"]
   var testList = ["FailingTests.tests", "Doc.Tests.all"]
+
+  console.log("testFilenames", testFilenames)
+  console.log("doctestFiles", doctestFiles)
 
   var testFileContents =
     // TODO use a module name that's less likely to cause namespace conflits
@@ -338,8 +384,6 @@ function runElmTest() {
     ].join("\n");
 
   var testFile = path.join(generatedSrc, "Main.elm");
-
-  console.log("testFile", testFile)
 
   fs.writeFileSync(testFile, testFileContents);
 

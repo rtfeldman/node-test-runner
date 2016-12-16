@@ -41,6 +41,7 @@
     "xmlbuilder": "^8.2.2"
   },
   "devDependencies": {
+    "glob": "^7.1.1",
     "shelljs": "0.7.3"
   }
 }
