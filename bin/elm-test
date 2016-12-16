@@ -41,10 +41,9 @@ var args = minimist(process.argv.slice(2), {
         'seed': 's',
         'compiler': 'c',
         'report': 'r',
-        'watch': 'w',
-        'doctest': 'd'
+        'watch': 'w'
     },
-    boolean: [ 'yes', 'warn', 'version', 'help', 'watch', 'doctest' ],
+    boolean: [ 'yes', 'warn', 'version', 'help', 'watch'],
     string: [ 'compiler', 'seed', 'report' ]
 });
 
@@ -55,7 +54,6 @@ if (args.help) {
   console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
   console.log("Usage: elm-test [--report json or chalk (default)] # Print results to stdout in given format\n");
   console.log("Usage: elm-test [--watch] # Run tests on file changes\n");
-  console.log("Usage: elm-test [--doctest] # Run doctests\n");
   process.exit(1);
 }
 
