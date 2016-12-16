@@ -3,6 +3,9 @@ module DocTestExample exposing (..)
 {-|
     >>> add 1 2
     3
+
+    >>> add 99 3
+    102
 -}
 
 
