@@ -4,6 +4,19 @@ var processTitle = "elm-test";
 
 process.title = processTitle;
 
+process.on('uncaughtException', function(error) {
+  if (/ an argument in Javascript/.test(error)) {
+    // Handle arg mismatch between js and elm code. Expected message from Elm:
+    // "You are giving module `Main` an argument in JavaScript.
+    // This module does not take arguments though! You probably need to change the
+    // initialization code to something like `Elm.Main.fullscreen()`]"
+    console.error("Error starting the node-test-runner.");
+    console.error("Please check your Javascript 'elm-test' and Elm 'node-test-runner' package versions are compatible");
+  } else {
+    console.error("Unhandled exception while running the tests:", error);
+  }
+});
+
 var compile    = require("node-elm-compiler").compile,
   fs           = require("fs-extra"),
   chalk        = require("chalk"),
@@ -14,10 +27,10 @@ var compile    = require("node-elm-compiler").compile,
   spawn        = require("cross-spawn"),
   minimist     = require("minimist"),
   firstline    = require("firstline"),
-  findUp       = require("find-up"),
   chokidar     = require("chokidar"),
   doctest      = require("elm-doc-test/bin/modes");
 
+var generatedCodeDir = "elm-stuff/generated-code/elm-community/elm-test"
 var elm = {
   'elm-package': 'elm-package'
 };
@@ -38,7 +51,7 @@ var args = minimist(process.argv.slice(2), {
 if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
-  console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
+  console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/\n");
   console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
   console.log("Usage: elm-test [--report json or chalk (default)] # Print results to stdout in given format\n");
   console.log("Usage: elm-test [--watch] # Run tests on file changes\n");
@@ -219,7 +232,7 @@ function runElmTest() {
   }
 
 
-  var testFile = args._[0],
+  var testsPath = args._[0],
       cwd = __dirname,
       pathToMake = undefined;
 
@@ -230,8 +243,8 @@ function runElmTest() {
     return spawn(cmd, args, compilerOpts);
   }
 
-  if (typeof testFile == "undefined") {
-    testFile = "tests/Main.elm";
+  if (typeof testsPath === "undefined") {
+    testsPath = "tests/"
   }
 
   if (args.compiler !== undefined) {
@@ -243,106 +256,143 @@ function runElmTest() {
     }
   }
 
-  if (!fs.existsSync(testFile)) {
-    console.error("Could not find file " + testFile);
-    process.exit(1);
-  }
-
-  var testModulePromise = firstline(testFile).then(function (testModuleLine) {
-      var moduleMatches = testModuleLine.match(/^(?:port\s+)?module\s+([^\s]+)/);
-      if (moduleMatches) {
-          return moduleMatches[1];
-      }
-
-      return 'Main';
-  });
-
   function infoLog(msg) {
     if (report === "chalk") {
       console.log(msg);
     }
   }
+  console.log(path.join(process.cwd(), testsPath))
 
-  findUp('elm-package.json', { cwd: path.dirname(testFile) })
-      .then(function (elmPackagePath) {
-          var elmRootDir = path.dirname(elmPackagePath);
-          if (fs.realpathSync(elmRootDir) !== fs.realpathSync(process.cwd())) {
-              testFile = path.relative(elmRootDir, testFile);
-              process.chdir(elmRootDir);
-          }
+  var elmRootDir = process.cwd();
+  console.log(elmRootDir)
+  var elmPackagePath = path.join(elmRootDir, "elm-package.json");
+  if (fs.realpathSync(elmRootDir) !== fs.realpathSync(process.cwd())) {
+      process.chdir(elmRootDir);
+  }
 
-          if (args.watch) {
-              infoLog('Running in watch mode');
+  // TODO we don't want to do this every single time. Instead,
+  // verify that the generated elm-package.json is there, with the
+  // expected version number. Iff the version number is wrong, regenerate.
+  var newElmPackageDir = path.resolve(generatedCodeDir);
+  var generatedSrc = path.join(newElmPackageDir, "src");
 
-              var watcher = chokidar.watch('**/*.elm', { ignoreInitial: true });
+  var elmPackageContents;
+  console.log(elmPackagePath);
 
-              var eventNameMap = {
-                  add: 'added',
-                  addDir: 'added',
-                  change: 'changed',
-                  unlink: 'removed',
-                  unlinkDir: 'removed',
-              };
+  try {
+    elmPackageContents = JSON.parse(fs.readFileSync(elmPackagePath, "utf8"));
+  } catch (err) {
+    console.error("Error reading elm-package.json: " + err);
+    process.exit(1);
+  }
 
-              watcher.on('all', function (event, filePath) {
-                  var relativePath = path.relative(elmRootDir, filePath);
-                  var eventName = eventNameMap[event] || event;
+  // Enable Native modules in the new elm-package.json, so we can import
+  // the function that translates runtime exceptions into test failures.
+  elmPackageContents["native-modules"] = true;
 
-                  infoLog('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
+  // Make all the source-directories absolute, and introduce a new one.
+  elmPackageContents["source-directories"] =
+    (elmPackageContents["source-directories"] || []).map(function(src) {
+      return path.resolve(src)
+    }).concat([generatedSrc]);
 
-                  runTests();
-              });
-          }
+  fs.mkdirpSync(newElmPackageDir);
 
-          function runTests () {
-              temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
-                  var dest = info.path;
-                  var compileProcess = compile( [testFile], {
-                      output: dest,
-                      verbose: args.verbose,
-                      yes: true,
-                      spawn: spawnCompiler,
-                      pathToMake: pathToMake,
-                      warn:args.warn
-                  });
+  // Generate the new elm-package.json
+  fs.writeFileSync(
+    path.join(newElmPackageDir, "elm-package.json"),
+    JSON.stringify(elmPackageContents, null, 4)
+  );
 
-                  compileProcess.on('close', function(exitCode) {
-                      if (exitCode !== 0) {
-                          console.error("Compilation failed for", testFile);
-                          if (!args.watch) {
-                              process.exit(exitCode);
-                          }
-                      } else {
-                          testModulePromise.then(function (testModuleName) {
-                              try {
-                                  evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), testModuleName);
-                              } catch (err) {
-                                  console.error("The test run failed because it encountered a runtime exception:\n\n", err);
+  fs.copySync(path.join(__dirname, "..", "src"), generatedSrc);
 
-                                  if (!args.watch) {
-                                      process.exit(2);
-                                  }
-                              }
-                          });
-                      }
-                  });
-              });
-          }
+  process.chdir(newElmPackageDir);
+
+  // TODO stop hardcoding this
+  var imports = ["import FailingTests"]
+  var testList = ["FailingTests.tests"]
+
+  var testFileContents =
+    // TODO use a module name that's less likely to cause namespace conflits
+    [ "port module Main exposing (main)"
+    , ""
+    , imports.join("\n")
+    , ""
+    , "import Test.Runner.Node"
+    , "import Test"
+    , "import Json.Encode"
+    , ""
+    , "port emit : ( String, Json.Encode.Value ) -> Cmd msg"
+    , ""
+    , "main : Test.Runner.Node.TestProgram"
+    , "main ="
+    , "    [ " + testList.join(", ") + " ]"
+    , "        |> Test.concat"
+    , "        |> Test.Runner.Node.run emit"
+    ].join("\n");
+
+  var testFile = path.join(generatedSrc, "Main.elm");
+
+  console.log("testFile", testFile)
+
+  fs.writeFileSync(testFile, testFileContents);
+
+  if (args.watch) {
+      infoLog('Running in watch mode');
+
+      var watcher = chokidar.watch('**/*.elm', { ignoreInitial: true });
+
+      var eventNameMap = {
+          add: 'added',
+          addDir: 'added',
+          change: 'changed',
+          unlink: 'removed',
+          unlinkDir: 'removed',
+      };
+
+      watcher.on('all', function (event, filePath) {
+          var relativePath = path.relative(elmRootDir, filePath);
+          var eventName = eventNameMap[event] || event;
+
+          infoLog('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
 
           runTests();
       });
+  }
 
+  function runTests () {
+      temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
+          var dest = info.path;
+          var compileProcess = compile( [testFile], {
+              output: dest,
+              verbose: args.verbose,
+              yes: true,
+              spawn: spawnCompiler,
+              pathToMake: pathToMake,
+              warn:args.warn
+          });
 
-  process.on('uncaughtException', function(error) {
-    if (/ an argument in Javascript/.test(error)) {
-      // Handle arg mismatch between js and elm code. Expected message from Elm:
-      // "You are giving module `Main` an argument in JavaScript.
-      // This module does not take arguments though! You probably need to change the
-      // initialization code to something like `Elm.Main.fullscreen()`]"
-      console.error("Error starting the node-test-runner.");
-      console.error("Please check your Javascript 'elm-test' and Elm 'node-test-runner' package versions are compatible");
-    } else {
-      console.error("Unhandled exception while running the tests:", error);
-    }
-  });
+          compileProcess.on('close', function(exitCode) {
+            if (exitCode !== 0) {
+              console.error("Compilation failed for", testFile);
+              if (!args.watch) {
+                  process.exit(exitCode);
+              }
+            } else {
+              try {
+                  // TODO FIXME testModuleName no longer exists - use Main
+                  evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), "Main");
+              } catch (err) {
+                  console.error("The test run failed because it encountered a runtime exception:\n\n", err);
+
+                  if (!args.watch) {
+                      process.exit(2);
+                  }
+              }
+            }
+          });
+      });
+  }
+
+  runTests();
 };
