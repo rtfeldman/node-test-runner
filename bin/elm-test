@@ -62,15 +62,20 @@ if (args.version) {
   process.exit(0);
 }
 
-if (args.doctest) {
-  var doctestModel = doctest.init(args);
-  doctestModel.run(doctestModel.config, function () {
+
+// Run elm-doc-tests
+var doctestModel = doctest.init({
+  warn: false,
+  output: path.join(generatedCodeDir, 'src')
+});
+
+if (doctestModel.config.tests.length <= 0) {
+  runElmTest(); // only run elm-tests
+} else {
+  doctestModel.run(doctestModel, function () {
+    // Run elm-tests
     runElmTest();
   });
-  args._[0] = "tests/Doc/Main.elm"
-  return;
-} else {
-  runElmTest();
 }
 
 function runElmTest() {
@@ -307,8 +312,8 @@ function runElmTest() {
   process.chdir(newElmPackageDir);
 
   // TODO stop hardcoding this
-  var imports = ["import FailingTests"]
-  var testList = ["FailingTests.tests"]
+  var imports = ["import FailingTests", "import Doc.Tests"]
+  var testList = ["FailingTests.tests", "Doc.Tests.all"]
 
   var testFileContents =
     // TODO use a module name that's less likely to cause namespace conflits
