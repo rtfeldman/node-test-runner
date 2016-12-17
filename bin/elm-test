@@ -30,6 +30,7 @@ var compile    = require("node-elm-compiler").compile,
   minimist     = require("minimist"),
   firstline    = require("firstline"),
   chokidar     = require("chokidar"),
+  Runner       = require("../lib/runner.js"),
   doctest      = require("elm-doc-test/bin/modes");
 
 var generatedCodeDir = "elm-stuff/generated-code/elm-community/elm-test"
@@ -320,49 +321,28 @@ function runElmTest() {
   // only search testFilenames for tests, but search all of source-directories
   // for doctests.
   // Don't bother searching a file for doctests if it's in testFilenames!
-  var srcFiles = new Set();
+  var srcModules = new Map();
   var visitedDirectories = new Set();
 
-  function isElmFile(filename) {
-    return /\.elm$/.test(filename);
-  }
-
-  function addSrcFiles(srcPath, isRoot) {
-    if (!visitedDirectories.has(srcPath) &&
-      // Ignore elm-stuff/ and files that start with .
-      !/(^\.|\/elm-stuff\/)/.test(srcPath)
-    ) {
-      visitedDirectories.add(srcPath);
-
-      fs.readdirSync(srcPath).forEach(function(filename) {
-        // Ignore the Native directory - it can't have tests in it.
-        var isNativeDir = filename === "Native" && isRoot;
-
-        if (!isNativeDir) {
-          var filePath = path.join(srcPath, filename);
-          var stats = fs.lstatSync(filePath);
-
-          if (stats.isDirectory()) {
-            addSrcFiles(filePath, false);
-          } else if ((stats.isFile() || stats.isSymbolicLink()) && isElmFile(filename)) {
-            srcFiles.add(filePath);
-          }
-        }
-      });
-    }
-  }
-
-  sourceDirs.forEach(function(srcDir) { return addSrcFiles(srcDir, true); });
+  sourceDirs.forEach(function(srcDir) {
+    return Runner.addSrcFilesTo(srcModules, visitedDirectories, srcDir, srcDir);
+  });
 
   // doctestFiles is the set of src files that are not already known test files
-  var doctestFiles = new Set([...srcFiles].filter(function(srcFile) {
+  var doctestFiles = new Set([...srcModules].filter(function(srcFile) {
     return !testFilenameSet.has(srcFile);
   }));
-  var imports = ["import FailingTests", "import Doc.Tests"]
-  var testList = ["FailingTests.tests", "Doc.Tests.all"]
 
-  console.log("testFilenames", testFilenames)
-  console.log("doctestFiles", doctestFiles)
+  var imports = [];
+  var testList = [];
+
+  for (var moduleName of srcModules.values()) {
+    imports.push("import " + moduleName);
+    testList.push(moduleName + ".tests");
+  }
+
+  console.log("imports", imports)
+  console.log("testList", testList)
 
   var testFileContents =
     // TODO use a module name that's less likely to cause namespace conflits
