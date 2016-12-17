@@ -1,4 +1,4 @@
-port module Main exposing (..)
+module PassingTests exposing (tests)
 
 import Test.Runner.Node exposing (run, TestProgram)
 import Expect
@@ -11,14 +11,10 @@ import Json.Encode exposing (Value)
 import Native.Polyfilled
 
 
-main : TestProgram
-main =
+tests : Test
+tests =
     [ plainExpectation ]
         |> concat
-        |> run emit
-
-
-port emit : ( String, Value ) -> Cmd msg
 
 
 plainExpectation : Test

@@ -81,6 +81,7 @@ var doctestModel = doctest.init({
   output: path.join(generatedCodeDir, 'src')
 });
 
+
 if (doctestModel.config.tests.length <= 0) {
   runElmTest(); // only run elm-tests
 } else {
@@ -187,8 +188,6 @@ function runElmTest() {
     if (args.seed !== undefined) {
       initialSeed = args.seed;
     }
-
-
 
     pathToMake = args.compiler;
 
@@ -328,21 +327,25 @@ function runElmTest() {
     return Runner.addSrcFilesTo(srcModules, visitedDirectories, srcDir, srcDir);
   });
 
-  // doctestFiles is the set of src files that are not already known test files
-  var doctestFiles = new Set([...srcModules].filter(function(srcFile) {
-    return !testFilenameSet.has(srcFile);
-  }));
-
   var imports = [];
   var testList = [];
+  var doctestSet = new Set(doctestModel.config.tests);
 
+  // Building things like:
+  //
+  // import MyTests
+  //
+  // MyTests.tests
   for (var moduleName of srcModules.values()) {
-    imports.push("import " + moduleName);
-    testList.push(moduleName + ".tests");
-  }
+    if (doctestSet.has(moduleName)) {
+      moduleName = "Doc." + moduleName + "Spec";
+      testList.push(moduleName + ".spec");
+    } else {
+      testList.push(moduleName + ".tests");
+    }
 
-  console.log("imports", imports)
-  console.log("testList", testList)
+    imports.push("import " + moduleName);
+  }
 
   var testFileContents =
     // TODO use a module name that's less likely to cause namespace conflits
