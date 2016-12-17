@@ -9,7 +9,7 @@ process.on('uncaughtException', function(error) {
     // Handle arg mismatch between js and elm code. Expected message from Elm:
     // "You are giving module `Main` an argument in JavaScript.
     // This module does not take arguments though! You probably need to change the
-    // initialization code to something like `Elm.Main.fullscreen()`]"
+    // initialization code to something like `Elm.Test.Generated.Main.fullscreen()`]"
     console.error("Error starting the node-test-runner.");
     console.error("Please check your Javascript 'elm-test' and Elm 'node-test-runner' package versions are compatible");
   } else {
@@ -153,7 +153,7 @@ function runElmTest() {
     process.exit(0);
   }
 
-  function evalElmCode (compiledCode, testModuleName) {
+  function evalElmCode (compiledCode) {
     // Apply Node polyfills as necessary.
     var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
     var document = {body: {}, createTextNode: function() {}};
@@ -165,24 +165,7 @@ function runElmTest() {
     // Make sure necessary things are defined.
     if (typeof Elm === 'undefined') { throw 'elm-io config error: Elm is not defined. Make sure you provide a file compiled by Elm!'; }
 
-    function getTestModule() {
-        var module = Elm;
-        var moduleParts = testModuleName.split('.');
-        while (moduleParts.length) {
-            var modulePart = moduleParts.shift();
-            if (module[modulePart] === undefined) {
-                return undefined;
-            }
-
-            module = module[modulePart];
-        }
-
-        return module;
-    }
-
-    var testModule = getTestModule();
-    if (testModule === undefined) { throw 'Elm.' + testModuleName + ' is not defined. Make sure you provide a file compiled by Elm!'; }
-
+    var testModule = Elm.Test.Generated.Main;
     var initialSeed = null;
 
     if (args.seed !== undefined) {
@@ -349,7 +332,7 @@ function runElmTest() {
 
   var testFileContents =
     // TODO use a module name that's less likely to cause namespace conflits
-    [ "port module Main exposing (main)"
+    [ "port module Test.Generated.Main exposing (main)"
     , ""
     , imports.join("\n")
     , ""
@@ -414,7 +397,6 @@ function runElmTest() {
               }
             } else {
               try {
-                  // TODO FIXME testModuleName no longer exists - use Main
                   evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), "Main");
               } catch (err) {
                   console.error("The test run failed because it encountered a runtime exception:\n\n", err);
