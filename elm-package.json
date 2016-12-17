@@ -4,7 +4,7 @@
     "repository": "https://github.com/rtfeldman/node-test-runner.git",
     "license": "BSD-3-Clause",
     "source-directories": [
-        "src"
+        "src", "native-src"
     ],
     "native-modules": true,
     "exposed-modules": [],
