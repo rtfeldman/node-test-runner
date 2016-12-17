@@ -330,7 +330,6 @@ function runElmTest() {
   }
 
   var testFileContents =
-    // TODO use a module name that's less likely to cause namespace conflits
     [ "port module Test.Generated.Main exposing (main)"
     , ""
     , imports.join("\n")
