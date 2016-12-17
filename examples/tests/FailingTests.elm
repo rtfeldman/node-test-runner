@@ -4,7 +4,6 @@ import String
 import Expect
 import Test exposing (..)
 import Fuzz exposing (..)
-import Json.Encode exposing (Value)
 import Char
 
 
