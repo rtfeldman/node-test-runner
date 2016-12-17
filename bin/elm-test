@@ -376,6 +376,7 @@ function runElmTest() {
   }
 
   function runTests () {
+      // TODO compile to elm-stuff/generated-code to avoid unnecessary recompilation
       temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
           var dest = info.path;
           var compileProcess = compile( [testFile], {
