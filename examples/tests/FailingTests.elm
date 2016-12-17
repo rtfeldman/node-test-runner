@@ -12,10 +12,10 @@ tests : Test
 tests =
     [ testWithoutNums
     , testOxfordify
-    , noDescription
     , testExpectations
     , testFailingFuzzTests
     , testFuzz
+    , noDescription
     , testShrinkables
     ]
         |> Test.concat
@@ -127,6 +127,10 @@ testOxfordify =
                 \() ->
                     oxfordify "This sentence contains " "." [ "one item", "two item", "three item" ]
                         |> Expect.equal "This sentence contains one item, two item, and three item."
+            , test "runs a Debug.crash on purpose" <|
+                \() ->
+                    oxfordify "Everything is normal"
+                        |> Debug.crash "this test runs a Debug.crash on purpose!"
             ]
         ]
 

@@ -10,7 +10,7 @@ passed and 1 if any failed.
 
 import Test.Reporter.Reporter exposing (TestReporter, Report(..), createReporter)
 import Test.Reporter.Result exposing (Failure, TestResult)
-import Test.Runner.Node.App as App
+import Test.Runner.Node.App as App exposing (LabeledThunk)
 import Test exposing (Test)
 import Dict exposing (Dict)
 import Expect exposing (Expectation)
@@ -23,12 +23,21 @@ import Platform
 import Native.RunTest
 
 
+{-| Execute the given thunk.
+
+If it throws an exception, return a failure instead of crashing.
+-}
+runThunk : (() -> List Expectation) -> List Expectation
+runThunk =
+    Native.RunTest.runThunk
+
+
 type alias TestId =
     Int
 
 
 type alias Model =
-    { available : Dict TestId (() -> ( List String, List Expectation ))
+    { available : Dict TestId LabeledThunk
     , running : Set TestId
     , queue : List TestId
     , startTime : Time
@@ -50,7 +59,7 @@ type alias Emitter msg =
 
 type Msg
     = Dispatch Time
-    | Complete TestId ( List String, List Expectation ) Time Time
+    | Complete TestId (List String) (List Expectation) Time Time
     | Finish Time
 
 
@@ -95,7 +104,7 @@ update emit msg ({ testReporter } as model) =
                 ( model, emit ( "FINISHED", data ) )
                     |> warn "Attempted to Dispatch when all tests completed!"
 
-        Complete testId ( labels, expectations ) startTime endTime ->
+        Complete testId labels expectations startTime endTime ->
             let
                 result =
                     { labels = labels
@@ -133,10 +142,13 @@ update emit msg ({ testReporter } as model) =
                             ( model, Cmd.none )
                                 |> warn ("Could not find testId " ++ toString testId)
 
-                        Just runner ->
+                        Just { labels, thunk } ->
                             let
+                                expectations =
+                                    runThunk thunk
+
                                 complete =
-                                    Complete testId (Native.RunTest.run runner) startTime
+                                    Complete testId labels expectations startTime
 
                                 available =
                                     Dict.remove testId model.available
@@ -159,13 +171,13 @@ init :
     Emitter Msg
     -> { initialSeed : Int
        , startTime : Time
-       , thunks : List (() -> ( List String, List Expectation ))
+       , thunks : List LabeledThunk
        , report : Report
        }
     -> ( Model, Cmd Msg )
 init emit { startTime, initialSeed, thunks, report } =
     let
-        indexedThunks : List ( TestId, () -> ( List String, List Expectation ) )
+        indexedThunks : List ( TestId, LabeledThunk )
         indexedThunks =
             List.indexedMap (,) thunks
 

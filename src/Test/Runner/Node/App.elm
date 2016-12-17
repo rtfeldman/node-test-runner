@@ -1,4 +1,4 @@
-module Test.Runner.Node.App exposing (run, Model, Msg)
+module Test.Runner.Node.App exposing (run, Model, Msg, LabeledThunk)
 
 {-| Test runner for a Node app
 
@@ -27,7 +27,7 @@ type Msg subMsg
 type alias InitArgs =
     { initialSeed : Int
     , startTime : Time
-    , thunks : List (() -> ( List String, List Expectation ))
+    , thunks : List LabeledThunk
     , report : Reporter.Report
     }
 
@@ -74,7 +74,7 @@ initOrUpdate msg maybeModel =
                         thunks =
                             test
                                 |> Test.Runner.fromTest runs seed
-                                |> toThunks
+                                |> toLabeledThunks
 
                         ( subModel, subCmd ) =
                             init
@@ -129,22 +129,31 @@ subscriptions subs model =
             Sub.map SubMsg (subs subModel)
 
 
-toThunks : Runner -> List (() -> ( List String, List Expectation ))
-toThunks =
-    toThunksHelp []
+type alias LabeledThunk =
+    { thunk : () -> List Expectation
+    , labels : List String
+    }
 
 
-toThunksHelp : List String -> Runner -> List (() -> ( List String, List Expectation ))
-toThunksHelp labels runner =
+toLabeledThunks : Runner -> List LabeledThunk
+toLabeledThunks =
+    toLabeledThunksHelp []
+
+
+toLabeledThunksHelp : List String -> Runner -> List LabeledThunk
+toLabeledThunksHelp labels runner =
     case runner of
         Runnable runnable ->
-            [ \() -> ( labels, Test.Runner.run runnable ) ]
+            [ { labels = labels
+              , thunk = \() -> Test.Runner.run runnable
+              }
+            ]
 
         Labeled label subRunner ->
-            toThunksHelp (label :: labels) subRunner
+            toLabeledThunksHelp (label :: labels) subRunner
 
         Batch runners ->
-            List.concatMap (toThunksHelp labels) runners
+            List.concatMap (toLabeledThunksHelp labels) runners
 
 
 intFromString : Decoder Int
@@ -187,10 +196,9 @@ decodeInitArgs args =
         |> Decode.decodeValue
             (Decode.oneOf
                 [ Decode.null ( Nothing, ChalkReport )
-                , (Decode.map2 (,)
+                , Decode.map2 (,)
                     (Decode.field "seed" (Decode.nullable intFromString))
                     (Decode.field "report" (decodeReport Decode.string))
-                  )
                 ]
             )
 
