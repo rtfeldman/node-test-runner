@@ -109,7 +109,7 @@ function runElmTest() {
     if((nodeVersion[0] === 0 && nodeVersion[1] < 11) ||
        (nodeVersion[0] === 0 && nodeVersion[1] === 11 && nodeVersion[2] < 13)) {
       console.log("using node v" + nodeVersionString);
-      console.error("elm-test requires node v0.11.13 or greater - upgrade the installed version of node and try again");
+      console.error("elm-test requires node v4.7.0 or greater - upgrade the installed version of node and try again");
       process.exit(1);
     }
   }
