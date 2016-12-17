@@ -20,6 +20,7 @@ import Task
 import Time exposing (Time)
 import Tuple
 import Platform
+import Native.RunTest
 
 
 type alias TestId =
@@ -132,10 +133,10 @@ update emit msg ({ testReporter } as model) =
                             ( model, Cmd.none )
                                 |> warn ("Could not find testId " ++ toString testId)
 
-                        Just run ->
+                        Just runner ->
                             let
                                 complete =
-                                    Complete testId (run ()) startTime
+                                    Complete testId (Native.RunTest.run runner) startTime
 
                                 available =
                                     Dict.remove testId model.available
