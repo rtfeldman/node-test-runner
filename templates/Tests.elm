@@ -1,4 +1,4 @@
-module Tests exposing (..)
+module Tests exposing (tests)
 
 import Test exposing (..)
 import Expect
@@ -6,8 +6,8 @@ import Fuzz exposing (list, int, tuple, string)
 import String
 
 
-all : Test
-all =
+tests : Test
+tests =
     describe "Sample Test Suite"
         [ describe "Unit test examples"
             [ test "Addition" <|

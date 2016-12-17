@@ -147,7 +147,6 @@ function runElmTest() {
     ensureDirectory("src");
     ensureDirectory("tests");
     copyTemplate("elm-package.json");
-    copyTemplate("Main.elm");
     copyTemplate("Tests.elm");
     copyTemplate("gitignore", ".gitignore");
     process.exit(0);
