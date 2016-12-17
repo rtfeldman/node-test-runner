@@ -53,11 +53,6 @@ timeToNumericSeed time =
         |> Tuple.first
 
 
-fromNever : Never -> a
-fromNever a =
-    fromNever a
-
-
 initOrUpdate : Msg subMsg -> Model subMsg subModel -> ( Model subMsg subModel, Cmd (Msg subMsg) )
 initOrUpdate msg maybeModel =
     case maybeModel of
