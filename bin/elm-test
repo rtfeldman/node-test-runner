@@ -50,7 +50,7 @@ var args = minimist(process.argv.slice(2), {
     string: [ 'compiler', 'seed', 'report' ]
 });
 
-var globPattern = args._[0] || "tests/**/*.elm";
+var globPattern = args._[0] || "test/suites/**/*.elm";
 var testFilePaths = glob.sync(
     globPattern,
     {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
@@ -77,31 +77,42 @@ if (args.version) {
 var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
 var elmPackagePath = path.join(elmRootDir, "elm-package.json");
 
-// Run elm-doc-tests
-var doctestModel = doctest.init({
-  warn: false,
-  output: path.join(elmRootDir, generatedCodeDir, "src")
-});
+function runTests (testFile) {
+  // TODO compile to elm-stuff/generated-code to avoid unnecessary recompilation
+  temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
+      var dest = info.path;
+      var compileProcess = compile( [testFile], {
+          output: dest,
+          verbose: args.verbose,
+          yes: true,
+          spawn: spawnCompiler,
+          pathToMake: pathToMake,
+          warn:args.warn
+      });
 
-if (doctestModel.config.tests.length <= 0) {
-  runElmTest(); // only run elm-tests
-} else {
-  doctestModel.run(doctestModel, function () {
-    // Run elm-tests
-    runElmTest();
+      compileProcess.on('close', function(exitCode) {
+        if (exitCode !== 0) {
+          console.error("Compilation failed for", testFile);
+          if (!args.watch) {
+            process.exit(exitCode);
+          }
+        } else {
+          try {
+            Runner.evalElmCode(args, report, fs.readFileSync(dest, {encoding: "utf8"}), "Main");
+          } catch (err) {
+            console.error("The test run failed because it encountered a runtime exception:\n\n", err);
+
+            if (!args.watch) {
+              process.exit(2);
+            }
+          }
+        }
+      });
   });
 }
 
 function runElmTest() {
   process.chdir(elmRootDir);
-
-  var report = "chalk";
-  if (args.report === "chalk" || args.report === "json" || args.report === "junit") {
-      report = args.report;
-  } else if (args.report !== undefined) {
-      console.error("The --report option must be given either 'chalk', 'junit', or 'json'");
-      process.exit(1);
-  }
 
   checkNodeVersion();
 
@@ -155,93 +166,8 @@ function runElmTest() {
     process.exit(0);
   }
 
-  function evalElmCode (compiledCode) {
-    // Apply Node polyfills as necessary.
-    var window = {Date: Date, addEventListener: function() {}, removeEventListener: function() {}};
-    var document = {body: {}, createTextNode: function() {}};
-    if (typeof XMLHttpRequest === 'undefined') { XMLHttpRequest = function() { return { addEventListener: function() {}, open: function() {}, send: function() {} }; }; }
-    if (typeof FormData === 'undefined') { FormData = function () { this._data = []; }; FormData.prototype.append = function () { this._data.push(Array.prototype.slice.call(arguments)); }; }
-
-    var Elm = function(module) { eval(compiledCode); return module.exports; }({});
-
-    // Make sure necessary things are defined.
-    if (typeof Elm === 'undefined') { throw 'elm-io config error: Elm is not defined. Make sure you provide a file compiled by Elm!'; }
-
-    var testModule = Elm.Test.Generated.Main;
-    var initialSeed = null;
-
-    if (args.seed !== undefined) {
-      initialSeed = args.seed;
-    }
-
-    pathToMake = args.compiler;
-
-    // Fix Windows Unicode problems. Credit to https://github.com/sindresorhus/figures for the Windows compat idea!
-    var windowsSubstitutions = [[/[↓✗►]/g, '>'], [/╵│╷╹┃╻/g, '|'], [/═/g, '='],, [/▔/g, '-'], [/✔/g, '√']];
-
-    function windowsify(str) {
-      return windowsSubstitutions.reduce(
-        function(result, sub) { return result.replace(sub[0], sub[1]); }, str);
-    }
-
-    function chalkify(messages) {
-      return messages.map(function(msg) {
-        var path = msg.styles;
-        var text = process.platform === 'win32' ? windowsify(msg.text) : msg.text;
-
-        if (path.length === 0) {
-          return text;
-        } else {
-          var fn = chalk;
-
-          path.forEach(function(nextPath) { fn = fn[nextPath]; });
-
-          return fn(text);
-        }
-      }).join('');
-    }
-
-    // Run the Elm app.
-    var app = testModule.worker({seed: initialSeed, report: report});
-
-    // Receive messages from ports and translate them into appropriate JS calls.
-    app.ports.emit.subscribe(function(msg) {
-      var msgType = msg[0];
-      var data = msg[1];
-
-      if (msgType === 'FINISHED') {
-        if (data.format === "CHALK") {
-          console.log(chalkify(data.message));
-        } else if (data.format === "JUNIT") {
-          console.log(builder.create(data.message).end());
-        } else {
-          console.log(JSON.stringify(data.message));
-        }
-
-        if (!args.watch) {
-          process.exit(data.exitCode);
-        }
-      } else if (msgType === "STARTED" || msgType === "TEST_COMPLETED")  {
-          if (data.format === "CHALK") {
-            console.log(chalkify(data.message));
-          } else if (data.format === "JSON") {
-            console.log(JSON.stringify(data.message));
-          }
-
-      }
-    });
-  }
-
-
   var testsPath = args._[0],
       pathToMake = undefined;
-
-  function spawnCompiler(cmd, args, opts) {
-    var compilerOpts =
-        _.defaults({stdio: [process.stdin, report === "chalk" ? process.stdout : 'ignore', process.stderr] }, opts);
-
-    return spawn(cmd, args, compilerOpts);
-  }
 
   if (args.compiler !== undefined) {
     pathToMake = args.compiler;
@@ -315,53 +241,52 @@ function runElmTest() {
   var srcModules = new Map();
   var visitedDirectories = new Set();
 
-  sourceDirs.forEach(function(srcDir) {
+  Promise.all(sourceDirs.map(function(srcDir) {
     return Runner.addSrcFilesTo(srcModules, visitedDirectories, srcDir, srcDir);
-  });
+  })).then(function() {
+    var imports = [];
+    var testList = [];
+    var doctestSet = new Set(doctestModel.config.tests);
 
-  var imports = [];
-  var testList = [];
-  var doctestSet = new Set(doctestModel.config.tests);
+    // Building things like:
+    //
+    // import MyTests
+    //
+    // MyTests.suite
+    for (var moduleName of srcModules.values()) {
+      if (doctestSet.has(moduleName)) {
+        moduleName = "Doc." + moduleName + "Spec";
+        testList.push(moduleName + ".spec");
+      } else {
+        testList.push(moduleName + ".suite");
+      }
 
-  // Building things like:
-  //
-  // import MyTests
-  //
-  // MyTests.suite
-  for (var moduleName of srcModules.values()) {
-    if (doctestSet.has(moduleName)) {
-      moduleName = "Doc." + moduleName + "Spec";
-      testList.push(moduleName + ".spec");
-    } else {
-      testList.push(moduleName + ".suite");
+      imports.push("import " + moduleName);
     }
 
-    imports.push("import " + moduleName);
-  }
+    var testFileContents =
+      [ "port module Test.Generated.Main exposing (main)"
+      , ""
+      , imports.join("\n")
+      , ""
+      , "import Test.Runner.Node"
+      , "import Test"
+      , "import Json.Encode"
+      , ""
+      , "port emit : ( String, Json.Encode.Value ) -> Cmd msg"
+      , ""
+      , "main : Test.Runner.Node.TestProgram"
+      , "main ="
+      , "    [ " + testList.join(", ") + " ]"
+      , "        |> Test.concat"
+      , "        |> Test.Runner.Node.run emit"
+      ].join("\n");
 
-  var testFileContents =
-    [ "port module Test.Generated.Main exposing (main)"
-    , ""
-    , imports.join("\n")
-    , ""
-    , "import Test.Runner.Node"
-    , "import Test"
-    , "import Json.Encode"
-    , ""
-    , "port emit : ( String, Json.Encode.Value ) -> Cmd msg"
-    , ""
-    , "main : Test.Runner.Node.TestProgram"
-    , "main ="
-    , "    [ " + testList.join(", ") + " ]"
-    , "        |> Test.concat"
-    , "        |> Test.Runner.Node.run emit"
-    ].join("\n");
+    var testFile = path.join(generatedSrc, "Main.elm");
 
-  var testFile = path.join(generatedSrc, "Main.elm");
+    fs.writeFileSync(testFile, testFileContents);
 
-  fs.writeFileSync(testFile, testFileContents);
-
-  if (args.watch) {
+    if (args.watch) {
       infoLog('Running in watch mode');
 
       var watchedPaths = JSON.parse(fs.readFileSync(elmPackagePath, 'utf8'))['source-directories'].map(function(path) { return path + '/**/*.elm'; });
@@ -381,43 +306,46 @@ function runElmTest() {
 
           infoLog('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
 
-          runTests();
+          runTests(testFile);
       });
-  }
+    }
 
-  function runTests () {
-      // TODO compile to elm-stuff/generated-code to avoid unnecessary recompilation
-      temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
-          var dest = info.path;
-          var compileProcess = compile( [testFile], {
-              output: dest,
-              verbose: args.verbose,
-              yes: true,
-              spawn: spawnCompiler,
-              pathToMake: pathToMake,
-              warn:args.warn
-          });
+    runTests(testFile);
+  }).catch(function(err) {
+    console.error(err);
+    process.exit(1);
+  });
+}
 
-          compileProcess.on('close', function(exitCode) {
-            if (exitCode !== 0) {
-              console.error("Compilation failed for", testFile);
-              if (!args.watch) {
-                  process.exit(exitCode);
-              }
-            } else {
-              try {
-                  evalElmCode(fs.readFileSync(dest, {encoding: "utf8"}), "Main");
-              } catch (err) {
-                  console.error("The test run failed because it encountered a runtime exception:\n\n", err);
+var report;
 
-                  if (!args.watch) {
-                      process.exit(2);
-                  }
-              }
-            }
-          });
-      });
-  }
+if (args.report === "chalk" || args.report === "json" || args.report === "junit") {
+    report = args.report;
+} else if (args.report !== undefined) {
+    console.error("The --report option must be given either 'chalk', 'junit', or 'json'");
+    process.exit(1);
+} else {
+  report = "chalk";
+}
 
-  runTests();
-};
+function spawnCompiler(cmd, args, opts) {
+  var compilerOpts =
+      _.defaults({stdio: [process.stdin, report === "chalk" ? process.stdout : 'ignore', process.stderr] }, opts);
+
+  return spawn(cmd, args, compilerOpts);
+}
+
+// Run elm-doc-tests
+var doctestModel = doctest.init({
+  warn: false,
+  output: path.join(elmRootDir, generatedCodeDir, "src")
+});
+
+if (doctestModel.config.tests.length <= 0) {
+  runElmTest(); // only run elm-tests
+} else {
+  doctestModel.run(doctestModel, function () {
+    // Run elm-tests
+    runElmTest();
+  });
+}
