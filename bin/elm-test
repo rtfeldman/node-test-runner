@@ -236,41 +236,33 @@ function runElmTest() {
 
   process.chdir(newElmPackageDir);
 
-  // only search testFilePaths for tests, but search all of source-directories
-  // for doctests.
-  // Don't bother searching a file for doctests if it's in testFilePaths!
-  var srcModules = new Map();
-  var visitedDirectories = new Set();
-
-  Promise.all(testFilePaths.map(function(testFilePath) {
-    var srcDir = path.dirname(testFilePath);
-
-    return Runner.addSrcFilesTo(srcModules, visitedDirectories, srcDir, srcDir);
-  })).then(function() {
-    var imports = [];
-    var testList = [];
+  Promise.all(testFilePaths.map(Runner.toModuleName)).then(function(moduleNames) {
+    var imports = new Set();
+    var testList = new Set();
     var doctestSet = new Set(doctestModel.config.tests);
+    var testModuleSet = new Set(moduleNames);
 
     // Building things like:
     //
     // import MyTests
     //
     // MyTests.suite
-    for (var moduleName of srcModules.values()) {
-      if (doctestSet.has(moduleName)) {
-        moduleName = "Doc." + moduleName + "Spec";
-        testList.push(moduleName + ".spec");
-      } else {
-        testList.push(moduleName + ".suite");
-      }
+    moduleNames.forEach(function(moduleName) {
+      testList.add(moduleName + ".suite");
 
-      imports.push("import " + moduleName);
-    }
+      imports.add("import " + moduleName);
+    });
+
+    doctestModel.config.tests.forEach(function(moduleName) {
+      testList.add("Doc." + moduleName + "Spec.spec");
+
+      imports.add("import Doc." + moduleName + "Spec");
+    });
 
     var testFileContents =
       [ "port module Test.Generated.Main exposing (main)"
       , ""
-      , imports.join("\n")
+      , Array.from(imports).join("\n")
       , ""
       , "import Test.Runner.Node"
       , "import Test"
@@ -280,7 +272,7 @@ function runElmTest() {
       , ""
       , "main : Test.Runner.Node.TestProgram"
       , "main ="
-      , "    [ " + testList.join(", ") + " ]"
+      , "    [ " + Array.from(testList).join(", ") + " ]"
       , "        |> Test.concat"
       , "        |> Test.Runner.Node.run emit"
       ].join("\n");
