@@ -312,7 +312,7 @@ function runElmTest() {
 
     runTests(testFile);
   }).catch(function(err) {
-    console.error(err);
+    console.error("Error reading source files", err);
     process.exit(1);
   });
 }
