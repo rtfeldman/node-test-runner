@@ -50,14 +50,12 @@ var args = minimist(process.argv.slice(2), {
     string: [ 'compiler', 'seed', 'report' ]
 });
 
-var globPattern = args._[0] || "test/suites/**/*.elm";
-var testFilePaths = glob.sync(
-    globPattern,
+var testFilePaths = (args._.length > 0) ? args._ : glob.sync(
+    "test/suites/**/*.elm",
     {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
   ).map(function(filename) { return path.resolve(filename); }),
   pathToMake = undefined;
 var testFilenameSet = new Set(testFilePaths);
-
 
 if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
@@ -75,7 +73,7 @@ if (args.version) {
 }
 
 var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
-var elmPackagePath = path.join(elmRootDir, "elm-package.json");
+var elmPackagePath = path.resolve(path.join(elmRootDir, "elm-package.json"));
 
 function runTests (testFile) {
   // TODO compile to elm-stuff/generated-code to avoid unnecessary recompilation
