@@ -1,9 +1,7 @@
-module PassingTests exposing (tests)
+module PassingTests exposing (suite)
 
-import Test.Runner.Node exposing (run, TestProgram)
 import Expect
 import Test exposing (..)
-import Json.Encode exposing (Value)
 
 
 -- Native.Polyfilled is only for testing node-test-runner
@@ -11,8 +9,8 @@ import Json.Encode exposing (Value)
 import Native.Polyfilled
 
 
-tests : Test
-tests =
+suite : Test
+suite =
     [ plainExpectation ]
         |> concat
 

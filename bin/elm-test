@@ -327,13 +327,13 @@ function runElmTest() {
   //
   // import MyTests
   //
-  // MyTests.tests
+  // MyTests.suite
   for (var moduleName of srcModules.values()) {
     if (doctestSet.has(moduleName)) {
       moduleName = "Doc." + moduleName + "Spec";
       testList.push(moduleName + ".spec");
     } else {
-      testList.push(moduleName + ".tests");
+      testList.push(moduleName + ".suite");
     }
 
     imports.push("import " + moduleName);

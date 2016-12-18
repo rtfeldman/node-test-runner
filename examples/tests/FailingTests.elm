@@ -1,4 +1,4 @@
-module FailingTests exposing (..)
+module FailingTests exposing (suite)
 
 import String
 import Expect
@@ -7,8 +7,8 @@ import Fuzz exposing (..)
 import Char
 
 
-tests : Test
-tests =
+suite : Test
+suite =
     [ testWithoutNums
     , testOxfordify
     , testExpectations
