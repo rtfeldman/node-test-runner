@@ -50,10 +50,13 @@ var args = minimist(process.argv.slice(2), {
     string: [ 'compiler', 'seed', 'report' ]
 });
 
-var testFilePaths = (args._.length > 0) ? args._ : glob.sync(
+// TODO on macOS if you give it a glob as its last argument, Node translates
+// that into a list of file paths. Do we get the same result on Windows?
+// If not, we need to do custom glob handling there.
+var testFilePaths = (args._.length > 0 ? args._ : glob.sync(
     "test/suites/**/*.elm",
     {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
-  ).map(function(filename) { return path.resolve(filename); }),
+  )).map(function(filename) { return path.resolve(filename); }),
   pathToMake = undefined;
 var testFilenameSet = new Set(testFilePaths);
 
@@ -239,7 +242,9 @@ function runElmTest() {
   var srcModules = new Map();
   var visitedDirectories = new Set();
 
-  Promise.all(sourceDirs.map(function(srcDir) {
+  Promise.all(testFilePaths.map(function(testFilePath) {
+    var srcDir = path.dirname(testFilePath);
+
     return Runner.addSrcFilesTo(srcModules, visitedDirectories, srcDir, srcDir);
   })).then(function() {
     var imports = [];
