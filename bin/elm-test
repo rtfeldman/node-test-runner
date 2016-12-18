@@ -56,8 +56,8 @@ var args = minimist(process.argv.slice(2), {
 var testFilePaths = (args._.length > 0 ? args._ : glob.sync(
     "test/suites/**/*.elm",
     {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
-  )).map(function(filename) { return path.resolve(filename); }),
-  pathToMake = undefined;
+  )).map(function(filename) { return path.resolve(filename); });
+var pathToMake = undefined;
 
 if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
