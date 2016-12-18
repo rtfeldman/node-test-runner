@@ -74,13 +74,14 @@ if (args.version) {
   process.exit(0);
 }
 
+var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
+var elmPackagePath = path.join(elmRootDir, "elm-package.json");
 
 // Run elm-doc-tests
 var doctestModel = doctest.init({
   warn: false,
-  output: path.join(generatedCodeDir, 'src')
+  output: path.join(elmRootDir, generatedCodeDir, "src")
 });
-
 
 if (doctestModel.config.tests.length <= 0) {
   runElmTest(); // only run elm-tests
@@ -92,6 +93,8 @@ if (doctestModel.config.tests.length <= 0) {
 }
 
 function runElmTest() {
+  process.chdir(elmRootDir);
+
   var report = "chalk";
   if (args.report === "chalk" || args.report === "json" || args.report === "junit") {
       report = args.report;
@@ -253,12 +256,6 @@ function runElmTest() {
     if (report === "chalk") {
       console.log(msg);
     }
-  }
-
-  var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
-  var elmPackagePath = path.join(elmRootDir, "elm-package.json");
-  if (fs.realpathSync(elmRootDir) !== fs.realpathSync(process.cwd())) {
-      process.chdir(elmRootDir);
   }
 
   // TODO we don't want to do this every single time. Instead,
