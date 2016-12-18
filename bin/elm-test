@@ -51,12 +51,12 @@ var args = minimist(process.argv.slice(2), {
 });
 
 var globPattern = args._[0] || "tests/**/*.elm";
-var testFilenames = glob.sync(
+var testFilePaths = glob.sync(
     globPattern,
     {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
   ).map(function(filename) { return path.resolve(filename); }),
   pathToMake = undefined;
-var testFilenameSet = new Set(testFilenames);
+var testFilenameSet = new Set(testFilePaths);
 
 
 if (args.help) {
@@ -255,7 +255,7 @@ function runElmTest() {
     }
   }
 
-  var elmRootDir = process.cwd();
+  var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
   var elmPackagePath = path.join(elmRootDir, "elm-package.json");
   if (fs.realpathSync(elmRootDir) !== fs.realpathSync(process.cwd())) {
       process.chdir(elmRootDir);
@@ -312,9 +312,9 @@ function runElmTest() {
 
   process.chdir(newElmPackageDir);
 
-  // only search testFilenames for tests, but search all of source-directories
+  // only search testFilePaths for tests, but search all of source-directories
   // for doctests.
-  // Don't bother searching a file for doctests if it's in testFilenames!
+  // Don't bother searching a file for doctests if it's in testFilePaths!
   var srcModules = new Map();
   var visitedDirectories = new Set();
 

@@ -32,6 +32,7 @@
     "chokidar": "1.6.0",
     "cross-spawn": "4.0.0",
     "elm-doc-test": "2.1.0",
+    "find-parent-dir": "^0.3.0",
     "firstline": "^1.2.0",
     "fs-extra": "0.30.0",
     "lodash": "4.13.1",
