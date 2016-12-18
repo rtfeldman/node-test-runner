@@ -58,7 +58,6 @@ var testFilePaths = (args._.length > 0 ? args._ : glob.sync(
     {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
   )).map(function(filename) { return path.resolve(filename); }),
   pathToMake = undefined;
-var testFilenameSet = new Set(testFilePaths);
 
 if (args.help) {
   console.log("Usage: elm-test init [--yes]  # Create example tests\n");
