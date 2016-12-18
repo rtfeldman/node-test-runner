@@ -31,6 +31,7 @@ var compile    = require("node-elm-compiler").compile,
   firstline    = require("firstline"),
   chokidar     = require("chokidar"),
   Runner       = require("../lib/runner.js"),
+  Init         = require("../lib/init.js"),
   doctest      = require("elm-doc-test/bin/modes");
 
 var generatedCodeDir = "elm-stuff/generated-code/elm-community/elm-test"
@@ -129,40 +130,8 @@ function runElmTest() {
   }
 
   if (args._[0] == "init") {
-    var copyTemplate = function(templateName, destName) {
-      if (arguments.length == 1) {
-        destName = templateName;
-      }
-      var source = path.resolve(__dirname, "../templates/" + templateName);
-      var destination = path.resolve("tests", destName);
-      if (fs.existsSync(destination)) {
-        console.log(destination + " already exists");
-      } else {
-        fs.copySync(source, destination);
-        console.log("Created " + destination);
-      }
-    };
+    Init.init(args);
 
-    var ensureDirectory = function(dirName) {
-      var destination = path.resolve(".", dirName);
-      if (fs.existsSync(destination)) {
-        console.log(destination + " already exists");
-      } else {
-        fs.mkdirSync(destination);
-        console.log("Created " + destination);
-      }
-    };
-
-    var elmOptions = "";
-    if (args.yes) {
-      elmOptions += " --yes";
-    }
-
-    ensureDirectory("src");
-    ensureDirectory("tests");
-    copyTemplate("elm-package.json");
-    copyTemplate("Tests.elm");
-    copyTemplate("gitignore", ".gitignore");
     process.exit(0);
   }
 
