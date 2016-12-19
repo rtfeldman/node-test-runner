@@ -66,10 +66,10 @@ exec(elmTest + ' --version');
 
 echo(filename + ': Testing examples...');
 
-cd('examples/tests');
+cd('examples/test');
 exec('elm-package install --yes');
-assertTestSuccess('PassingTests.elm');
-assertTestFailure('FailingTests.elm');
+assertTestSuccess('suites/PassingTests.elm');
+assertTestFailure('suites/FailingTests.elm');
 cd('../..');
 
 echo(filename + ': Testing doc-test...');
@@ -84,7 +84,7 @@ rm('-Rf', 'tmp');
 mkdir('-p', 'tmp');
 cd('tmp');
 exec(elmTest + ' init --yes');
-cd('tests');
+cd('test');
 // use local node-test-runner
 var tmpPackage = fs.readJsonSync('./elm-package.json');
 tmpPackage['source-directories'].push('../../src');
@@ -98,10 +98,10 @@ cd('..');
 assertTestFailure();
 
 // update failing test to passing test
-sed('-i', /should fail/, 'should pass', 'tests/Tests.elm');
-sed('-i', /Expect.fail "Failed as expected!"/, 'Expect.pass', 'tests/Tests.elm');
-rm('-Rf', 'tests/elm-stuff');
-cd('tests');
+sed('-i', /should fail/, 'should pass', 'test/suites/Tests.elm');
+sed('-i', /Expect.fail "Failed as expected!"/, 'Expect.pass', 'test/suites/Tests.elm');
+rm('-Rf', 'test/elm-stuff');
+cd('test');
 exec('elm-package install --yes');
 cd('..');
 assertTestSuccess();
