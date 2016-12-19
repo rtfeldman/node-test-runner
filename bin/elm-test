@@ -162,7 +162,7 @@ function runElmTest() {
   var elmPackageContents;
 
   try {
-    elmPackageContents = JSON.parse(fs.readFileSync(elmPackagePath, "utf8"));
+    elmPackageContents = fs.readJsonSync(elmPackagePath);
   } catch (err) {
     console.error("Error reading elm-package.json: " + err);
     process.exit(1);
