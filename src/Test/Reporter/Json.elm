@@ -6,13 +6,14 @@ import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 
 
-reportBegin : { testCount : Int, initialSeed : Int } -> Value
+reportBegin : { testCount : Int, initialSeed : Int } -> Maybe Value
 reportBegin { testCount, initialSeed } =
-    Encode.object
-        [ ( "event", Encode.string "runStart" )
-        , ( "testCount", Encode.string <| toString testCount )
-        , ( "initialSeed", Encode.string <| toString initialSeed )
-        ]
+    Just
+        <| Encode.object
+            [ ( "event", Encode.string "runStart" )
+            , ( "testCount", Encode.string <| toString testCount )
+            , ( "initialSeed", Encode.string <| toString initialSeed )
+            ]
 
 
 reportComplete : Results.TestResult -> Maybe Value
