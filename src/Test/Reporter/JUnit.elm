@@ -71,7 +71,8 @@ reportSummary duration results =
     in
         Encode.object
             [ ( "testsuite", Encode.object
-                [ ( "@tests", Encode.int (List.length expectations) )
+                [ ( "@name", Encode.string "elm-test" )
+                , ( "@tests", Encode.int (List.length expectations) )
                 , ( "@failed", Encode.int failed )
                 , ( "@time", encodeTime (List.foldl (+) 0 <| List.map .duration results) )
                 , ( "testcase", encodeSuites results )
