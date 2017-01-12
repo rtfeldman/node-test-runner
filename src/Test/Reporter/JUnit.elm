@@ -43,7 +43,8 @@ encodeTest { labels, duration } expectation =
     in
         Encode.object
             (
-              [ ( "@name", Encode.string <| String.join " " (List.reverse labels) )
+              [ ( "@classname", Encode.string classname )
+              , ( "@name", Encode.string name )
               , ( "@time", encodeTime duration )
               ] ++ (encodeTestcaseFailure expectation)
             )
