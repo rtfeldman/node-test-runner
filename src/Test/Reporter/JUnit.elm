@@ -72,6 +72,7 @@ reportSummary duration results =
         Encode.object
             [ ( "testsuite", Encode.object
                 [ ( "@name", Encode.string "elm-test" )
+                , ( "@package", Encode.string "elm-test" ) -- Would be nice to have this provided from elm-package.json of tests
                 , ( "@tests", Encode.int (List.length expectations) )
                 , ( "@failed", Encode.int failed )
                 , ( "@time", encodeTime (List.foldl (+) 0 <| List.map .duration results) )
