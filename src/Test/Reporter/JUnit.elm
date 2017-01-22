@@ -12,24 +12,28 @@ reportBegin { fuzzRuns, testCount, initialSeed } =
 
 
 reportComplete : Results.TestResult -> Maybe Value
-reportComplete { duration, labels, expectations } = Nothing
+reportComplete { duration, labels, expectations } =
+    Nothing
 
-encodeTestcaseFailure : Expectation -> List (String, Value)
+
+encodeTestcaseFailure : Expectation -> List ( String, Value )
 encodeTestcaseFailure expectation =
     expectation
         |> Expect.getFailure
-        |> Maybe.map (\f -> [ ("failure", Encode.string (f.given ++ f.message) )  ])
+        |> Maybe.map (\f -> [ ( "failure", Encode.string (f.given ++ f.message) ) ])
         |> Maybe.withDefault []
 
-formatClassAndName : List String -> (String, String)
+
+formatClassAndName : List String -> ( String, String )
 formatClassAndName labels =
     case labels of
-        head::rest ->
-            (String.join " " (List.reverse rest), head)
+        head :: rest ->
+            ( String.join " " (List.reverse rest), head )
 
         _ ->
-            ("", "")
-            
+            ( "", "" )
+
+
 encodeTime : Time -> Value
 encodeTime time =
     time
@@ -37,31 +41,38 @@ encodeTime time =
         |> toString
         |> Encode.string
 
+
 encodeTest : Results.TestResult -> Expectation -> Value
 encodeTest { labels, duration } expectation =
     let
-        (classname, name) = formatClassAndName labels
+        ( classname, name ) =
+            formatClassAndName labels
     in
         Encode.object
-            (
-              [ ( "@classname", Encode.string classname )
-              , ( "@name", Encode.string name )
-              , ( "@time", encodeTime duration )
-              ] ++ (encodeTestcaseFailure expectation)
+            ([ ( "@classname", Encode.string classname )
+             , ( "@name", Encode.string name )
+             , ( "@time", encodeTime duration )
+             ]
+                ++ (encodeTestcaseFailure expectation)
             )
+
 
 encodeSuite : Results.TestResult -> List Value
 encodeSuite result =
     List.map (encodeTest result) result.expectations
 
+
 encodeSuites : List Results.TestResult -> Value
 encodeSuites results =
     Encode.list <| List.concatMap encodeSuite results
 
+
 reportSummary : Time -> List Results.TestResult -> Value
 reportSummary duration results =
     let
-        expectations = List.concatMap .expectations results
+        expectations =
+            List.concatMap .expectations results
+
         failed =
             expectations
                 |> List.filter ((/=) Expect.pass)
@@ -71,12 +82,15 @@ reportSummary duration results =
             (List.length expectations) - failed
     in
         Encode.object
-            [ ( "testsuite", Encode.object
-                [ ( "@name", Encode.string "elm-test" )
-                , ( "@package", Encode.string "elm-test" ) -- Would be nice to have this provided from elm-package.json of tests
-                , ( "@tests", Encode.int (List.length expectations) )
-                , ( "@failed", Encode.int failed )
-                , ( "@time", encodeTime (List.foldl (+) 0 <| List.map .duration results) )
-                , ( "testcase", encodeSuites results )
-                ]
-            ) ]
+            [ ( "testsuite"
+              , Encode.object
+                    [ ( "@name", Encode.string "elm-test" )
+                    , ( "@package", Encode.string "elm-test" )
+                      -- Would be nice to have this provided from elm-package.json of tests
+                    , ( "@tests", Encode.int (List.length expectations) )
+                    , ( "@failed", Encode.int failed )
+                    , ( "@time", encodeTime (List.foldl (+) 0 <| List.map .duration results) )
+                    , ( "testcase", encodeSuites results )
+                    ]
+              )
+            ]
