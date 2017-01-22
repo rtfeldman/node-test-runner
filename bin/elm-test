@@ -52,13 +52,33 @@ var args = minimist(process.argv.slice(2), {
     string: ['compiler', 'seed', 'report', 'fuzz']
 });
 
-// TODO on macOS if you give it a glob as its last argument, Node translates
-// that into a list of file paths. Do we get the same result on Windows?
-// If not, we need to do custom glob handling there.
-var testFilePaths = (args._.length > 0 ? args._ : glob.sync(
-    "test/suites/**/*.elm",
-    {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
-  )).map(function(filename) { return path.resolve(filename); });
+// Recursively search directories for *.elm files, excluding elm-stuff/
+function resolveFilePath(filename) {
+  if (fs.lstatSync(filename).isDirectory()) {
+    return _.flatMap(
+      glob.sync(
+        filename + "/**/*.elm",
+        {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
+      ),
+      resolveFilePath);
+  } else {
+    return [path.resolve(filename)];
+  }
+}
+
+var testFilePaths = _.flatMap(
+  (args._.length > 0
+    // TODO on macOS if you give it a glob as its last argument, Node translates
+    // that into a list of file paths. Do we get the same result on Windows?
+    // If not, we need to do custom glob handling there.
+    ? args._
+    : glob.sync(
+      "test/suites/**/*.elm",
+      {nocase: true, ignore: "**/elm-stuff/**", nodir: false}
+    )
+  ),
+  resolveFilePath
+);
 var pathToMake = undefined;
 
 if (args.help) {
