@@ -23,7 +23,6 @@ var compile    = require("node-elm-compiler").compile,
   chalk        = require("chalk"),
   builder      = require("xmlbuilder"),
   path         = require("path"),
-  temp         = require("temp").track(), // Automatically cleans up temp files.
   util         = require("util"),
   _            = require("lodash"),
   spawn        = require("cross-spawn"),
@@ -102,36 +101,33 @@ var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
 var elmPackagePath = path.resolve(path.join(elmRootDir, "elm-package.json"));
 
 function runTests (testFile) {
-  // TODO compile to elm-stuff/generated-code to avoid unnecessary recompilation
-  temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
-      var dest = info.path;
-      var compileProcess = compile( [testFile], {
-          output: dest,
-          verbose: args.verbose,
-          yes: true,
-          spawn: spawnCompiler,
-          pathToMake: pathToMake,
-          warn:args.warn
-      });
+  var dest = path.join(generatedCodeDir, "elmTestOutput.js");
+  var compileProcess = compile( [testFile], {
+      output: dest,
+      verbose: args.verbose,
+      yes: true,
+      spawn: spawnCompiler,
+      pathToMake: pathToMake,
+      warn:args.warn
+  });
 
-      compileProcess.on('close', function(exitCode) {
-        if (exitCode !== 0) {
-          console.error("Compilation failed for", testFile);
-          if (!args.watch) {
-            process.exit(exitCode);
-          }
-        } else {
-          try {
-            Runner.evalElmCode(args, report, fs.readFileSync(dest, {encoding: "utf8"}), "Main");
-          } catch (err) {
-            console.error("The test run failed because it encountered a runtime exception:\n\n", err);
+  compileProcess.on('close', function(exitCode) {
+    if (exitCode !== 0) {
+      console.error("Compilation failed for", testFile);
+      if (!args.watch) {
+        process.exit(exitCode);
+      }
+    } else {
+      try {
+        Runner.evalElmCode(args, report, fs.readFileSync(dest, {encoding: "utf8"}), "Main");
+      } catch (err) {
+        console.error("The test run failed because it encountered a runtime exception:\n\n", err);
 
-            if (!args.watch) {
-              process.exit(2);
-            }
-          }
+        if (!args.watch) {
+          process.exit(2);
         }
-      });
+      }
+    }
   });
 }
 
