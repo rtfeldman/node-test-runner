@@ -86,6 +86,7 @@ if (args.help) {
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/\n");
   console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
+  console.log("Usage: elm-test [--fuzz integer] # Run with each fuzz test performing this many iterations/\n");
   console.log("Usage: elm-test [--report json, junit, or chalk (default)] # Print results to stdout in given format\n");
   console.log("Usage: elm-test [--watch] # Run tests on file changes\n");
   process.exit(1);
