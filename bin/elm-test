@@ -44,11 +44,12 @@ var args = minimist(process.argv.slice(2), {
         'fuzz': 'f',
         'seed': 's',
         'compiler': 'c',
+        'add-dependencies': 'a',
         'report': 'r',
         'watch': 'w'
     },
     boolean: ['yes', 'warn', 'version', 'help', 'watch'],
-    string: ['compiler', 'seed', 'report', 'fuzz']
+    string: ['add-dependencies', 'compiler', 'seed', 'report', 'fuzz']
 });
 
 // Recursively search directories for *.elm files, excluding elm-stuff/
@@ -85,7 +86,8 @@ if (args.help) {
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/\n");
   console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
-  console.log("Usage: elm-test [--fuzz integer] # Run with each fuzz test performing this many iterations/\n");
+  console.log("Usage: elm-test [--fuzz integer] # Run with each fuzz test performing this many iterations\n");
+  console.log("Usage: elm-test [--add-dependencies target-elm-package.json] # Add missing dependencies from current elm-package.json to target\n");
   console.log("Usage: elm-test [--report json, junit, or chalk (default)] # Print results to stdout in given format\n");
   console.log("Usage: elm-test [--version] # Print version string and exit\n");
   console.log("Usage: elm-test [--watch] # Run tests on file changes\n");
@@ -95,6 +97,47 @@ if (args.help) {
 if (args.version) {
   console.log(require(path.join(__dirname, "..", "package.json")).version);
   process.exit(0);
+}
+
+if (args["add-dependencies"]) {
+  var target = args["add-dependencies"];
+
+  if (fs.existsSync("elm-package.json")) {
+    if (fs.existsSync(target)) {
+      var elmPackageContents;
+      var targetElmPackageContents;
+
+      try {
+        elmPackageContents = fs.readJsonSync("elm-package.json");
+      } catch (err) {
+        console.error("Error reading elm-package.json: " + err);
+        process.exit(1);
+      }
+
+      try {
+        targetElmPackageContents = fs.readJsonSync(target);
+      } catch (err) {
+        console.error("Error reading " + target + ": " + err);
+        process.exit(1);
+      }
+
+      var newDeps = Object.assign(
+        targetElmPackageContents.dependencies,
+        elmPackageContents.dependencies
+      );
+
+      fs.writeFileSync(target, JSON.stringify(targetElmPackageContents, null, 4) + "\n");
+
+      console.log("Successfully updated dependencies in " + target);
+      process.exit(0);
+    } else {
+      console.error(target + " does not exist.\n\nPlease re-run elm-test --add-dependencies with a target elm-package.json file (usually your tests' elm-package.json) that exists!");
+      process.exit(1);
+    }
+  } else {
+    console.error("There is no elm-package.json in this directory.\n\nPlease re-run elm-test --add-dependencies from a directory that contains an elm-package.json file!");
+    process.exit(1);
+  }
 }
 
 var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
