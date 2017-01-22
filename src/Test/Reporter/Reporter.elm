@@ -2,6 +2,7 @@ module Test.Reporter.Reporter exposing (..)
 
 import Test.Reporter.Chalk as ChalkReporter
 import Test.Reporter.Json as JsonReporter
+import Test.Reporter.JUnit as JUnitReporter
 import Test.Reporter.Result exposing (TestResult)
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
@@ -10,11 +11,12 @@ import Time exposing (Time)
 type Report
     = ChalkReport
     | JsonReport
+    | JUnitReport
 
 
 type alias TestReporter =
     { format : String
-    , reportBegin : { testCount : Int, initialSeed : Int } -> Value
+    , reportBegin : { testCount : Int, initialSeed : Int } -> Maybe Value
     , reportComplete : TestResult -> Maybe Value
     , reportSummary : Time -> List TestResult -> Value
     }
@@ -34,3 +36,9 @@ createReporter report =
                 ChalkReporter.reportBegin
                 ChalkReporter.reportComplete
                 ChalkReporter.reportSummary
+
+        JUnitReport ->
+            TestReporter "JUNIT"
+                JUnitReporter.reportBegin
+                JUnitReporter.reportComplete
+                JUnitReporter.reportSummary

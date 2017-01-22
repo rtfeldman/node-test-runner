@@ -178,6 +178,9 @@ decodeReport decoder =
                     "chalk" ->
                         Decode.succeed Reporter.ChalkReport
 
+                    "junit" ->
+                        Decode.succeed Reporter.JUnitReport
+
                     _ ->
                         Decode.fail <| "Invalid --report argument: " ++ str
             )

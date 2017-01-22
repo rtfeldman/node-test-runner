@@ -38,7 +38,8 @@
     "lodash": "4.13.1",
     "minimist": "^1.2.0",
     "node-elm-compiler": "4.1.0",
-    "temp": "0.8.3"
+    "temp": "0.8.3",
+    "xmlbuilder": "^8.2.2"
   },
   "devDependencies": {
     "shelljs": "0.7.3"

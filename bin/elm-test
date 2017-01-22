@@ -7,6 +7,7 @@ process.title = processTitle;
 var compile    = require("node-elm-compiler").compile,
   fs           = require("fs-extra"),
   chalk        = require("chalk"),
+  builder      = require("xmlbuilder"),
   path         = require("path"),
   temp         = require("temp").track(), // Automatically cleans up temp files.
   util         = require("util"),
@@ -40,7 +41,7 @@ if (args.help) {
   console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/Main.elm\n");
   console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
-  console.log("Usage: elm-test [--report json or chalk (default)] # Print results to stdout in given format\n");
+  console.log("Usage: elm-test [--report json, junit, or chalk (default)] # Print results to stdout in given format\n");
   console.log("Usage: elm-test [--watch] # Run tests on file changes\n");
   console.log("Usage: elm-test [--doctest] # Run doctests\n");
   process.exit(1);
@@ -64,10 +65,10 @@ if (args.doctest) {
 
 function runElmTest() {
   var report = "chalk";
-  if (args.report === "chalk" || args.report == "json") {
+  if (args.report === "chalk" || args.report === "json" || args.report === "junit") {
       report = args.report;
   } else if (args.report !== undefined) {
-      console.error("The --report option must be given either 'chalk' or 'json'");
+      console.error("The --report option must be given either 'chalk', 'junit', or 'json'");
       process.exit(1);
   }
 
@@ -200,6 +201,8 @@ function runElmTest() {
       if (msgType === 'FINISHED') {
         if (data.format === "CHALK") {
           console.log(chalkify(data.message));
+        } else if (data.format === "JUNIT") {
+          console.log(builder.create(data.message).end());
         } else {
           console.log(JSON.stringify(data.message));
         }
@@ -210,7 +213,7 @@ function runElmTest() {
       } else if (msgType === "STARTED" || msgType === "TEST_COMPLETED")  {
           if (data.format === "CHALK") {
             console.log(chalkify(data.message));
-          } else {
+          } else if (data.format === "JSON") {
             console.log(JSON.stringify(data.message));
           }
 

@@ -185,13 +185,18 @@ init emit { startTime, initialSeed, thunks, report } =
             }
 
         reportCmd =
-            emit
-                ( "STARTED"
-                , Encode.object
-                    [ ( "format", Encode.string testReporter.format )
-                    , ( "message", testReporter.reportBegin { testCount = testCount, initialSeed = initialSeed } )
-                    ]
-                )
+            case (testReporter.reportBegin { testCount = testCount, initialSeed = initialSeed }) of
+                Just val ->
+                    emit
+                        ( "STARTED"
+                        , Encode.object
+                            [ ( "format", Encode.string testReporter.format )
+                            , ( "message", val )
+                            ]
+                        )
+
+                Nothing ->
+                    Cmd.none
     in
         ( model, Cmd.batch [ dispatch, reportCmd ] )
 
