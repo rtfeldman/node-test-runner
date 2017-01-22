@@ -275,12 +275,12 @@ function runElmTest() {
       };
 
       watcher.on('all', function (event, filePath) {
-          var relativePath = path.relative(elmRootDir, filePath);
-          var eventName = eventNameMap[event] || event;
+        var relativePath = path.relative(elmRootDir, filePath);
+        var eventName = eventNameMap[event] || event;
 
-          infoLog('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
+        infoLog('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
 
-          runTests(testFile);
+        runTests(testFile);
       });
     }
 
