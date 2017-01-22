@@ -287,7 +287,7 @@ function runElmTest() {
     if (args.watch) {
       infoLog('Running in watch mode');
 
-      var watchedPaths = JSON.parse(fs.readFileSync(elmPackagePath, 'utf8'))['source-directories'].map(function(path) { return path + '/**/*.elm'; });
+      var watchedPaths = fs.readJsonSync(elmPackagePath, 'utf8')['source-directories'].map(function(path) { return path + '/**/*.elm'; });
       var watcher = chokidar.watch(watchedPaths, {ignoreInitial: true, ignored: /(\/|^)elm-stuff(\/|$)/});
 
       var eventNameMap = {
