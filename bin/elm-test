@@ -280,6 +280,7 @@ function runElmTest() {
 
         infoLog('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
 
+        // TODO if a previous run is in progress, wait until it's done.
         runTests(testFile);
       });
     }
