@@ -102,7 +102,6 @@ update emit msg ({ testReporter } as model) =
                         ]
             in
                 ( model, emit ( "FINISHED", data ) )
-                    |> warn "Attempted to Dispatch when all tests completed!"
 
         Complete testId labels expectations startTime endTime ->
             let
