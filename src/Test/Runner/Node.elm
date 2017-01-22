@@ -222,33 +222,6 @@ init emit { startTime, fuzzRuns, initialSeed, thunks, report } =
         ( model, Cmd.batch [ dispatch, reportCmd ] )
 
 
-{-| Run the test and report the results.
-
-Fuzz tests use a default run count of 100, and an initial seed based on the
-system time when the test runs begin.
--}
-run : Emitter Msg -> Test -> TestProgram
-run =
-    runWithOptions defaultOptions
-
-
-{-| The default Options for runWithOptions.
--}
-defaultOptions : Options
-defaultOptions =
-    { runs = 100
-    , seed = Nothing
-    }
-
-
-{-| The Options you can pass to runWithOptions.
--}
-type alias Options =
-    { runs : Int
-    , seed : Maybe Int
-    }
-
-
 {-| Run the test using the provided options. If `Nothing` is provided for either
 `runs` or `seed`, it will fall back on the options used in [`run`](#run).
 -}
