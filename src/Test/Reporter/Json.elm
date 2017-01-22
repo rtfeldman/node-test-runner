@@ -6,20 +6,21 @@ import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 
 
-reportBegin : { testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin { testCount, initialSeed } =
-    Just
-        <| Encode.object
-            [ ( "event", Encode.string "runStart" )
-            , ( "testCount", Encode.string <| toString testCount )
-            , ( "initialSeed", Encode.string <| toString initialSeed )
-            ]
+reportBegin : { fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin { fuzzRuns, testCount, initialSeed } =
+    Encode.object
+        [ ( "event", Encode.string "runStart" )
+        , ( "testCount", Encode.string <| toString testCount )
+        , ( "fuzzRuns", Encode.string <| toString fuzzRuns )
+        , ( "initialSeed", Encode.string <| toString initialSeed )
+        ]
+        |> Just
 
 
 reportComplete : Results.TestResult -> Maybe Value
 reportComplete { duration, labels, expectations } =
-    Just
-        <| Encode.object
+    Just <|
+        Encode.object
             [ ( "event", Encode.string "testCompleted" )
             , ( "status", Encode.string (getStatus expectations) )
             , ( "labels", encodeLabels labels )

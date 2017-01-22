@@ -16,7 +16,7 @@ type Report
 
 type alias TestReporter =
     { format : String
-    , reportBegin : { testCount : Int, initialSeed : Int } -> Maybe Value
+    , reportBegin : { fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
     , reportComplete : TestResult -> Maybe Value
     , reportSummary : Time -> List TestResult -> Value
     }

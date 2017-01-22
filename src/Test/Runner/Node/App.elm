@@ -26,6 +26,7 @@ type Msg subMsg
 
 type alias InitArgs =
     { initialSeed : Int
+    , fuzzRuns : Int
     , startTime : Time
     , thunks : List LabeledThunk
     , report : Reporter.Report
@@ -79,6 +80,7 @@ initOrUpdate msg maybeModel =
                         ( subModel, subCmd ) =
                             init
                                 { initialSeed = numericSeed
+                                , fuzzRuns = runs
                                 , startTime = time
                                 , thunks = thunks
                                 , report = report
@@ -108,7 +110,7 @@ type alias SubUpdate msg model =
 
 type alias RunnerOptions =
     { seed : Maybe Int
-    , runs : Int
+    , runs : Maybe Int
     }
 
 
@@ -203,6 +205,11 @@ decodeInitArgs args =
             )
 
 
+defaultRunCount : Int
+defaultRunCount =
+    100
+
+
 {-| Run the tests and render the results as a Web page.
 -}
 run : RunnerOptions -> AppOptions msg model -> Test -> Program Value (Model msg model) (Msg msg)
@@ -245,7 +252,7 @@ run { runs, seed } appOpts test =
                 ( Uninitialized appOpts.update
                     { maybeInitialSeed = Tuple.first initArgs
                     , report = Tuple.second initArgs
-                    , runs = runs
+                    , runs = Maybe.withDefault defaultRunCount runs
                     , test = test
                     , init = appOpts.init
                     }

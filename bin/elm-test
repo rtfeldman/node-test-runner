@@ -42,13 +42,14 @@ var args = minimist(process.argv.slice(2), {
     alias: {
         'help': 'h',
         'yes': 'y',
+        'fuzz': 'f',
         'seed': 's',
         'compiler': 'c',
         'report': 'r',
         'watch': 'w'
     },
-    boolean: [ 'yes', 'warn', 'version', 'help', 'watch'],
-    string: [ 'compiler', 'seed', 'report' ]
+    boolean: ['yes', 'warn', 'version', 'help', 'watch'],
+    string: ['compiler', 'seed', 'report', 'fuzz']
 });
 
 // TODO on macOS if you give it a glob as its last argument, Node translates
@@ -227,6 +228,16 @@ function runElmTest() {
       imports.add("import Doc." + moduleName + "Spec");
     });
 
+    var fuzz = parseInt(args.fuzz);
+    var seed = parseInt(args.seed);
+    var opts =
+      {
+        fuzz : isNaN(fuzz) ? "Nothing" : "Just " + fuzz,
+        seed : isNaN(seed) ? "Nothing" : "Just " + seed
+      }
+
+    var optsCode = "{ runs = " + opts.fuzz + ", seed = " + opts.seed + "}"
+
     var testFileContents =
       [ "port module Test.Generated.Main exposing (main)"
       , ""
@@ -242,7 +253,7 @@ function runElmTest() {
       , "main ="
       , "    [ " + Array.from(testList).join(", ") + " ]"
       , "        |> Test.concat"
-      , "        |> Test.Runner.Node.run emit"
+      , "        |> Test.Runner.Node.runWithOptions " + optsCode + " emit"
       ].join("\n");
 
     var testFile = path.join(generatedSrc, "Main.elm");

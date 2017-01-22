@@ -1,4 +1,4 @@
-module Test.Runner.Node exposing (run, runWithOptions, TestProgram)
+module Test.Runner.Node exposing (runWithOptions, TestProgram)
 
 {-| # Node Runner
 
@@ -170,12 +170,13 @@ dispatch =
 init :
     Emitter Msg
     -> { initialSeed : Int
+       , fuzzRuns : Int
        , startTime : Time
        , thunks : List LabeledThunk
        , report : Report
        }
     -> ( Model, Cmd Msg )
-init emit { startTime, initialSeed, thunks, report } =
+init emit { startTime, fuzzRuns, initialSeed, thunks, report } =
     let
         indexedThunks : List ( TestId, LabeledThunk )
         indexedThunks =
@@ -197,14 +198,21 @@ init emit { startTime, initialSeed, thunks, report } =
             , testReporter = testReporter
             }
 
+        maybeReport =
+            testReporter.reportBegin
+                { fuzzRuns = fuzzRuns
+                , testCount = testCount
+                , initialSeed = initialSeed
+                }
+
         reportCmd =
-            case (testReporter.reportBegin { testCount = testCount, initialSeed = initialSeed }) of
-                Just val ->
+            case maybeReport of
+                Just report ->
                     emit
                         ( "STARTED"
                         , Encode.object
                             [ ( "format", Encode.string testReporter.format )
-                            , ( "message", val )
+                            , ( "message", report )
                             ]
                         )
 
@@ -245,7 +253,7 @@ type alias Options =
 `runs` or `seed`, it will fall back on the options used in [`run`](#run).
 -}
 runWithOptions :
-    { a | runs : Int, seed : Maybe Int }
+    { a | runs : Maybe Int, seed : Maybe Int }
     -> Emitter Msg
     -> Test
     -> TestProgram

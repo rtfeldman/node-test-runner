@@ -6,8 +6,9 @@ import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 
 
-reportBegin : { testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin { testCount, initialSeed } = Nothing
+reportBegin : { fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin { fuzzRuns, testCount, initialSeed } =
+    Nothing
 
 
 reportComplete : Results.TestResult -> Maybe Value
