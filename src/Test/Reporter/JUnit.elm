@@ -6,8 +6,8 @@ import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 
 
-reportBegin : { fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin { fuzzRuns, testCount, initialSeed } =
+reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin _ =
     Nothing
 
 

@@ -14,9 +14,25 @@ type Report
     | JUnitReport
 
 
+fromString : String -> Result String Report
+fromString str =
+    case String.toLower str of
+        "chalk" ->
+            Ok ChalkReport
+
+        "json" ->
+            Ok JsonReport
+
+        "junit" ->
+            Ok JUnitReport
+
+        _ ->
+            Err ("Unrecognized report type: " ++ toString str)
+
+
 type alias TestReporter =
     { format : String
-    , reportBegin : { fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+    , reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
     , reportComplete : TestResult -> Maybe Value
     , reportSummary : Time -> List TestResult -> Value
     }

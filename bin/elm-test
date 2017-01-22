@@ -66,13 +66,13 @@ function resolveFilePath(filename) {
   }
 }
 
+// TODO on macOS if you give it a glob as its last argument, Node translates
+// that into a list of file paths. Do we get the same result on Windows?
+// If not, we need to do custom glob handling there.
+var filePathArgs = args._.length > 0 ? args._ : [];
 var testFilePaths = _.flatMap(
-  (args._.length > 0
-    // TODO on macOS if you give it a glob as its last argument, Node translates
-    // that into a list of file paths. Do we get the same result on Windows?
-    // If not, we need to do custom glob handling there.
-    ? args._
-    : glob.sync(
+  (filePathArgs.length > 0 ? filePathArgs :
+    glob.sync(
       "test/suites/**/*.elm",
       {nocase: true, ignore: "**/elm-stuff/**", nodir: false}
     )
@@ -248,15 +248,21 @@ function runElmTest() {
       imports.add("import Doc." + moduleName + "Spec");
     });
 
+    function sanitizedToString(str) {
+      return '"' + str.replace(/"/g, '\\\"') + '"';
+    }
+
     var fuzz = parseInt(args.fuzz);
     var seed = parseInt(args.seed);
     var opts =
       {
         fuzz : isNaN(fuzz) ? "Nothing" : "Just " + fuzz,
-        seed : isNaN(seed) ? "Nothing" : "Just " + seed
+        seed : isNaN(seed) ? "Nothing" : "Just " + seed,
+        reporter : typeof args.reporter === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.reporter),
+        paths : filePathArgs.map(sanitizedToString).join(",")
       }
 
-    var optsCode = "{ runs = " + opts.fuzz + ", seed = " + opts.seed + "}"
+    var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
 
     var testFileContents =
       [ "port module Test.Generated.Main exposing (main)"

@@ -65,21 +65,23 @@ chalkWith chalks =
         |> Encode.list
 
 
-reportBegin : { fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin { fuzzRuns, testCount, initialSeed } =
-    chalkWith
-        [ { styles = []
-          , text =
-                "\nelm-test\n--------\n\nRunning "
-                    ++ pluralize "test" "tests" testCount
-                    ++ ". To reproduce these results, run: elm-test --fuzz "
-                    ++ toString fuzzRuns
-                    ++ " --seed "
-                    ++ toString initialSeed
-                    ++ "\n"
-          }
-        ]
-        |> Just
+reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin { paths, fuzzRuns, testCount, initialSeed } =
+    let
+        prefix =
+            "\nelm-test\n--------\n\nRunning "
+                ++ pluralize "test" "tests" testCount
+                ++ ". To reproduce these results, run: elm-test --fuzz "
+                ++ toString fuzzRuns
+                ++ " --seed "
+                ++ toString initialSeed
+    in
+        chalkWith
+            [ { styles = []
+              , text = String.join " " (prefix :: paths) ++ "\n"
+              }
+            ]
+            |> Just
 
 
 reportComplete : Results.TestResult -> Maybe Value

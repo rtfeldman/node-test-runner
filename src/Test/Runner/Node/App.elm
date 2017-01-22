@@ -1,4 +1,4 @@
-module Test.Runner.Node.App exposing (run, Model, Msg, LabeledThunk)
+module Test.Runner.Node.App exposing (run, Model, Msg, LabeledThunk, RunnerOptions)
 
 {-| Test runner for a Node app
 
@@ -28,6 +28,7 @@ type alias InitArgs =
     { initialSeed : Int
     , fuzzRuns : Int
     , startTime : Time
+    , paths : List String
     , thunks : List LabeledThunk
     , report : Reporter.Report
     }
@@ -40,6 +41,7 @@ type Model subMsg subModel
         { maybeInitialSeed : Maybe Int
         , report : Reporter.Report
         , runs : Int
+        , paths : List String
         , test : Test
         , init : InitArgs -> ( subModel, Cmd subMsg )
         }
@@ -57,7 +59,7 @@ timeToNumericSeed time =
 initOrUpdate : Msg subMsg -> Model subMsg subModel -> ( Model subMsg subModel, Cmd (Msg subMsg) )
 initOrUpdate msg maybeModel =
     case maybeModel of
-        Uninitialized update { maybeInitialSeed, report, runs, test, init } ->
+        Uninitialized update { maybeInitialSeed, report, paths, runs, test, init } ->
             case msg of
                 Init time ->
                     let
@@ -81,6 +83,7 @@ initOrUpdate msg maybeModel =
                             init
                                 { initialSeed = numericSeed
                                 , fuzzRuns = runs
+                                , paths = paths
                                 , startTime = time
                                 , thunks = thunks
                                 , report = report
@@ -111,6 +114,8 @@ type alias SubUpdate msg model =
 type alias RunnerOptions =
     { seed : Maybe Int
     , runs : Maybe Int
+    , reporter : Maybe String
+    , paths : List String
     }
 
 
@@ -192,14 +197,15 @@ decodeReport decoder =
             )
 
 
-decodeInitArgs : Value -> Result String ( Maybe Int, Reporter.Report )
+decodeInitArgs : Value -> Result String ( Maybe Int, List String, Reporter.Report )
 decodeInitArgs args =
     args
         |> Decode.decodeValue
             (Decode.oneOf
-                [ Decode.null ( Nothing, ChalkReport )
-                , Decode.map2 (,)
+                [ Decode.null ( Nothing, [], ChalkReport )
+                , Decode.map3 (,,)
                     (Decode.field "seed" (Decode.nullable intFromString))
+                    (Decode.field "paths" (Decode.list Decode.string))
                     (Decode.field "report" (decodeReport Decode.string))
                 ]
             )
@@ -213,46 +219,31 @@ defaultRunCount =
 {-| Run the tests and render the results as a Web page.
 -}
 run : RunnerOptions -> AppOptions msg model -> Test -> Program Value (Model msg model) (Msg msg)
-run { runs, seed } appOpts test =
+run { runs, seed, reporter, paths } appOpts test =
     let
         init args =
             let
                 cmd =
                     Task.perform Init Time.now
 
-                initArgs : ( Maybe Int, Reporter.Report )
-                initArgs =
-                    case ( decodeInitArgs args, seed ) of
-                        -- ( decodeValue (nullable intFromString) maybeInitialSeed, seed ) of
-                        -- The --seed argument didn't decode
-                        ( Err str, _ ) ->
-                            Debug.crash ("Invalid --seed argument: " ++ str)
+                report =
+                    case reporter of
+                        Nothing ->
+                            ChalkReport
 
-                        -- The user provided both a --seed flag and a seed from Elm
-                        ( Ok ( Just fromCli, report ), Just fromElm ) ->
-                            if fromCli == fromElm then
-                                -- If they were the same, then that's no problem.
-                                ( seed, report )
-                            else
-                                -- If they were different, crash. We don't know which to use.
-                                Debug.crash ("Received both a --seed flag (" ++ toString fromCli ++ ") and a runner option seed (" ++ toString fromElm ++ "). Which initial seed did you mean to use?")
+                        Just someReport ->
+                            case Reporter.fromString someReport of
+                                Ok validReport ->
+                                    validReport
 
-                        -- User passed --seed but not an Elm arg
-                        ( Ok ( Just fromCli, report ), Nothing ) ->
-                            ( Just fromCli, report )
-
-                        -- User passed an Elm arg but not --seed
-                        ( Ok ( Nothing, report ), Just fromElm ) ->
-                            ( seed, report )
-
-                        -- User passed neither --seed nor an Elm arg
-                        ( Ok ( Nothing, report ), Nothing ) ->
-                            ( Nothing, report )
+                                Err err ->
+                                    Debug.crash err
             in
                 ( Uninitialized appOpts.update
-                    { maybeInitialSeed = Tuple.first initArgs
-                    , report = Tuple.second initArgs
+                    { maybeInitialSeed = seed
+                    , report = report
                     , runs = Maybe.withDefault defaultRunCount runs
+                    , paths = paths
                     , test = test
                     , init = appOpts.init
                     }

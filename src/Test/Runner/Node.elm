@@ -170,13 +170,14 @@ dispatch =
 init :
     Emitter Msg
     -> { initialSeed : Int
+       , paths : List String
        , fuzzRuns : Int
        , startTime : Time
        , thunks : List LabeledThunk
        , report : Report
        }
     -> ( Model, Cmd Msg )
-init emit { startTime, fuzzRuns, initialSeed, thunks, report } =
+init emit { startTime, paths, fuzzRuns, initialSeed, thunks, report } =
     let
         indexedThunks : List ( TestId, LabeledThunk )
         indexedThunks =
@@ -200,7 +201,8 @@ init emit { startTime, fuzzRuns, initialSeed, thunks, report } =
 
         maybeReport =
             testReporter.reportBegin
-                { fuzzRuns = fuzzRuns
+                { paths = paths
+                , fuzzRuns = fuzzRuns
                 , testCount = testCount
                 , initialSeed = initialSeed
                 }
@@ -226,15 +228,12 @@ init emit { startTime, fuzzRuns, initialSeed, thunks, report } =
 `runs` or `seed`, it will fall back on the options used in [`run`](#run).
 -}
 runWithOptions :
-    { a | runs : Maybe Int, seed : Maybe Int }
+    App.RunnerOptions
     -> Emitter Msg
     -> Test
     -> TestProgram
-runWithOptions { runs, seed } emit =
-    App.run
-        { runs = runs
-        , seed = seed
-        }
+runWithOptions options emit =
+    App.run options
         { init = init emit
         , update = update emit
         , subscriptions = \_ -> Sub.none
