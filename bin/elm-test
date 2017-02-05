@@ -42,6 +42,8 @@ var args = minimist(process.argv.slice(2), {
         'help': 'h',
         'yes': 'y',
         'fuzz': 'f',
+        'include': 'i',
+        'exclude': 'e',
         'seed': 's',
         'compiler': 'c',
         'add-dependencies': 'a',
@@ -49,7 +51,7 @@ var args = minimist(process.argv.slice(2), {
         'watch': 'w'
     },
     boolean: ['yes', 'warn', 'version', 'help', 'watch'],
-    string: ['add-dependencies', 'compiler', 'seed', 'report', 'fuzz']
+    string: ['add-dependencies', 'compiler', 'seed', 'report', 'fuzz', 'include', 'exclude']
 });
 
 // Recursively search directories for *.elm files, excluding elm-stuff/
@@ -87,6 +89,8 @@ if (args.help) {
   console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/\n");
   console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
   console.log("Usage: elm-test [--fuzz integer] # Run with each fuzz test performing this many iterations\n");
+  console.log("Usage: elm-test [--include string] # Test.filter to include only descriptions matching this Regex\n");
+  console.log("Usage: elm-test [--exclude string] # Test.filter to exclude every description matching this Regex\n");
   console.log("Usage: elm-test [--add-dependencies target-elm-package.json] # Add missing dependencies from current elm-package.json to target\n");
   console.log("Usage: elm-test [--report json, junit, or chalk (default)] # Print results to stdout in given format\n");
   console.log("Usage: elm-test [--version] # Print version string and exit\n");
@@ -138,6 +142,30 @@ if (args["add-dependencies"]) {
     console.error("There is no elm-package.json in this directory.\n\nPlease re-run elm-test --add-dependencies from a directory that contains an elm-package.json file!");
     process.exit(1);
   }
+}
+
+var filters = [];
+
+if (args.include) {
+  try {
+    new RegExp(args.include)
+  } catch (err) {
+    console.error("The Regex for --include was \"" + args.include + "\", which is a", err);
+    process.exit(1);
+  }
+
+  filters.push({include: true, regex: args.include});
+}
+
+if (args.exclude) {
+  try {
+    new RegExp(args.exclude)
+  } catch (err) {
+    console.error("The Regex for --exclude was \"" + args.exclude + "\", which is a", err);
+    process.exit(1);
+  }
+
+  filters.push({include: false, regex: args.exclude});
 }
 
 var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
@@ -293,6 +321,11 @@ function runElmTest() {
       return '"' + str.replace(/"/g, '\\\"') + '"';
     }
 
+    function filterToRecord(filter) {
+      return "{ include = " + (filter.include ? "True" : "False") +
+        ", regex = " + sanitizedToString(filter.regex) + " }"
+    }
+
     var fuzz = parseInt(args.fuzz);
     var seed = parseInt(args.seed);
     var opts =
@@ -300,10 +333,11 @@ function runElmTest() {
         fuzz : isNaN(fuzz) ? "Nothing" : "Just " + fuzz,
         seed : isNaN(seed) ? "Nothing" : "Just " + seed,
         reporter : typeof args.reporter === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.reporter),
+        filters: "[ " + filters.map(filterToRecord).join(", ") + " ]",
         paths : filePathArgs.map(sanitizedToString).join(",")
       }
 
-    var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
+    var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", filters = " + opts.filters + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
 
     var testFileContents =
       [ "port module Test.Generated.Main exposing (main)"

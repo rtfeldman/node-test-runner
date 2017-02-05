@@ -17,6 +17,7 @@ import Json.Decode as Decode exposing (Value, Decoder)
 import String
 import Tuple
 import Platform
+import Regex
 
 
 type Msg subMsg
@@ -115,6 +116,7 @@ type alias RunnerOptions =
     { seed : Maybe Int
     , runs : Maybe Int
     , reporter : Maybe String
+    , filters : List { include : Bool, regex : String }
     , paths : List String
     }
 
@@ -219,7 +221,7 @@ defaultRunCount =
 {-| Run the tests and render the results as a Web page.
 -}
 run : RunnerOptions -> AppOptions msg model -> Test -> Program Value (Model msg model) (Msg msg)
-run { runs, seed, reporter, paths } appOpts test =
+run { runs, seed, reporter, filters, paths } appOpts test =
     let
         init args =
             let
@@ -244,7 +246,7 @@ run { runs, seed, reporter, paths } appOpts test =
                     , report = report
                     , runs = Maybe.withDefault defaultRunCount runs
                     , paths = paths
-                    , test = test
+                    , test = applyFilters filters test
                     , init = appOpts.init
                     }
                 , cmd
@@ -255,3 +257,27 @@ run { runs, seed, reporter, paths } appOpts test =
             , update = initOrUpdate
             , subscriptions = subscriptions appOpts.subscriptions
             }
+
+
+applyFilters : List { include : Bool, regex : String } -> Test -> Test
+applyFilters filters test =
+    case filters of
+        [] ->
+            test
+
+        { include, regex } :: rest ->
+            let
+                compiledRegex : Regex.Regex
+                compiledRegex =
+                    Regex.regex regex
+
+                filter : String -> Bool
+                filter =
+                    if include then
+                        Regex.contains compiledRegex
+                    else
+                        not << Regex.contains compiledRegex
+            in
+                test
+                    |> Test.filter filter
+                    |> applyFilters rest
