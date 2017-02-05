@@ -170,13 +170,15 @@ init :
     Emitter Msg
     -> { initialSeed : Int
        , paths : List String
+       , include : Maybe String
+       , exclude : Maybe String
        , fuzzRuns : Int
        , startTime : Time
        , thunks : List LabeledThunk
        , report : Report
        }
     -> ( Model, Cmd Msg )
-init emit { startTime, paths, fuzzRuns, initialSeed, thunks, report } =
+init emit { startTime, paths, include, exclude, fuzzRuns, initialSeed, thunks, report } =
     let
         indexedThunks : List ( TestId, LabeledThunk )
         indexedThunks =
@@ -202,6 +204,8 @@ init emit { startTime, paths, fuzzRuns, initialSeed, thunks, report } =
             testReporter.reportBegin
                 { paths = paths
                 , fuzzRuns = fuzzRuns
+                , include = include
+                , exclude = exclude
                 , testCount = testCount
                 , initialSeed = initialSeed
                 }

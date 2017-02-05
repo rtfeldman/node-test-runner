@@ -65,9 +65,20 @@ chalkWith chalks =
         |> Encode.list
 
 
-reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin { paths, fuzzRuns, testCount, initialSeed } =
+reportBegin : { paths : List String, include : Maybe String, exclude : Maybe String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin { paths, include, exclude, fuzzRuns, testCount, initialSeed } =
     let
+        optionalArgs =
+            if include == Nothing && exclude == Nothing then
+                ""
+            else
+                [ Maybe.map (\str -> "--include " ++ toString str) include
+                , Maybe.map (\str -> "--exclude " ++ toString str) exclude
+                ]
+                    |> List.filterMap identity
+                    |> String.join " "
+                    |> (++) " "
+
         prefix =
             "\nelm-test\n--------\n\nRunning "
                 ++ pluralize "test" "tests" testCount
@@ -75,6 +86,7 @@ reportBegin { paths, fuzzRuns, testCount, initialSeed } =
                 ++ toString fuzzRuns
                 ++ " --seed "
                 ++ toString initialSeed
+                ++ optionalArgs
     in
         chalkWith
             [ { styles = []

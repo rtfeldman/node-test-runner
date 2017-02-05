@@ -144,7 +144,8 @@ if (args["add-dependencies"]) {
   }
 }
 
-var filters = [];
+var include = null;
+var exclude = null;
 
 if (args.include) {
   try {
@@ -154,7 +155,7 @@ if (args.include) {
     process.exit(1);
   }
 
-  filters.push({include: true, regex: args.include});
+  include = args.include;
 }
 
 if (args.exclude) {
@@ -165,7 +166,7 @@ if (args.exclude) {
     process.exit(1);
   }
 
-  filters.push({include: false, regex: args.exclude});
+  exclude = args.exclude;
 }
 
 var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
@@ -333,11 +334,12 @@ function runElmTest() {
         fuzz : isNaN(fuzz) ? "Nothing" : "Just " + fuzz,
         seed : isNaN(seed) ? "Nothing" : "Just " + seed,
         reporter : typeof args.reporter === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.reporter),
-        filters: "[ " + filters.map(filterToRecord).join(", ") + " ]",
+        include: include === null ? "Nothing" : "Just " + sanitizedToString(include),
+        exclude: exclude === null ? "Nothing" : "Just " + sanitizedToString(exclude),
         paths : filePathArgs.map(sanitizedToString).join(",")
       }
 
-    var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", filters = " + opts.filters + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
+    var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", include = " + opts.include + ", exclude = " + opts.exclude + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
 
     var testFileContents =
       [ "port module Test.Generated.Main exposing (main)"

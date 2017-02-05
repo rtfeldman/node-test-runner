@@ -6,14 +6,24 @@ import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 
 
-reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin { paths, fuzzRuns, testCount, initialSeed } =
+reportBegin : { paths : List String, include : Maybe String, exclude : Maybe String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin { paths, include, exclude, fuzzRuns, testCount, initialSeed } =
     Encode.object
         [ ( "event", Encode.string "runStart" )
         , ( "testCount", Encode.string <| toString testCount )
         , ( "fuzzRuns", Encode.string <| toString fuzzRuns )
         , ( "paths", Encode.list (List.map Encode.string paths) )
         , ( "initialSeed", Encode.string <| toString initialSeed )
+        , ( "include"
+          , include
+                |> Maybe.map Encode.string
+                |> Maybe.withDefault Encode.null
+          )
+        , ( "exclude"
+          , exclude
+                |> Maybe.map Encode.string
+                |> Maybe.withDefault Encode.null
+          )
         ]
         |> Just
 
