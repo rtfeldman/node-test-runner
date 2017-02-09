@@ -11,7 +11,8 @@ var compile    = require("node-elm-compiler").compile,
   temp         = require("temp").track(), // Automatically cleans up temp files.
   util         = require("util"),
   _            = require("lodash"),
-  childProcess = require("child_process");
+  childProcess = require("child_process"),
+  findup       = require("findup-sync");
 
 var elm = {
   'elm-package': 'elm-package'
@@ -102,23 +103,24 @@ temp.open({ prefix:'elm_test_', suffix:'.js' }, function(err, info) {
 
     console.log("Successfully compiled", testFile);
 
-    var runnerOpts = {stdio: ["pipe", "inherit", "inherit"]};
-    var runnerProcess = childProcess.spawn("node", [], runnerOpts);
+    // append suffix to temp file
+    fs.appendFile(dest, suffix, function(err){
+      if (err) throw(err);
 
-    runnerProcess.on('exit', function (exitCode) {
-      process.exit(exitCode);
+      console.log("Bootstrapped test script")
+
+      // add node_modules to NODE_PATH so the temporary file can require
+      // local modules
+      var pathToNodeModules = findup("node_modules");
+      process.env.NODE_PATH = _.compact([process.env.NODE_PATH, pathToNodeModules]).join(':');
+
+      var runnerProcess = childProcess.spawn("node", [dest], {stdio: 'inherit'});
+
+      runnerProcess.on('exit', function (exitCode) {
+        process.exit(exitCode);
+      });
+
+      console.log("Running tests...");
     });
-
-    var reader = fs.createReadStream(dest);
-
-    reader.on("end", function() {
-      runnerProcess.stdin.write(suffix);
-
-      runnerProcess.stdin.end();
-    })
-
-    reader.pipe(runnerProcess.stdin);
-
-    console.log("Running tests...");
   });
 });
