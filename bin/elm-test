@@ -30,8 +30,7 @@ var compile    = require("node-elm-compiler").compile,
   firstline    = require("firstline"),
   chokidar     = require("chokidar"),
   Runner       = require("../lib/runner.js"),
-  Init         = require("../lib/init.js"),
-  doctest      = require("elm-doc-test/bin/modes");
+  Init         = require("../lib/init.js");
 
 var generatedCodeDir = "elm-stuff/generated-code/elm-community/elm-test"
 var elm = {
@@ -298,7 +297,6 @@ function runElmTest() {
   Promise.all(testFilePaths.map(Runner.toModuleName)).then(function(moduleNames) {
     var imports = new Set();
     var testList = new Set();
-    var doctestSet = new Set(doctestModel.config.tests);
     var testModuleSet = new Set(moduleNames);
 
     // Building things like:
@@ -310,12 +308,6 @@ function runElmTest() {
       testList.add(moduleName + ".suite");
 
       imports.add("import " + moduleName);
-    });
-
-    doctestModel.config.tests.forEach(function(moduleName) {
-      testList.add("Doc." + moduleName + "Spec.spec");
-
-      imports.add("import Doc." + moduleName + "Spec");
     });
 
     function sanitizedToString(str) {
@@ -413,17 +405,4 @@ function spawnCompiler(cmd, args, opts) {
   return spawn(cmd, args, compilerOpts);
 }
 
-// Run elm-doc-tests
-var doctestModel = doctest.init({
-  warn: false,
-  output: path.join(elmRootDir, generatedCodeDir, "src")
-});
-
-if (doctestModel.config.tests.length <= 0) {
-  runElmTest(); // only run elm-tests
-} else {
-  doctestModel.run(doctestModel, function () {
-    // Run elm-tests
-    runElmTest();
-  });
-}
+runElmTest();

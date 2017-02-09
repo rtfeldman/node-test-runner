@@ -39,25 +39,6 @@ function assertTestSuccess(testFile) {
   }
 }
 
-function assertDocTest() {
-  var code = exec(elmTest + ' --doctest').code;
-  if (code !== 0) {
-    exec('Expected doc-tests to pass >&2');
-    exit(1);
-  }
-
-  sed('-i', /    >>> add 1 2/, '    >>> add 42 42', './DocTestExample.elm');
-
-  code = exec(elmTest + ' --doctest').code;
-  if (code !== 1) {
-    exec('Expected doc-tests to fail >&2');
-    exit(1);
-  }
-
-  sed('-i', /    >>> add 42 42/, '    >>> add 1 2', './DocTestExample.elm');
-}
-
-
 echo(filename + ': Installing elm-test...');
 exec('npm install --global');
 
@@ -71,13 +52,6 @@ exec('elm-package install --yes');
 assertTestSuccess('suites/PassingTests.elm');
 assertTestFailure('suites/FailingTests.elm');
 cd('../..');
-
-echo(filename + ': Testing doc-test...');
-
-cd('examples');
-assertDocTest();
-cd('..');
-
 
 echo(filename + ': Testing elm-test init...');
 rm('-Rf', 'tmp');
