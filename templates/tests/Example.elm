@@ -1,4 +1,4 @@
-module Tests exposing (suite)
+module Example exposing (suite)
 
 import Test exposing (..)
 import Expect
@@ -8,7 +8,7 @@ import String
 
 suite : Test
 suite =
-    describe "Sample Test Suite"
+    describe "Example Test Suite"
         [ describe "Unit test examples"
             [ test "Addition" <|
                 \() ->
