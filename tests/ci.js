@@ -73,6 +73,19 @@ exec('elm-package install --yes');
 cd('..');
 assertTestFailure();
 
+cd('..');
+
+echo('### Testing elm-test init on a non-empty directory');
+rm('-Rf', 'tmp');
+cp('-R', 'tests/init-test', 'tmp');
+cd('tmp');
+exec(elmTest + ' init --yes');
+cd('tests');
+exec('elm-package install --yes');
+cd('..');
+assertTestFailure();
+
+
 rm('-Rf', 'tmp');
 
 echo('');
