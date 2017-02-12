@@ -63,21 +63,12 @@ ls("*.elm").forEach(function(testToRun) {
 
 cd('..');
 
-echo(filename + ': Testing elm-test init...');
+echo('### Testing elm-test init && elm-test');
 rm('-Rf', 'tmp');
 mkdir('-p', 'tmp');
 cd('tmp');
 exec(elmTest + ' init --yes');
 cd('tests');
-// use local node-test-runner
-
-var tmpPackage = fs.readJsonSync(path.join(__dirname, '..', 'elm-package.json'));
-tmpPackage['source-directories'].push('../../src');
-var keys = _.reject(_.keys(tmpPackage.dependencies), function(name) {
-  return name === "rtfeldman/node-test-runner";
-});
-tmpPackage.dependencies = _.pick(tmpPackage.dependencies, keys);
-fs.writeJsonSync(path.join(__dirname, '..', 'tmp', 'tests', 'elm-package.json'), tmpPackage);
 exec('elm-package install --yes');
 cd('..');
 assertTestFailure();
