@@ -1,7 +1,8 @@
 module Test.Reporter.Json exposing (reportBegin, reportComplete, reportSummary)
 
-import Test.Reporter.Result as Results
+import Test.Reporter.TestResults as TestResults
 import Expect exposing (Expectation)
+import Test.Runner
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 
@@ -28,7 +29,7 @@ reportBegin { paths, include, exclude, fuzzRuns, testCount, initialSeed } =
         |> Just
 
 
-reportComplete : Results.TestResult -> Maybe Value
+reportComplete : TestResults.TestResult -> Maybe Value
 reportComplete { duration, labels, expectations } =
     Just <|
         Encode.object
@@ -42,7 +43,7 @@ reportComplete { duration, labels, expectations } =
 
 getStatus : List Expectation -> String
 getStatus expectations =
-    case (List.filterMap Expect.getFailure expectations) of
+    case (List.filterMap Test.Runner.getFailure expectations) of
         [] ->
             "pass"
 
@@ -59,20 +60,20 @@ encodeLabels labels =
 
 encodeFailures : List Expectation -> Value
 encodeFailures expectations =
-    List.filterMap Expect.getFailure expectations
-        |> List.map encodeFailure
+    expectations
+        |> List.filterMap (Test.Runner.getFailure >> Maybe.map encodeFailure)
         |> Encode.list
 
 
-encodeFailure : Results.Failure -> Value
+encodeFailure : TestResults.Failure -> Value
 encodeFailure { given, message } =
     Encode.object
-        [ ( "given", Encode.string given )
+        [ ( "given", Maybe.withDefault Encode.null (Maybe.map Encode.string given) )
         , ( "actual", Encode.string message )
         ]
 
 
-reportSummary : Time -> List Results.TestResult -> Value
+reportSummary : Time -> List TestResults.TestResult -> Value
 reportSummary duration results =
     let
         failed =

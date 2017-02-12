@@ -1,4 +1,4 @@
-module Test.Reporter.Result exposing (TestResult, Failure)
+module Test.Reporter.TestResults exposing (TestResult, Failure)
 
 import Expect exposing (Expectation)
 import Time exposing (Time)
@@ -12,4 +12,4 @@ type alias TestResult =
 
 
 type alias Failure =
-    { given : String, message : String }
+    { given : Maybe String, message : String }

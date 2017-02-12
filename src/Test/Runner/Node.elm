@@ -9,7 +9,7 @@ passed and 1 if any failed.
 -}
 
 import Test.Reporter.Reporter exposing (TestReporter, Report(..), createReporter)
-import Test.Reporter.Result exposing (Failure, TestResult)
+import Test.Reporter.TestResults exposing (Failure, TestResult)
 import Test.Runner.Node.App as App exposing (LabeledThunk)
 import Test exposing (Test)
 import Dict exposing (Dict)

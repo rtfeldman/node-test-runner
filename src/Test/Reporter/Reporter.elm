@@ -3,7 +3,7 @@ module Test.Reporter.Reporter exposing (..)
 import Test.Reporter.Chalk as ChalkReporter
 import Test.Reporter.Json as JsonReporter
 import Test.Reporter.JUnit as JUnitReporter
-import Test.Reporter.Result exposing (TestResult)
+import Test.Reporter.TestResults exposing (TestResult)
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 

@@ -1,7 +1,7 @@
 module Test.Reporter.Chalk exposing (reportBegin, reportComplete, reportSummary)
 
 import Chalk exposing (Chalk)
-import Test.Reporter.Result as Results
+import Test.Reporter.TestResults as Results
 import Expect
 import Json.Encode as Encode exposing (Value)
 import String
@@ -50,12 +50,14 @@ failureToChalk { given, message } =
         messageChalk =
             { styles = [], text = "\n" ++ indent message ++ "\n\n" }
     in
-        if String.isEmpty given then
-            [ messageChalk ]
-        else
-            [ { styles = [ "dim" ], text = "\nGiven " ++ given ++ "\n" }
-            , messageChalk
-            ]
+        case given of
+            Nothing ->
+                [ messageChalk ]
+
+            Just givenStr ->
+                [ { styles = [ "dim" ], text = "\nGiven " ++ givenStr ++ "\n" }
+                , messageChalk
+                ]
 
 
 chalkWith : List Chalk -> Value
@@ -98,7 +100,7 @@ reportBegin { paths, include, exclude, fuzzRuns, testCount, initialSeed } =
 
 reportComplete : Results.TestResult -> Maybe Value
 reportComplete { duration, labels, expectations } =
-    case List.filterMap Expect.getFailure expectations of
+    case List.filterMap Test.Runner.getFailure expectations of
         [] ->
             Nothing
 

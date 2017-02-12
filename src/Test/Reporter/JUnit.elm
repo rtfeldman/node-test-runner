@@ -1,6 +1,7 @@
 module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 
-import Test.Reporter.Result as Results
+import Test.Reporter.TestResults as TestResults
+import Test.Runner
 import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
@@ -11,7 +12,7 @@ reportBegin _ =
     Nothing
 
 
-reportComplete : Results.TestResult -> Maybe Value
+reportComplete : TestResults.TestResult -> Maybe Value
 reportComplete { duration, labels, expectations } =
     Nothing
 
@@ -19,9 +20,14 @@ reportComplete { duration, labels, expectations } =
 encodeTestcaseFailure : Expectation -> List ( String, Value )
 encodeTestcaseFailure expectation =
     expectation
-        |> Expect.getFailure
-        |> Maybe.map (\f -> [ ( "failure", Encode.string (f.given ++ f.message) ) ])
+        |> Test.Runner.getFailure
+        |> Maybe.map encodeFailureMessage
         |> Maybe.withDefault []
+
+
+encodeFailureMessage : TestResults.Failure -> List ( String, Value )
+encodeFailureMessage { given, message } =
+    [ ( "failure", Encode.string (Maybe.withDefault "" given ++ message) ) ]
 
 
 formatClassAndName : List String -> ( String, String )
@@ -42,7 +48,7 @@ encodeTime time =
         |> Encode.string
 
 
-encodeTest : Results.TestResult -> Expectation -> Value
+encodeTest : TestResults.TestResult -> Expectation -> Value
 encodeTest { labels, duration } expectation =
     let
         ( classname, name ) =
@@ -57,17 +63,17 @@ encodeTest { labels, duration } expectation =
             )
 
 
-encodeSuite : Results.TestResult -> List Value
+encodeSuite : TestResults.TestResult -> List Value
 encodeSuite result =
     List.map (encodeTest result) result.expectations
 
 
-encodeSuites : List Results.TestResult -> Value
+encodeSuites : List TestResults.TestResult -> Value
 encodeSuites results =
     Encode.list <| List.concatMap encodeSuite results
 
 
-reportSummary : Time -> List Results.TestResult -> Value
+reportSummary : Time -> List TestResults.TestResult -> Value
 reportSummary duration results =
     let
         expectations =
