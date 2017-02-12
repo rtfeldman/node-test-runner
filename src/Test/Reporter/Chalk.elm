@@ -182,7 +182,7 @@ summarizeTodos todos =
             []
 
         todoChalks ->
-            { styles = [], text = "" } :: todoChalks
+            { styles = [], text = "\n\n" } :: todoChalks
 
 
 reportSummary : Time -> List Results.TestResult -> Value

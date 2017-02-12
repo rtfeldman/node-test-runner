@@ -1,16 +1,16 @@
-module PassingTests exposing (suite)
+module SeveralPassing exposing (suite)
 
 import Expect
-import Test exposing (Test, test)
+import Test exposing (..)
 
 
 suite : Test
 suite =
-    Test.concat
-        [ testEqual
-        , testTrue
-        , testFalse
-        ]
+    [ testEqual
+    , testTrue
+    , testFalse
+    ]
+        |> concat
 
 
 testEqual : Test

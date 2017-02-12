@@ -17,6 +17,6 @@ suite =
 
 plainExpectation : Test
 plainExpectation =
-    test "" <|
+    test "plain" <|
         \() ->
             Expect.true "Polyfilling of `window` failed" True
