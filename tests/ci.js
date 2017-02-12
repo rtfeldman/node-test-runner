@@ -49,6 +49,8 @@ cd('tests');
 exec('elm-package install --yes');
 
 ls("*.elm").forEach(function(testToRun) {
+  rm('-rf', 'elm-stuff/generated-code');
+
   if (/Passing\.elm$/.test(testToRun)) {
     echo("### Testing " + testToRun);
     assertTestSuccess(testToRun);

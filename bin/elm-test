@@ -159,7 +159,7 @@ var elmRootDir;
 var elmPackagePath;
 
 function runTests (testFile) {
-  var dest = path.join(generatedCodeDir, "elmTestOutput.js");
+  var dest = path.resolve(path.join(generatedCodeDir, "elmTestOutput.js"));
   var compileProcess = compile([testFile], {
       output: dest,
       verbose: args.verbose,
@@ -176,26 +176,29 @@ function runTests (testFile) {
         process.exit(exitCode);
       }
     } else {
-      var compiledElmCode;
+      readAndEval(dest);
+    }
+  });
+}
 
-      try {
-        compiledElmCode = fs.readFileSync(dest, {encoding: "utf8"});
-      } catch (err) {
-        console.error("The test run failed because it could not read the compiled Elm code:\n\n", err);
+function readAndEval(dest) {
+  fs.readFile(dest, {encoding: "utf8"}, function(readErr, compiledElmCode) {
+    console.log("COMPILED ELM CODE FOR", dest, "\n\n", compiledElmCode.length)
+    if (readErr) {
+      console.error("The test run failed because it could not read the compiled Elm code:\n\n", readErr);
 
-        if (!args.watch) {
-          process.exit(1);
-        }
+      if (!args.watch) {
+        process.exit(1);
       }
+    }
 
-      try {
-        Runner.evalElmCode(args, report, compiledElmCode, "Main");
-      } catch (err) {
-        console.error("The test run failed because of a runtime exception encountered when evaluating the compiled Elm code:\n\n", err);
+    try {
+      Runner.evalElmCode(args, report, compiledElmCode, "Main");
+    } catch (err) {
+      console.error("The test run failed because of a runtime exception encountered when evaluating the compiled Elm code:\n\n", err);
 
-        if (!args.watch) {
-          process.exit(1);
-        }
+      if (!args.watch) {
+        process.exit(1);
       }
     }
   });
