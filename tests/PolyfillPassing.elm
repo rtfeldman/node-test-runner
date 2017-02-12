@@ -1,4 +1,4 @@
-module PolyfillTest exposing (suite)
+module PolyfillPassing exposing (suite)
 
 import Expect
 import Test exposing (..)

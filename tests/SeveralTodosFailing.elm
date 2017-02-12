@@ -1,4 +1,4 @@
-module TodoTests exposing (suite)
+module SeveralTodosFailing exposing (suite)
 
 import Expect
 import Test exposing (..)

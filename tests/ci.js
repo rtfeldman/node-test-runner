@@ -45,20 +45,23 @@ exec('npm install --global');
 echo(filename + ': Verifying installed elm-test version...');
 exec(elmTest + ' --version');
 
-echo(filename + ': Testing examples...');
-
-cd('examples/tests');
+cd('tests');
 exec('elm-package install --yes');
 
-echo("### Testing FailingTests.elm ###");
-assertTestSuccess('PassingTests.elm');
+ls("*.elm").forEach(function(testToRun) {
+  if (/Passing\.elm$/.test(testToRun)) {
+    echo("### Testing " + testToRun);
+    assertTestSuccess(testToRun);
+  } else if (/Failing\.elm$/.test(testToRun)) {
+    echo("### Testing " + testToRun);
+    assertTestFailure(testToRun);
+  } else {
+    echo("Tried to run " + testToRun + " but it has an invalid filename; node-test-runner tests should fit the pattern \"*Passing.elm\" or \"*Failing.elm\"");
+    process.exit(1);
+  }
+});
 
-echo("### Testing FailingTests.elm ###");
-assertTestFailure('FailingTests.elm');
-
-echo("### Testing TodoTests.elm ###");
-assertTestFailure('TodoTests.elm');
-cd('../..');
+cd('..');
 
 echo(filename + ': Testing elm-test init...');
 rm('-Rf', 'tmp');
