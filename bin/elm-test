@@ -67,19 +67,6 @@ function resolveFilePath(filename) {
   }
 }
 
-// TODO on macOS if you give it a glob as its last argument, Node translates
-// that into a list of file paths. Do we get the same result on Windows?
-// If not, we need to do custom glob handling there.
-var filePathArgs = args._.length > 0 ? args._ : [];
-var testFilePaths = _.flatMap(
-  (filePathArgs.length > 0 ? filePathArgs :
-    glob.sync(
-      "test/suites/**/*.elm",
-      {nocase: true, ignore: "**/elm-stuff/**", nodir: false}
-    )
-  ),
-  resolveFilePath
-);
 var pathToMake = undefined;
 
 if (args.help) {
@@ -168,8 +155,8 @@ if (args.exclude) {
   exclude = args.exclude;
 }
 
-var elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
-var elmPackagePath = path.resolve(path.join(elmRootDir, "elm-package.json"));
+var elmRootDir;
+var elmPackagePath;
 
 function runTests (testFile) {
   var dest = path.join(generatedCodeDir, "elmTestOutput.js");
@@ -202,28 +189,47 @@ function runTests (testFile) {
   });
 }
 
-function runElmTest() {
-  process.chdir(elmRootDir);
+function checkNodeVersion() {
+  var nodeVersionString = process.versions.node;
+  var nodeVersion = _.map(_.split(nodeVersionString, '.'), _.parseInt);
 
-  checkNodeVersion();
-
-  function checkNodeVersion() {
-    var nodeVersionString = process.versions.node;
-    var nodeVersion = _.map(_.split(nodeVersionString, '.'), _.parseInt);
-
-    if((nodeVersion[0] === 0 && nodeVersion[1] < 11) ||
-       (nodeVersion[0] === 0 && nodeVersion[1] === 11 && nodeVersion[2] < 13)) {
-      console.log("using node v" + nodeVersionString);
-      console.error("elm-test requires node v4.7.0 or greater - upgrade the installed version of node and try again");
-      process.exit(1);
-    }
+  if((nodeVersion[0] === 0 && nodeVersion[1] < 11) ||
+     (nodeVersion[0] === 0 && nodeVersion[1] === 11 && nodeVersion[2] < 13)) {
+    console.log("using node v" + nodeVersionString);
+    console.error("elm-test requires node v4.7.0 or greater - upgrade the installed version of node and try again");
+    process.exit(1);
   }
+}
+
+function runElmTest() {
+  checkNodeVersion();
 
   if (args._[0] == "init") {
     Init.init(args);
 
     process.exit(0);
   }
+
+  // TODO on macOS if you give it a glob as its last argument, Node translates
+  // that into a list of file paths. Do we get the same result on Windows?
+  // If not, we need to do custom glob handling there.
+  var filePathArgs = args._.length > 0 ? args._ : [];
+  var testFilePaths = _.flatMap(
+    (filePathArgs.length > 0 ? filePathArgs :
+      glob.sync(
+        "test/suites/**/*.elm",
+        {nocase: true, ignore: "**/elm-stuff/**", nodir: false}
+      )
+    ),
+    resolveFilePath
+  );
+
+  elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
+  elmPackagePath = path.resolve(path.join(elmRootDir, "elm-package.json"));
+
+  process.chdir(elmRootDir);
+
+
 
   var testsPath = args._[0],
       pathToMake = undefined;
