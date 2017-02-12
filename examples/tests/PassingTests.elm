@@ -12,6 +12,6 @@ suite =
 
 plainExpectation : Test
 plainExpectation =
-    test "" <|
+    test "this should pass" <|
         \() ->
             Expect.equal "success" "success"
