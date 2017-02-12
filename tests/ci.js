@@ -49,7 +49,11 @@ echo(filename + ': Testing examples...');
 
 cd('examples/test');
 exec('elm-package install --yes');
+
+echo("### Testing suites/FailingTests.elm ###");
 assertTestSuccess('suites/PassingTests.elm');
+
+echo("### Testing suites/FailingTests.elm ###");
 assertTestFailure('suites/FailingTests.elm');
 cd('../..');
 
@@ -58,29 +62,20 @@ rm('-Rf', 'tmp');
 mkdir('-p', 'tmp');
 cd('tmp');
 exec(elmTest + ' init --yes');
-cd('test');
+cd('tests');
 // use local node-test-runner
-var tmpPackage = fs.readJsonSync('./elm-package.json');
+
+var tmpPackage = fs.readJsonSync(path.join(__dirname, '..', 'elm-package.json'));
 tmpPackage['source-directories'].push('../../src');
 var keys = _.reject(_.keys(tmpPackage.dependencies), function(name) {
   return name === "rtfeldman/node-test-runner";
 });
 tmpPackage.dependencies = _.pick(tmpPackage.dependencies, keys);
-fs.writeJsonSync('./elm-package.json', tmpPackage);
+fs.writeJsonSync(path.join(__dirname, '..', 'tmp', 'tests', 'elm-package.json'), tmpPackage);
 exec('elm-package install --yes');
 cd('..');
 assertTestFailure();
 
-// update failing test to passing test
-sed('-i', /should fail/, 'should pass', 'test/suites/Tests.elm');
-sed('-i', /Expect.fail "Failed as expected!"/, 'Expect.pass', 'test/suites/Tests.elm');
-rm('-Rf', 'test/elm-stuff');
-cd('test');
-exec('elm-package install --yes');
-cd('..');
-assertTestSuccess();
-
-cd('..');
 rm('-Rf', 'tmp');
 
 echo('');
