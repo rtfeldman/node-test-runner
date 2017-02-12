@@ -1,16 +1,19 @@
 {
     "version": "3.0.0",
     "summary": "Run elm-test suites in a Node.js CLI. Get it with npm install -g elm-test",
-    "repository": "https://github.com/rtfeldman/node-test-runner.git",
+    "repository": "https://github.com/elm-community/elm-test.git",
     "license": "BSD-3-Clause",
     "source-directories": [
+        "/Users/rtfeldman/code/elm-test/src/",
         "src", "native-src"
     ],
     "native-modules": true,
     "exposed-modules": [],
     "dependencies": {
-        "elm-community/elm-test": "3.0.0 <= v < 4.0.0",
         "elm-community/json-extra": "2.0.0 <= v < 3.0.0",
+        "elm-lang/core": "5.0.0 <= v < 6.0.0",
+        "elm-community/lazy-list": "1.0.0 <= v < 2.0.0",
+        "elm-community/shrink": "2.0.0 <= v < 3.0.0",
         "elm-lang/core": "5.0.0 <= v < 6.0.0",
         "mgold/elm-random-pcg": "4.0.2 <= v < 5.0.0"
     },
