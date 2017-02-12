@@ -182,7 +182,7 @@ function runTests (testFile) {
         console.error("The test run failed because it encountered a runtime exception:\n\n", err);
 
         if (!args.watch) {
-          process.exit(2);
+          process.exit(1);
         }
       }
     }

@@ -25,7 +25,7 @@ function run(testFile) {
 
 function assertTestFailure(testFile) {
   var code = run(testFile);
-  if (code !== 1) {
+  if (code !== 2) {
     exec('echo ' + filename + ': ERROR: ' + (testFile ? testFile + ': ' : '') + 'Expected tests to fail >&2');
     exit(1);
   }
