@@ -160,13 +160,13 @@ var elmPackagePath;
 
 function runTests (testFile) {
   var dest = path.join(generatedCodeDir, "elmTestOutput.js");
-  var compileProcess = compile( [testFile], {
+  var compileProcess = compile([testFile], {
       output: dest,
       verbose: args.verbose,
       yes: true,
       spawn: spawnCompiler,
       pathToMake: pathToMake,
-      warn:args.warn
+      warn: args.warn
   });
 
   compileProcess.on('close', function(exitCode) {
