@@ -47,14 +47,14 @@ exec(elmTest + ' --version');
 
 echo(filename + ': Testing examples...');
 
-cd('examples/test');
+cd('examples/tests');
 exec('elm-package install --yes');
 
-echo("### Testing suites/FailingTests.elm ###");
-assertTestSuccess('suites/PassingTests.elm');
+echo("### Testing FailingTests.elm ###");
+assertTestSuccess('PassingTests.elm');
 
-echo("### Testing suites/FailingTests.elm ###");
-assertTestFailure('suites/FailingTests.elm');
+echo("### Testing FailingTests.elm ###");
+assertTestFailure('FailingTests.elm');
 cd('../..');
 
 echo(filename + ': Testing elm-test init...');

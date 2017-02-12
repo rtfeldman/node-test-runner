@@ -217,7 +217,7 @@ function runElmTest() {
   var testFilePaths = _.flatMap(
     (filePathArgs.length > 0 ? filePathArgs :
       glob.sync(
-        "test/suites/**/*.elm",
+        "test?(s)/**/*.elm",
         {nocase: true, ignore: "**/elm-stuff/**", nodir: false}
       )
     ),
