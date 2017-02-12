@@ -15,9 +15,19 @@ suite =
     , testFailingFuzzTests
     , testFuzz
     , noDescription
+    , someTodos
     , testShrinkables
     ]
         |> Test.concat
+
+
+someTodos : Test
+someTodos =
+    Test.describe "you should not see these in the normal output, because there are non-TODO failures"
+        [ Test.todo "write a test here"
+        , Test.todo "write a second test here"
+        , Test.todo "write a third test here"
+        ]
 
 
 withoutNums : String -> String

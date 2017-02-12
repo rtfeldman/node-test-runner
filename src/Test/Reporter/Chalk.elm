@@ -34,13 +34,28 @@ pluralize singular plural count =
         String.join " " [ toString count, suffix ]
 
 
+todosToChalk : List String -> List Results.Failure -> List Chalk
+todosToChalk labels failures =
+    todoLabelsToChalk labels ++ List.concatMap todoToChalk failures
+
+
+todoLabelsToChalk : List String -> List Chalk
+todoLabelsToChalk =
+    formatLabels (Chalk.withColorChar '↓' "dim") (Chalk.withColorChar '↓' "dim")
+
+
+todoToChalk : Results.Failure -> List Chalk
+todoToChalk { message } =
+    [ { styles = [], text = "◦ TODO: " ++ message ++ "\n\n" } ]
+
+
 failuresToChalk : List String -> List Results.Failure -> List Chalk
 failuresToChalk labels failures =
-    labelsToChalk labels ++ List.concatMap failureToChalk failures
+    failureLabelsToChalk labels ++ List.concatMap failureToChalk failures
 
 
-labelsToChalk : List String -> List Chalk
-labelsToChalk =
+failureLabelsToChalk : List String -> List Chalk
+failureLabelsToChalk =
     formatLabels (Chalk.withColorChar '↓' "dim") (Chalk.withColorChar '✗' "red")
 
 
@@ -100,14 +115,29 @@ reportBegin { paths, include, exclude, fuzzRuns, testCount, initialSeed } =
 
 reportComplete : Results.TestResult -> Maybe Value
 reportComplete { duration, labels, expectations } =
-    case List.filterMap Test.Runner.getFailure expectations of
-        [] ->
-            Nothing
+    let
+        ( todos, nonTodos ) =
+            List.partition Test.Runner.isTodo expectations
+    in
+        case List.filterMap Test.Runner.getFailure nonTodos of
+            [] ->
+                case List.filterMap Test.Runner.getFailure todos of
+                    [] ->
+                        -- No failures of any kind.
+                        Nothing
 
-        failures ->
-            failuresToChalk labels failures
-                |> chalkWith
-                |> Just
+                    failures ->
+                        -- Only TODOs are still failing; report them.
+                        failures
+                            |> todosToChalk labels
+                            |> chalkWith
+                            |> Just
+
+            failures ->
+                -- We have non-TODOs still failing; report them, not the TODOs.
+                failuresToChalk labels failures
+                    |> chalkWith
+                    |> Just
 
 
 reportSummary : Time -> List Results.TestResult -> Value

@@ -55,6 +55,9 @@ assertTestSuccess('PassingTests.elm');
 
 echo("### Testing FailingTests.elm ###");
 assertTestFailure('FailingTests.elm');
+
+echo("### Testing TodoTests.elm ###");
+assertTestFailure('TodoTests.elm');
 cd('../..');
 
 echo(filename + ': Testing elm-test init...');
