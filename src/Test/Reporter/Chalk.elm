@@ -2,7 +2,7 @@ module Test.Reporter.Chalk exposing (reportBegin, reportComplete, reportSummary)
 
 import Chalk exposing (Chalk)
 import Test.Reporter.TestResults as Results
-import Expect
+import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
 import String
 import Test.Runner exposing (formatLabels)
@@ -34,9 +34,9 @@ pluralize singular plural count =
         String.join " " [ toString count, suffix ]
 
 
-todosToChalk : List String -> List Results.Failure -> List Chalk
-todosToChalk labels failures =
-    todoLabelsToChalk labels ++ List.concatMap todoToChalk failures
+todosToChalk : ( List String, Results.Failure ) -> List Chalk
+todosToChalk ( labels, failure ) =
+    todoLabelsToChalk labels ++ todoToChalk failure
 
 
 todoLabelsToChalk : List String -> List Chalk
@@ -113,60 +113,143 @@ reportBegin { paths, include, exclude, fuzzRuns, testCount, initialSeed } =
             |> Just
 
 
+getNonTodoFailure : Expectation -> Maybe { given : Maybe String, message : String }
+getNonTodoFailure expectation =
+    if Test.Runner.isTodo expectation then
+        Nothing
+    else
+        Test.Runner.getFailure expectation
+
+
 reportComplete : Results.TestResult -> Maybe Value
 reportComplete { duration, labels, expectations } =
-    let
-        ( todos, nonTodos ) =
-            List.partition Test.Runner.isTodo expectations
-    in
-        case List.filterMap Test.Runner.getFailure nonTodos of
-            [] ->
-                case List.filterMap Test.Runner.getFailure todos of
-                    [] ->
-                        -- No failures of any kind.
-                        Nothing
+    -- Don't report TODOs eagerly; report them at the summary if at all.
+    case List.filterMap getNonTodoFailure expectations of
+        [] ->
+            -- No failures of any kind.
+            Nothing
 
-                    failures ->
-                        -- Only TODOs are still failing; report them.
-                        failures
-                            |> todosToChalk labels
-                            |> chalkWith
-                            |> Just
+        failures ->
+            -- We have non-TODOs still failing; report them, not the TODOs.
+            failuresToChalk labels failures
+                |> chalkWith
+                |> Just
 
-            failures ->
-                -- We have non-TODOs still failing; report them, not the TODOs.
-                failuresToChalk labels failures
-                    |> chalkWith
-                    |> Just
+
+getTodosAndFailures : List Results.TestResult -> { todos : List ( List String, Results.Failure ), nonTodoFailures : Int }
+getTodosAndFailures =
+    getTodosAndFailuresHelp { todos = [], nonTodoFailures = 0 }
+
+
+getTodosAndFailuresHelp :
+    { todos : List ( List String, Results.Failure ), nonTodoFailures : Int }
+    -> List Results.TestResult
+    -> { todos : List ( List String, Results.Failure ), nonTodoFailures : Int }
+getTodosAndFailuresHelp outcome testResults =
+    case testResults of
+        [] ->
+            outcome
+
+        { expectations, labels } :: rest ->
+            let
+                ( todos, nonTodos ) =
+                    List.partition Test.Runner.isTodo expectations
+
+                todoFailures =
+                    List.filterMap Test.Runner.getFailure todos
+
+                nonTodoFailures =
+                    if List.any ((/=) Expect.pass) nonTodos then
+                        1
+                    else
+                        0
+
+                newOutcome =
+                    if todoFailures == [] && nonTodoFailures == 0 then
+                        outcome
+                    else
+                        { todos = outcome.todos ++ List.map (\failure -> ( labels, failure )) todoFailures
+                        , nonTodoFailures = outcome.nonTodoFailures + nonTodoFailures
+                        }
+            in
+                getTodosAndFailuresHelp newOutcome rest
+
+
+summarizeTodos : List ( List String, Results.Failure ) -> List Chalk
+summarizeTodos todos =
+    case List.concatMap todosToChalk todos of
+        [] ->
+            []
+
+        todoChalks ->
+            { styles = [], text = "" } :: todoChalks
 
 
 reportSummary : Time -> List Results.TestResult -> Value
 reportSummary duration results =
     let
-        failed =
-            results
-                |> List.filter (.expectations >> List.all ((/=) Expect.pass))
-                |> List.length
-
-        headline =
-            if failed > 0 then
-                [ { styles = [ "underline", "red" ], text = "\nTEST RUN FAILED\n\n" } ]
-            else
-                [ { styles = [ "underline", "green" ], text = "\nTEST RUN PASSED\n\n" } ]
+        { todos, nonTodoFailures } =
+            getTodosAndFailures results
 
         passed =
-            (List.length results) - failed
+            (List.length results) - nonTodoFailures - List.length todos
 
-        stat label value =
-            [ { styles = [ "dim" ], text = label }
-            , { styles = [], text = value ++ "\n" }
-            ]
+        headlineResult =
+            case ( nonTodoFailures, List.length todos ) of
+                ( 0, 0 ) ->
+                    Ok "TEST RUN PASSED"
+
+                ( 0, 1 ) ->
+                    Err "TEST RUN FAILED because there is 1 TODO remaining"
+
+                ( 0, numTodos ) ->
+                    Err ("TEST RUN FAILED because there are " ++ toString numTodos ++ " TODOs remaining")
+
+                ( _, _ ) ->
+                    Err "TEST RUN FAILED"
+
+        headline =
+            let
+                ( styles, text ) =
+                    case headlineResult of
+                        Ok str ->
+                            ( [ "underline", "green" ], str )
+
+                        Err str ->
+                            ( [ "underline", "red" ], str )
+            in
+                [ { styles = styles, text = "\n" ++ text ++ "\n\n" } ]
+
+        todoStats =
+            -- Print stats for TODOs if there are any,
+            --but don't print details unless only TODOs remain
+            case List.length todos of
+                0 ->
+                    []
+
+                numTodos ->
+                    stat "TODO:     " (toString numTodos)
+
+        individualTodos =
+            if nonTodoFailures > 0 then
+                []
+            else
+                summarizeTodos todos
     in
         [ headline
         , stat "Duration: " (formatDuration duration)
         , stat "Passed:   " (toString passed)
-        , stat "Failed:   " (toString failed)
+        , stat "Failed:   " (toString nonTodoFailures)
+        , todoStats
+        , individualTodos
         ]
             |> List.concat
             |> List.map Chalk.encode
             |> Encode.list
+
+
+stat : String -> String -> List Chalk
+stat label value =
+    [ { styles = [ "dim" ], text = label }
+    , { styles = [], text = value ++ "\n" }
+    ]
