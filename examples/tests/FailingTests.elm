@@ -14,7 +14,6 @@ suite =
     , testExpectations
     , testFailingFuzzTests
     , testFuzz
-    , noDescription
     , someTodos
     , testShrinkables
     ]
@@ -68,13 +67,6 @@ testExpectations =
 oxfordify : a -> b -> c -> String
 oxfordify _ _ _ =
     "Alice, Bob, and Claire"
-
-
-noDescription : Test
-noDescription =
-    test "" <|
-        \() ->
-            Expect.equal "No description" "Whatsoever!"
 
 
 testFuzz : Test
