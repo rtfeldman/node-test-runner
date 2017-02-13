@@ -19,6 +19,7 @@ process.on('uncaughtException', function(error) {
 
 var compile    = require("node-elm-compiler").compile,
   fs           = require("fs-extra"),
+  crypto       = require("crypto"),
   glob         = require("glob"),
   chalk        = require("chalk"),
   builder      = require("xmlbuilder"),
@@ -207,7 +208,7 @@ function readAndEval(dest) {
     }
 
     try {
-      Runner.evalElmCode(args, report, compiledElmCode, "Main");
+      Runner.evalElmCode(args, report, compiledElmCode);
     } catch (err) {
       console.error("The test run failed because of a runtime exception encountered when evaluating the compiled Elm code:\n\n", err);
 
@@ -367,25 +368,36 @@ function runElmTest() {
 
     var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", include = " + opts.include + ", exclude = " + opts.exclude + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
 
-    var testFileContents =
-      [ "port module Test.Generated.Main exposing (main)"
-      , ""
-      , Array.from(imports).join("\n")
-      , ""
-      , "import Test.Runner.Node"
-      , "import Test"
-      , "import Json.Encode"
-      , ""
-      , "port emit : ( String, Json.Encode.Value ) -> Cmd msg"
-      , ""
-      , "main : Test.Runner.Node.TestProgram"
-      , "main ="
-      , "    [ " + Array.from(testList).join(", ") + " ]"
-      , "        |> Test.concat"
-      , "        |> Test.Runner.Node.runWithOptions " + optsCode + " emit"
+    var testFileBody =
+      [
+        Array.from(imports).join("\n"),
+        "",
+        "import Test.Runner.Node",
+        "import Test",
+        "import Json.Encode",
+        "",
+        "port emit : ( String, Json.Encode.Value ) -> Cmd msg",
+        "",
+        "main : Test.Runner.Node.TestProgram",
+        "main =",
+        "    [ " + Array.from(testList).join(", ") + " ]",
+        "        |> Test.concat",
+        "        |> Test.Runner.Node.runWithOptions " + optsCode + " emit"
       ].join("\n");
 
-    var testFile = path.join(generatedSrc, "Main.elm");
+    // Generate a filename that incorporates the hash of file contents.
+    // Otherwise quickly re-running tests back to back will cause elm-make
+    // to think it doesn't need to recompile anything, becuse the last
+    // modified timestamp hasn't changed...leading to a busted test run!
+    var salt = crypto.createHash('md5').update(testFileBody).digest("hex")
+    var moduleName = "Main" + salt;
+    var testFileContents =
+      [
+        "port module Test.Generated." + moduleName + " exposing (main)",
+        testFileBody
+      ].join("\n\n");
+
+    var testFile = path.join(generatedSrc, moduleName + ".elm");
 
     fs.writeFileSync(testFile, testFileContents);
 
