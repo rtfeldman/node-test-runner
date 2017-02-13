@@ -32,7 +32,7 @@ var compile    = require("node-elm-compiler").compile,
   Runner       = require("../lib/runner.js"),
   Init         = require("../lib/init.js");
 
-var generatedCodeDir = "elm-stuff/generated-code/elm-community/elm-test"
+var generatedCodeDir = path.resolve(path.join("elm-stuff", "generated-code", "elm-community", "elm-test"));
 var elm = {
   'elm-package': 'elm-package'
 };
