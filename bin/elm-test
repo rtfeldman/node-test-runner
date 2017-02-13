@@ -55,16 +55,23 @@ var args = minimist(process.argv.slice(2), {
 
 // Recursively search directories for *.elm files, excluding elm-stuff/
 function resolveFilePath(filename) {
+  var candidates;
+
   if (fs.lstatSync(filename).isDirectory()) {
-    return _.flatMap(
+    candidates = _.flatMap(
       glob.sync(
         filename + "/**/*.elm",
         {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
       ),
       resolveFilePath);
   } else {
-    return [path.resolve(filename)];
+    candidates = [path.resolve(filename)];
   }
+
+  // Exclude everything inside elm-stuff
+  return candidates.filter(function(candidate) {
+    return path.parse(candidate).indexOf("elm-stuff") === -1;
+  })
 }
 
 var pathToMake = undefined;
