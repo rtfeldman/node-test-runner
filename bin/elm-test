@@ -332,7 +332,6 @@ function runElmTest() {
   Promise.all(testFilePaths.map(Runner.toModuleName)).then(function(moduleNames) {
     var imports = new Set();
     var testList = new Set();
-    var testModuleSet = new Set(moduleNames);
 
     // Building things like:
     //
