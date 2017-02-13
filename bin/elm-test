@@ -84,7 +84,7 @@ function printUsage(str) {
 if (args.help) {
   [
     "init [--yes]  # Create example tests",
-    "TESTFILE [--compiler /path/to/compiler] # Run TESTFILE",
+    "TESTFILES # Run TESTFILES, for example tests/**/*.elm",
     "[--compiler /path/to/compiler] # Run tests",
     "[--seed integer] # Run with initial fuzzer seed",
     "[--fuzz integer] # Run with each fuzz test performing this many iterations",
