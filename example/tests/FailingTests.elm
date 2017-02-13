@@ -5,6 +5,7 @@ import Expect
 import Test exposing (..)
 import Fuzz exposing (..)
 import Char
+import Example
 
 
 suite : Test
@@ -13,6 +14,10 @@ suite =
     , testExpectations
     , testFuzz
     , someTodos
+    , test "the ultimate answer is 41" <|
+        \() ->
+            Example.ultimateAnswer
+                |> Expect.equal 41
     ]
         |> Test.concat
 
@@ -82,3 +87,8 @@ testFuzz =
                     |> Expect.equal "This sentence contains one item, two item, and three item."
                     |> Expect.onFail "given a list of length 3, did not return an oxford-style sentence"
         ]
+
+
+oxfordify : a -> b -> c -> String
+oxfordify _ _ _ =
+    "Alice, Bob, and Claire"

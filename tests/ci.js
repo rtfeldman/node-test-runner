@@ -9,18 +9,11 @@ var filename = __filename.replace(__dirname + '/', '');
 var elmTest = path.join(__dirname, '..', 'bin', 'elm-test');
 
 function run(testFile) {
-  var logFile = 'elm-test.test.log';
-  var retVal;
-
   if (!testFile) {
-    retVal = exec(elmTest);
+    return exec(elmTest).code;
   } else {
-    logFile = testFile + '.test.log';
-    retVal = exec(elmTest + ' '+ testFile);
+    return exec([elmTest, testFile].join(" ")).code
   }
-
-  retVal.toEnd(logFile);
-  return retVal.code;
 }
 
 function assertTestFailure(testFile) {
@@ -45,21 +38,26 @@ exec('npm install --global');
 echo(filename + ': Verifying installed elm-test version...');
 exec(elmTest + ' --version');
 
-
-ls("*.elm").forEach(function(testToRun) {
-  rm('-rf', path.join('elm-stuff', 'generated-code', 'elmTestOutput.js'));
-
+ls("tests/*.elm").forEach(function(testToRun) {
   if (/Passing\.elm$/.test(testToRun)) {
     echo("\n### Testing " + testToRun + "\n");
     assertTestSuccess(testToRun);
   } else if (/Failing\.elm$/.test(testToRun)) {
-    echo("#\n## Testing " + testToRun + "\n");
+    echo("\n### Testing " + testToRun + "\n");
     assertTestFailure(testToRun);
   } else {
     echo("Tried to run " + testToRun + " but it has an invalid filename; node-test-runner tests should fit the pattern \"*Passing.elm\" or \"*Failing.elm\"");
     process.exit(1);
   }
 });
+
+echo('### Testing elm-test on example/');
+
+cd('example');
+
+assertTestSuccess(path.join("tests", "PassingTests.*"));
+assertTestFailure(path.join("tests", "Fail*"));
+assertTestFailure();
 
 cd('..');
 
@@ -72,7 +70,7 @@ assertTestFailure();
 
 cd('..');
 
-echo('### Testing elm-test init on a non-empty directory');
+echo('\n### Testing elm-test init on a non-empty directory\n');
 rm('-Rf', 'tmp');
 cp('-R', 'tests/init-test', 'tmp');
 cd('tmp');

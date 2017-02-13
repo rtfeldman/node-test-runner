@@ -52,8 +52,6 @@ testExpectations =
         ]
 
 
-{-| stubbed function under test
--}
 oxfordify : a -> b -> c -> String
 oxfordify _ _ _ =
     "Alice, Bob, and Claire"

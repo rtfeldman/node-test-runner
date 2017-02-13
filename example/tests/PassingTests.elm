@@ -2,6 +2,7 @@ module PassingTests exposing (suite)
 
 import Expect
 import Test exposing (Test, test)
+import Example
 
 
 suite : Test
@@ -17,8 +18,8 @@ testEqual : Test
 testEqual =
     test "Expect.equal works" <|
         \() ->
-            "success"
-                |> Expect.equal "success"
+            Example.ultimateAnswer
+                |> Expect.equal 42
 
 
 testTrue : Test
