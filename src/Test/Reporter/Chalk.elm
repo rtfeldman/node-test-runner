@@ -228,7 +228,7 @@ reportSummary duration results =
                     []
 
                 numTodos ->
-                    stat "TODO:     " (toString numTodos)
+                    stat "Todo:     " (toString numTodos)
 
         individualTodos =
             if nonTodoFailures > 0 then
