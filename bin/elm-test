@@ -183,7 +183,6 @@ function runTests (testFile) {
 
 function readAndEval(dest) {
   fs.readFile(dest, {encoding: "utf8"}, function(readErr, compiledElmCode) {
-    console.log("COMPILED ELM CODE FOR", dest, "\n\n", compiledElmCode.length)
     if (readErr) {
       console.error("The test run failed because it could not read the compiled Elm code:\n\n", readErr);
 
