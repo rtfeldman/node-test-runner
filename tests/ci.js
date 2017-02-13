@@ -68,14 +68,14 @@ cd('tmp');
 exec(elmTest + ' init --yes');
 assertTestFailure();
 
-cd('..');
-
-echo('\n### Testing elm-test init on a non-empty directory\n');
-rm('-Rf', 'tmp');
-cp('-R', 'tests/init-test', 'tmp');
-cd('tmp');
-exec(elmTest + ' init --yes');
-assertTestFailure();
+// cd('..');
+//
+// echo('\n### Testing elm-test init on a non-empty directory\n');
+// rm('-Rf', 'tmp');
+// cp('-R', 'tests/init-test', 'tmp');
+// cd('tmp');
+// exec(elmTest + ' init --yes');
+// assertTestFailure();
 
 
 rm('-Rf', 'tmp');
