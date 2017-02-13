@@ -45,17 +45,15 @@ exec('npm install --global');
 echo(filename + ': Verifying installed elm-test version...');
 exec(elmTest + ' --version');
 
-cd('tests');
-exec('elm-package install --yes');
 
 ls("*.elm").forEach(function(testToRun) {
-  rm('-rf', 'elm-stuff/generated-code');
+  rm('-rf', path.join('elm-stuff', 'generated-code', 'elmTestOutput.js'));
 
   if (/Passing\.elm$/.test(testToRun)) {
-    echo("### Testing " + testToRun);
+    echo("\n### Testing " + testToRun + "\n");
     assertTestSuccess(testToRun);
   } else if (/Failing\.elm$/.test(testToRun)) {
-    echo("### Testing " + testToRun);
+    echo("#\n## Testing " + testToRun + "\n");
     assertTestFailure(testToRun);
   } else {
     echo("Tried to run " + testToRun + " but it has an invalid filename; node-test-runner tests should fit the pattern \"*Passing.elm\" or \"*Failing.elm\"");
@@ -70,9 +68,6 @@ rm('-Rf', 'tmp');
 mkdir('-p', 'tmp');
 cd('tmp');
 exec(elmTest + ' init --yes');
-cd('tests');
-exec('elm-package install --yes');
-cd('..');
 assertTestFailure();
 
 cd('..');
@@ -82,9 +77,6 @@ rm('-Rf', 'tmp');
 cp('-R', 'tests/init-test', 'tmp');
 cd('tmp');
 exec(elmTest + ' init --yes');
-cd('tests');
-exec('elm-package install --yes');
-cd('..');
 assertTestFailure();
 
 
