@@ -389,6 +389,8 @@ function runElmTest() {
     // Otherwise quickly re-running tests back to back will cause elm-make
     // to think it doesn't need to recompile anything, becuse the last
     // modified timestamp hasn't changed...leading to a busted test run!
+    // TODO change this back to be just "Main" once elm-make uses
+    // content hashes instead of last modified timestamp to detect changes.
     var salt = crypto.createHash('md5').update(testFileBody).digest("hex")
     var moduleName = "Main" + salt;
     var testFileContents =
