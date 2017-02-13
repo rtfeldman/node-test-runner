@@ -68,26 +68,33 @@ function resolveFilePath(filename) {
     candidates = [path.resolve(filename)];
   }
 
-  // Exclude everything inside elm-stuff
+  // Exclude everything having anything to do with elm-stuff
   return candidates.filter(function(candidate) {
-    return path.parse(candidate).indexOf("elm-stuff") === -1;
+    return candidate.split(path.sep).indexOf("elm-stuff") === -1;
   })
 }
 
 var pathToMake = undefined;
 
+function printUsage(str) {
+  console.log("Usage: elm-test " + str + "\n");
+}
+
 if (args.help) {
-  console.log("Usage: elm-test init [--yes]  # Create example tests\n");
-  console.log("Usage: elm-test TESTFILE [--compiler /path/to/compiler] # Run TESTFILE\n");
-  console.log("Usage: elm-test [--compiler /path/to/compiler] # Run tests/\n");
-  console.log("Usage: elm-test [--seed integer] # Run with initial fuzzer seed\n");
-  console.log("Usage: elm-test [--fuzz integer] # Run with each fuzz test performing this many iterations\n");
-  console.log("Usage: elm-test [--include string] # Test.filter to include only descriptions matching this Regex\n");
-  console.log("Usage: elm-test [--exclude string] # Test.filter to exclude every description matching this Regex\n");
-  console.log("Usage: elm-test [--add-dependencies target-elm-package.json] # Add missing dependencies from current elm-package.json to target\n");
-  console.log("Usage: elm-test [--report json, junit, or chalk (default)] # Print results to stdout in given format\n");
-  console.log("Usage: elm-test [--version] # Print version string and exit\n");
-  console.log("Usage: elm-test [--watch] # Run tests on file changes\n");
+  [
+    "init [--yes]  # Create example tests",
+    "TESTFILE [--compiler /path/to/compiler] # Run TESTFILE",
+    "[--compiler /path/to/compiler] # Run tests",
+    "[--seed integer] # Run with initial fuzzer seed",
+    "[--fuzz integer] # Run with each fuzz test performing this many iterations",
+    "[--include string] # Test.filter to include only descriptions matching this Regex",
+    "[--exclude string] # Test.filter to exclude every description matching this Regex",
+    "[--add-dependencies target-elm-package.json] # Add missing dependencies from current elm-package.json to target",
+    "[--report json, junit, or chalk (default)] # Print results to stdout in given format",
+    "[--version] # Print version string and exit",
+    "[--watch] # Run tests on file changes",
+  ].forEach(printUsage);
+
   process.exit(1);
 }
 
@@ -167,6 +174,7 @@ var elmPackagePath;
 
 function runTests (testFile) {
   var dest = path.resolve(path.join(generatedCodeDir, "elmTestOutput.js"));
+
   var compileProcess = compile([testFile], {
       output: dest,
       verbose: args.verbose,
