@@ -90,7 +90,7 @@ if (args.help) {
     "[--fuzz integer] # Run with each fuzz test performing this many iterations",
     "[--include string] # Test.filter to include only descriptions matching this Regex",
     "[--exclude string] # Test.filter to exclude every description matching this Regex",
-    "[--add-dependencies target-elm-package.json] # Add missing dependencies from current elm-package.json to target",
+    "[--add-dependencies path-to-destination-elm-package.json] # Add missing dependencies from current elm-package.json to destination",
     "[--report json, junit, or chalk (default)] # Print results to stdout in given format",
     "[--version] # Print version string and exit",
     "[--watch] # Run tests on file changes",
