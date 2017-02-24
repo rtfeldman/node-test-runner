@@ -7,6 +7,7 @@
     "node": ">=4.7.0"
   },
   "scripts": {
+    "install": "node install.js",
     "test": "node tests/ci.js"
   },
   "repository": {
@@ -14,6 +15,7 @@
     "url": "git+https://github.com/rtfeldman/node-test-runner.git"
   },
   "bin": {
+    "read_elmi": "bin/read_elmi",
     "elm-test": "bin/elm-test"
   },
   "keywords": [
@@ -28,6 +30,7 @@
   },
   "homepage": "https://github.com/rtfeldman/node-test-runner#readme",
   "dependencies": {
+    "binstall": "1.2.0",
     "chalk": "1.1.3",
     "chokidar": "1.6.0",
     "cross-spawn": "4.0.0",

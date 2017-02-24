@@ -5,15 +5,6 @@ import Test exposing (Test, test)
 import Example
 
 
-suite : Test
-suite =
-    Test.concat
-        [ testEqual
-        , testTrue
-        , testFalse
-        ]
-
-
 testEqual : Test
 testEqual =
     test "Expect.equal works" <|

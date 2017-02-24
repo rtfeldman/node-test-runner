@@ -259,10 +259,16 @@ function runElmTest() {
 
   process.chdir(elmRootDir);
 
+  Runner.findTests().then(function(tests) {
+    compileAndRun(tests, filePathArgs);
+  }).catch(function(err) {
+    console.error(err);
+    process.exit(1);
+  });
+}
 
-
-  var testsPath = args._[0],
-      pathToMake = undefined;
+function compileAndRun(tests, filePathArgs) {
+  var pathToMake = undefined;
 
   if (args.compiler !== undefined) {
     pathToMake = args.compiler;
@@ -330,109 +336,106 @@ function runElmTest() {
 
   process.chdir(newElmPackageDir);
 
-  Promise.all(testFilePaths.map(Runner.toModuleName)).then(function(moduleNames) {
-    var imports = new Set();
-    var testList = new Set();
-
-    // Building things like:
-    //
-    // import MyTests
-    //
-    // MyTests.suite
-    moduleNames.forEach(function(moduleName) {
-      testList.add(moduleName + ".suite");
-
-      imports.add("import " + moduleName);
-    });
-
-    function sanitizedToString(str) {
-      return '"' + str.replace(/"/g, '\\\"') + '"';
-    }
-
-    function filterToRecord(filter) {
-      return "{ include = " + (filter.include ? "True" : "False") +
-        ", regex = " + sanitizedToString(filter.regex) + " }"
-    }
-
-    var fuzz = parseInt(args.fuzz);
-    var seed = parseInt(args.seed);
-    var opts =
-      {
-        fuzz : isNaN(fuzz) ? "Nothing" : "Just " + fuzz,
-        seed : isNaN(seed) ? "Nothing" : "Just " + seed,
-        reporter : typeof args.reporter === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.reporter),
-        include: include === null ? "Nothing" : "Just " + sanitizedToString(include),
-        exclude: exclude === null ? "Nothing" : "Just " + sanitizedToString(exclude),
-        paths : filePathArgs.map(sanitizedToString).join(",")
-      }
-
-    var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", include = " + opts.include + ", exclude = " + opts.exclude + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
-
-    var testFileBody =
-      [
-        Array.from(imports).join("\n"),
-        "",
-        "import Test.Runner.Node",
-        "import Test",
-        "import Json.Encode",
-        "",
-        "port emit : ( String, Json.Encode.Value ) -> Cmd msg",
-        "",
-        "main : Test.Runner.Node.TestProgram",
-        "main =",
-        "    [ " + Array.from(testList).join(", ") + " ]",
-        "        |> Test.concat",
-        "        |> Test.Runner.Node.runWithOptions " + optsCode + " emit"
-      ].join("\n");
-
-    // Generate a filename that incorporates the hash of file contents.
-    // Otherwise quickly re-running tests back to back will cause elm-make
-    // to think it doesn't need to recompile anything, becuse the last
-    // modified timestamp hasn't changed...leading to a busted test run!
-    // TODO change this back to be just "Main" once elm-make uses
-    // content hashes instead of last modified timestamp to detect changes.
-    var salt = crypto.createHash('md5').update(testFileBody).digest("hex")
-    var moduleName = "Main" + salt;
-    var testFileContents =
-      [
-        "port module Test.Generated." + moduleName + " exposing (main)",
-        testFileBody
-      ].join("\n\n");
-
-    var testFile = path.join(generatedSrc, moduleName + ".elm");
-
-    fs.writeFileSync(testFile, testFileContents);
-
-    if (args.watch) {
-      infoLog('Running in watch mode');
-
-      var watchedPaths = fs.readJsonSync(elmPackagePath, 'utf8')['source-directories'].map(function(path) { return path + '/**/*.elm'; });
-      var watcher = chokidar.watch(watchedPaths, {ignoreInitial: true, ignored: /(\/|^)elm-stuff(\/|$)/});
-
-      var eventNameMap = {
-          add: 'added',
-          addDir: 'added',
-          change: 'changed',
-          unlink: 'removed',
-          unlinkDir: 'removed',
-      };
-
-      watcher.on('all', function (event, filePath) {
-        var relativePath = path.relative(elmRootDir, filePath);
-        var eventName = eventNameMap[event] || event;
-
-        infoLog('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
-
-        // TODO if a previous run is in progress, wait until it's done.
-        runTests(testFile);
-      });
-    }
-
-    runTests(testFile);
-  }).catch(function(err) {
-    console.error("Error reading source files", err);
-    process.exit(1);
+  // Building things like:
+  //
+  // import MyTests
+  //
+  // MyTests.suite
+  var imports = _.map(tests, function(test) { return "import " + test.name; });
+  var testList = _.map(tests, function(mod) {
+    return "    Test.describe \"" + mod.name + "\" [" +
+      _.map(mod.tests, function(test) {
+        return mod.name + "." + test;
+      }).join(",\n    ")
+      + "]\n";
   });
+
+  function sanitizedToString(str) {
+    return '"' + str.replace(/"/g, '\\\"') + '"';
+  }
+
+  function filterToRecord(filter) {
+    return "{ include = " + (filter.include ? "True" : "False") +
+      ", regex = " + sanitizedToString(filter.regex) + " }"
+  }
+
+  var fuzz = parseInt(args.fuzz);
+  var seed = parseInt(args.seed);
+  var opts =
+    {
+      fuzz : isNaN(fuzz) ? "Nothing" : "Just " + fuzz,
+      seed : isNaN(seed) ? "Nothing" : "Just " + seed,
+      reporter : typeof args.reporter === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.reporter),
+      include: include === null ? "Nothing" : "Just " + sanitizedToString(include),
+      exclude: exclude === null ? "Nothing" : "Just " + sanitizedToString(exclude),
+      paths : filePathArgs.map(sanitizedToString).join(",")
+    }
+
+  var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", include = " + opts.include + ", exclude = " + opts.exclude + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
+
+  var testFileBody =
+    [
+      imports.join("\n"),
+      "",
+      "import Test.Runner.Node",
+      "import Test",
+      "import Json.Encode",
+      "",
+      "port emit : ( String, Json.Encode.Value ) -> Cmd msg",
+      "",
+      "main : Test.Runner.Node.TestProgram",
+      "main =",
+      "    [ " + testList.join(", ") + " ]",
+      "        |> Test.concat",
+      "        |> Test.Runner.Node.runWithOptions " + optsCode + " emit"
+    ].join("\n");
+
+  console.log(testFileBody);
+
+  // Generate a filename that incorporates the hash of file contents.
+  // Otherwise quickly re-running tests back to back will cause elm-make
+  // to think it doesn't need to recompile anything, becuse the last
+  // modified timestamp hasn't changed...leading to a busted test run!
+  // TODO change this back to be just "Main" once elm-make uses
+  // content hashes instead of last modified timestamp to detect changes.
+  var salt = crypto.createHash('md5').update(testFileBody).digest("hex")
+  var moduleName = "Main" + salt;
+  var testFileContents =
+    [
+      "port module Test.Generated." + moduleName + " exposing (main)",
+      testFileBody
+    ].join("\n\n");
+
+  var testFile = path.join(generatedSrc, moduleName + ".elm");
+
+  fs.writeFileSync(testFile, testFileContents);
+
+  if (args.watch) {
+    infoLog('Running in watch mode');
+
+    var watchedPaths = fs.readJsonSync(elmPackagePath, 'utf8')['source-directories'].map(function(path) { return path + '/**/*.elm'; });
+    var watcher = chokidar.watch(watchedPaths, {ignoreInitial: true, ignored: /(\/|^)elm-stuff(\/|$)/});
+
+    var eventNameMap = {
+        add: 'added',
+        addDir: 'added',
+        change: 'changed',
+        unlink: 'removed',
+        unlinkDir: 'removed',
+    };
+
+    watcher.on('all', function (event, filePath) {
+      var relativePath = path.relative(elmRootDir, filePath);
+      var eventName = eventNameMap[event] || event;
+
+      infoLog('\n' + relativePath + ' ' + eventName + '. Rebuilding!');
+
+      // TODO if a previous run is in progress, wait until it's done.
+      runTests(testFile);
+    });
+  }
+
+  runTests(testFile);
 }
 
 var report;

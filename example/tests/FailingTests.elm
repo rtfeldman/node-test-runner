@@ -1,4 +1,4 @@
-module FailingTests exposing (suite)
+module FailingTests exposing (..)
 
 import String
 import Expect
@@ -8,18 +8,12 @@ import Char
 import Example
 
 
-suite : Test
-suite =
-    [ testWithoutNums
-    , testExpectations
-    , testFuzz
-    , someTodos
-    , test "the ultimate answer is 41" <|
+ultimateTest : Test
+ultimateTest =
+    test "the ultimate answer is 41" <|
         \() ->
             Example.ultimateAnswer
                 |> Expect.equal 41
-    ]
-        |> Test.concat
 
 
 someTodos : Test
