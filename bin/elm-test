@@ -390,8 +390,6 @@ function compileAndRun(tests, filePathArgs) {
       "        |> Test.Runner.Node.runWithOptions " + optsCode + " emit"
     ].join("\n");
 
-  console.log(testFileBody);
-
   // Generate a filename that incorporates the hash of file contents.
   // Otherwise quickly re-running tests back to back will cause elm-make
   // to think it doesn't need to recompile anything, becuse the last
