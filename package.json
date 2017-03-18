@@ -15,7 +15,7 @@
     "url": "git+https://github.com/rtfeldman/node-test-runner.git"
   },
   "bin": {
-    "read_elmi": "bin/read_elmi",
+    "elm-interface-to-json": "bin/elm-interface-to-json",
     "elm-test": "bin/elm-test"
   },
   "keywords": [

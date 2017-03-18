@@ -20,7 +20,7 @@ var url = "https://dl.bintray.com/elmlang/elm-test/"
 var binariesDir = path.join(__dirname, "bin");
 var packageInfo = require(path.join(__dirname, "package.json"));
 var binaryExtension = process.platform === "win32" ? ".exe" : "";
-var executablePaths = [path.join(binariesDir, "read_elmi" + binaryExtension)];
+var executablePaths = [path.join(binariesDir, "elm-interface-to-json" + binaryExtension)];
 var errorMessage = "Unfortunately, there are no elm-test " + binVersion + " binaries available on your operating system and architecture.\n\nIf you would like to build Elm from source, there are instructions at https://github.com/elm-lang/elm-platform#build-from-source\n";
 
 binstall(url, {path: binariesDir},
