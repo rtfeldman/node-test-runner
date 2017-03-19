@@ -30,8 +30,6 @@ type alias InitArgs =
     , fuzzRuns : Int
     , startTime : Time
     , paths : List String
-    , include : Maybe String
-    , exclude : Maybe String
     , thunks : List LabeledThunk
     , report : Reporter.Report
     }
@@ -45,8 +43,6 @@ type Model subMsg subModel
         , report : Reporter.Report
         , runs : Int
         , paths : List String
-        , include : Maybe String
-        , exclude : Maybe String
         , test : Test
         , init : InitArgs -> ( subModel, Cmd subMsg )
         }
@@ -64,7 +60,7 @@ timeToNumericSeed time =
 initOrUpdate : Msg subMsg -> Model subMsg subModel -> ( Model subMsg subModel, Cmd (Msg subMsg) )
 initOrUpdate msg maybeModel =
     case maybeModel of
-        Uninitialized update { maybeInitialSeed, report, include, exclude, paths, runs, test, init } ->
+        Uninitialized update { maybeInitialSeed, report, paths, runs, test, init } ->
             case msg of
                 Init time ->
                     let
@@ -87,8 +83,6 @@ initOrUpdate msg maybeModel =
                         ( subModel, subCmd ) =
                             init
                                 { initialSeed = numericSeed
-                                , include = include
-                                , exclude = exclude
                                 , fuzzRuns = runs
                                 , paths = paths
                                 , startTime = time
@@ -122,8 +116,6 @@ type alias RunnerOptions =
     { seed : Maybe Int
     , runs : Maybe Int
     , reporter : Maybe String
-    , include : Maybe String
-    , exclude : Maybe String
     , paths : List String
     }
 
@@ -228,7 +220,7 @@ defaultRunCount =
 {-| Run the tests and render the results as a Web page.
 -}
 run : RunnerOptions -> AppOptions msg model -> Test -> Program Value (Model msg model) (Msg msg)
-run { runs, seed, reporter, include, exclude, paths } appOpts test =
+run { runs, seed, reporter, paths } appOpts test =
     let
         init args =
             let
@@ -247,21 +239,13 @@ run { runs, seed, reporter, include, exclude, paths } appOpts test =
 
                                 Err err ->
                                     Debug.crash err
-
-                filters =
-                    List.filterMap identity
-                        [ Maybe.map (\regex -> { include = True, regex = regex }) include
-                        , Maybe.map (\regex -> { include = False, regex = regex }) exclude
-                        ]
             in
                 ( Uninitialized appOpts.update
                     { maybeInitialSeed = seed
                     , report = report
-                    , include = include
-                    , exclude = exclude
                     , runs = Maybe.withDefault defaultRunCount runs
                     , paths = paths
-                    , test = applyFilters filters test
+                    , test = test
                     , init = appOpts.init
                     }
                 , cmd
@@ -272,27 +256,3 @@ run { runs, seed, reporter, include, exclude, paths } appOpts test =
             , update = initOrUpdate
             , subscriptions = subscriptions appOpts.subscriptions
             }
-
-
-applyFilters : List { include : Bool, regex : String } -> Test -> Test
-applyFilters filters test =
-    case filters of
-        [] ->
-            test
-
-        { include, regex } :: rest ->
-            let
-                compiledRegex : Regex.Regex
-                compiledRegex =
-                    Regex.regex regex
-
-                filter : String -> Bool
-                filter =
-                    if include then
-                        Regex.contains compiledRegex
-                    else
-                        not << Regex.contains compiledRegex
-            in
-                test
-                    |> Test.filter filter
-                    |> applyFilters rest

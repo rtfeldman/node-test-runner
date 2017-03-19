@@ -42,8 +42,6 @@ var args = minimist(process.argv.slice(2), {
         'help': 'h',
         'yes': 'y',
         'fuzz': 'f',
-        'include': 'i',
-        'exclude': 'e',
         'seed': 's',
         'compiler': 'c',
         'add-dependencies': 'a',
@@ -51,7 +49,7 @@ var args = minimist(process.argv.slice(2), {
         'watch': 'w'
     },
     boolean: ['yes', 'warn', 'version', 'help', 'watch'],
-    string: ['add-dependencies', 'compiler', 'seed', 'report', 'fuzz', 'include', 'exclude']
+    string: ['add-dependencies', 'compiler', 'seed', 'report', 'fuzz']
 });
 
 // Recursively search directories for *.elm files, excluding elm-stuff/
@@ -88,8 +86,6 @@ if (args.help) {
     "[--compiler /path/to/compiler] # Run tests",
     "[--seed integer] # Run with initial fuzzer seed",
     "[--fuzz integer] # Run with each fuzz test performing this many iterations",
-    "[--include string] # Test.filter to include only descriptions matching this Regex",
-    "[--exclude string] # Test.filter to exclude every description matching this Regex",
     "[--add-dependencies path-to-destination-elm-package.json] # Add missing dependencies from current elm-package.json to destination",
     "[--report json, junit, or chalk (default)] # Print results to stdout in given format",
     "[--version] # Print version string and exit",
@@ -143,31 +139,6 @@ if (args["add-dependencies"]) {
     console.error("There is no elm-package.json in this directory.\n\nPlease re-run elm-test --add-dependencies from a directory that contains an elm-package.json file!");
     process.exit(1);
   }
-}
-
-var include = null;
-var exclude = null;
-
-if (args.include) {
-  try {
-    new RegExp(args.include)
-  } catch (err) {
-    console.error("The Regex for --include was \"" + args.include + "\", which is a", err);
-    process.exit(1);
-  }
-
-  include = args.include;
-}
-
-if (args.exclude) {
-  try {
-    new RegExp(args.exclude)
-  } catch (err) {
-    console.error("The Regex for --exclude was \"" + args.exclude + "\", which is a", err);
-    process.exit(1);
-  }
-
-  exclude = args.exclude;
 }
 
 var elmRootDir;
@@ -354,11 +325,6 @@ function compileAndRun(tests, filePathArgs) {
     return '"' + str.replace(/"/g, '\\\"') + '"';
   }
 
-  function filterToRecord(filter) {
-    return "{ include = " + (filter.include ? "True" : "False") +
-      ", regex = " + sanitizedToString(filter.regex) + " }"
-  }
-
   var fuzz = parseInt(args.fuzz);
   var seed = parseInt(args.seed);
   var opts =
@@ -366,12 +332,10 @@ function compileAndRun(tests, filePathArgs) {
       fuzz : isNaN(fuzz) ? "Nothing" : "Just " + fuzz,
       seed : isNaN(seed) ? "Nothing" : "Just " + seed,
       reporter : typeof args.reporter === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.reporter),
-      include: include === null ? "Nothing" : "Just " + sanitizedToString(include),
-      exclude: exclude === null ? "Nothing" : "Just " + sanitizedToString(exclude),
       paths : filePathArgs.map(sanitizedToString).join(",")
     }
 
-  var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", include = " + opts.include + ", exclude = " + opts.exclude + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
+  var optsCode = "{ runs = " + opts.fuzz + ", reporter = " + opts.reporter + ", seed = " + opts.seed + ", paths = [" + opts.paths + "]}"
 
   var testFileBody =
     [
