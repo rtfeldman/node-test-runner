@@ -1,4 +1,4 @@
-module PassingTests exposing (suite)
+module PassingTests exposing (..)
 
 import Expect
 import Test exposing (Test, test)
