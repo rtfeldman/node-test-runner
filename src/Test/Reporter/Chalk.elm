@@ -173,8 +173,8 @@ summarizeTodos todos =
             { styles = [], text = "\n\n" } :: todoChalks
 
 
-reportSummary : Time -> List Results.TestResult -> Value
-reportSummary duration results =
+reportSummary : Time -> Maybe String -> List Results.TestResult -> Value
+reportSummary duration autoFail results =
     let
         { todos, nonTodoFailures } =
             getTodosAndFailures results
@@ -183,17 +183,20 @@ reportSummary duration results =
             (List.length results) - nonTodoFailures - List.length todos
 
         headlineResult =
-            case ( nonTodoFailures, List.length todos ) of
-                ( 0, 0 ) ->
+            case ( autoFail, nonTodoFailures, List.length todos ) of
+                ( Nothing, 0, 0 ) ->
                     Ok "TEST RUN PASSED"
 
-                ( 0, 1 ) ->
+                ( Nothing, 0, 1 ) ->
                     Err "TEST RUN FAILED because there is 1 TODO remaining"
 
-                ( 0, numTodos ) ->
+                ( Nothing, 0, numTodos ) ->
                     Err ("TEST RUN FAILED because there are " ++ toString numTodos ++ " TODOs remaining")
 
-                ( _, _ ) ->
+                ( Just failure, _, _ ) ->
+                    Err ("TEST RUN FAILED because " ++ failure)
+
+                ( Nothing, _, _ ) ->
                     Err "TEST RUN FAILED"
 
         headline =

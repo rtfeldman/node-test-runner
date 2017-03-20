@@ -1,4 +1,4 @@
-module Test.Runner.Node.App exposing (run, Model, Msg, LabeledThunk, RunnerOptions)
+module Test.Runner.Node.App exposing (run, Model, Msg, RunnerOptions)
 
 {-| Test runner for a Node app
 
@@ -8,8 +8,7 @@ module Test.Runner.Node.App exposing (run, Model, Msg, LabeledThunk, RunnerOptio
 
 import Test.Reporter.Reporter as Reporter exposing (Report(ChalkReport))
 import Test exposing (Test)
-import Test.Runner exposing (Runner(..))
-import Expect exposing (Expectation)
+import Test.Runner exposing (Runner, SeededRunners)
 import Task
 import Random.Pcg
 import Time exposing (Time)
@@ -17,7 +16,6 @@ import Json.Decode as Decode exposing (Value, Decoder)
 import String
 import Tuple
 import Platform
-import Regex
 
 
 type Msg subMsg
@@ -30,7 +28,7 @@ type alias InitArgs =
     , fuzzRuns : Int
     , startTime : Time
     , paths : List String
-    , thunks : List LabeledThunk
+    , runners : SeededRunners
     , report : Reporter.Report
     }
 
@@ -75,10 +73,8 @@ initOrUpdate msg maybeModel =
                         seed =
                             Random.Pcg.initialSeed numericSeed
 
-                        thunks =
-                            test
-                                |> Test.Runner.fromTest runs seed
-                                |> toLabeledThunks
+                        runners =
+                            Test.Runner.fromTest runs seed test
 
                         ( subModel, subCmd ) =
                             init
@@ -86,7 +82,7 @@ initOrUpdate msg maybeModel =
                                 , fuzzRuns = runs
                                 , paths = paths
                                 , startTime = time
-                                , thunks = thunks
+                                , runners = runners
                                 , report = report
                                 }
                     in
@@ -135,33 +131,6 @@ subscriptions subs model =
 
         Initialized _ subModel ->
             Sub.map SubMsg (subs subModel)
-
-
-type alias LabeledThunk =
-    { thunk : () -> List Expectation
-    , labels : List String
-    }
-
-
-toLabeledThunks : Runner -> List LabeledThunk
-toLabeledThunks =
-    toLabeledThunksHelp []
-
-
-toLabeledThunksHelp : List String -> Runner -> List LabeledThunk
-toLabeledThunksHelp labels runner =
-    case runner of
-        Runnable runnable ->
-            [ { labels = labels
-              , thunk = \() -> Test.Runner.run runnable
-              }
-            ]
-
-        Labeled label subRunner ->
-            toLabeledThunksHelp (label :: labels) subRunner
-
-        Batch runners ->
-            List.concatMap (toLabeledThunksHelp labels) runners
 
 
 intFromString : Decoder Int

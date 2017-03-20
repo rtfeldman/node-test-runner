@@ -8,19 +8,19 @@ passed and 2 if any failed. Returns 1 if something went wrong.
 @docs run, runWithOptions, TestProgram
 -}
 
-import Test.Reporter.Reporter exposing (TestReporter, Report(..), createReporter)
-import Test.Reporter.TestResults exposing (Failure, TestResult)
-import Test.Runner.Node.App as App exposing (LabeledThunk)
-import Test exposing (Test)
 import Dict exposing (Dict)
 import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
+import Native.RunTest
+import Platform
 import Set exposing (Set)
 import Task
+import Test exposing (Test)
+import Test.Reporter.Reporter exposing (Report(..), TestReporter, createReporter)
+import Test.Reporter.TestResults exposing (Failure, TestResult)
+import Test.Runner exposing (Runner, SeededRunners(..))
+import Test.Runner.Node.App as App
 import Time exposing (Time)
-import Tuple
-import Platform
-import Native.RunTest
 
 
 {-| Execute the given thunk.
@@ -37,13 +37,14 @@ type alias TestId =
 
 
 type alias Model =
-    { available : Dict TestId LabeledThunk
+    { available : Dict TestId Runner
     , running : Set TestId
     , queue : List TestId
     , startTime : Time
     , finishTime : Maybe Time
     , completed : List TestResult
     , testReporter : TestReporter
+    , autoFail : Maybe String
     }
 
 
@@ -86,13 +87,15 @@ update emit msg ({ testReporter } as model) =
                     finishTime - model.startTime
 
                 summary =
-                    testReporter.reportSummary duration model.completed
+                    testReporter.reportSummary duration model.autoFail model.completed
 
                 exitCode =
-                    if failed == 0 then
-                        0
-                    else
+                    if failed > 0 then
                         2
+                    else if model.autoFail /= Nothing then
+                        3
+                    else
+                        0
 
                 data =
                     Encode.object
@@ -141,10 +144,10 @@ update emit msg ({ testReporter } as model) =
                             ( model, Cmd.none )
                                 |> warn ("Could not find testId " ++ toString testId)
 
-                        Just { labels, thunk } ->
+                        Just { labels, run } ->
                             let
                                 expectations =
-                                    runThunk thunk
+                                    runThunk run
 
                                 complete =
                                     Complete testId labels expectations startTime
@@ -172,30 +175,49 @@ init :
        , paths : List String
        , fuzzRuns : Int
        , startTime : Time
-       , thunks : List LabeledThunk
+       , runners : SeededRunners
        , report : Report
        }
     -> ( Model, Cmd Msg )
-init emit { startTime, paths, fuzzRuns, initialSeed, thunks, report } =
+init emit { startTime, paths, fuzzRuns, initialSeed, runners, report } =
     let
-        indexedThunks : List ( TestId, LabeledThunk )
-        indexedThunks =
-            List.indexedMap (,) thunks
+        { indexedRunners, autoFail } =
+            case runners of
+                Plain runnerList ->
+                    { indexedRunners = List.indexedMap (,) runnerList
+                    , autoFail = Nothing
+                    }
+
+                Only runnerList ->
+                    { indexedRunners = List.indexedMap (,) runnerList
+                    , autoFail = Just "Test.only was used"
+                    }
+
+                Skipping runnerList ->
+                    { indexedRunners = List.indexedMap (,) runnerList
+                    , autoFail = Just "Test.skip was used"
+                    }
+
+                Invalid str ->
+                    { indexedRunners = []
+                    , autoFail = Just str
+                    }
 
         testCount =
-            List.length indexedThunks
+            List.length indexedRunners
 
         testReporter =
             createReporter report
 
         model =
-            { available = Dict.fromList indexedThunks
+            { available = Dict.fromList indexedRunners
             , running = Set.empty
-            , queue = List.map Tuple.first indexedThunks
+            , queue = List.map Tuple.first indexedRunners
             , completed = []
             , startTime = startTime
             , finishTime = Nothing
             , testReporter = testReporter
+            , autoFail = autoFail
             }
 
         maybeReport =

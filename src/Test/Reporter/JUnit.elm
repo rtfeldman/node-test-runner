@@ -63,18 +63,38 @@ encodeTest { labels, duration } expectation =
             )
 
 
-encodeSuite : TestResults.TestResult -> List Value
-encodeSuite result =
-    List.map (encodeTest result) result.expectations
+encodeSuite : Maybe String -> TestResults.TestResult -> List Value
+encodeSuite extraFailure result =
+    let
+        baseExpectations =
+            List.map (encodeTest result) result.expectations
+    in
+        case extraFailure of
+            Nothing ->
+                baseExpectations
+
+            Just failure ->
+                let
+                    expectation =
+                        Expect.fail failure
+                in
+                    expectation
+                        |> encodeTest
+                            { labels = []
+                            , duration = 0
+                            , expectations = [ expectation ]
+                            }
+                        |> List.singleton
+                        |> List.append baseExpectations
 
 
-encodeSuites : List TestResults.TestResult -> Value
-encodeSuites results =
-    Encode.list <| List.concatMap encodeSuite results
+encodeSuites : Maybe String -> List TestResults.TestResult -> Value
+encodeSuites extraFailure results =
+    Encode.list <| List.concatMap (encodeSuite extraFailure) results
 
 
-reportSummary : Time -> List TestResults.TestResult -> Value
-reportSummary duration results =
+reportSummary : Time -> Maybe String -> List TestResults.TestResult -> Value
+reportSummary duration autoFail results =
     let
         expectations =
             List.concatMap .expectations results
@@ -83,6 +103,18 @@ reportSummary duration results =
             expectations
                 |> List.filter ((/=) Expect.pass)
                 |> List.length
+
+        extraFailure =
+            -- JUnit doesn't have a notion of "everything passed, but you left
+            -- a Test.only in there, so it's a failure overall." In that case
+            -- we'll tack on an extra failed test, so the overall suite fails.
+            -- Another option would be to report it as an Error, but that would
+            -- make JUnit have different semantics from the other reporters.
+            -- Also, there wasn't really an error. Nothing broke.
+            if failed == 0 && autoFail /= Nothing then
+                autoFail
+            else
+                Nothing
 
         passed =
             (List.length expectations) - failed
@@ -97,7 +129,7 @@ reportSummary duration results =
                     , ( "@failed", Encode.int failed )
                     , ( "@errors", Encode.int 0 )
                     , ( "@time", encodeTime (List.foldl (+) 0 <| List.map .duration results) )
-                    , ( "testcase", encodeSuites results )
+                    , ( "testcase", encodeSuites extraFailure results )
                     ]
               )
             ]

@@ -34,7 +34,7 @@ type alias TestReporter =
     { format : String
     , reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
     , reportComplete : TestResult -> Maybe Value
-    , reportSummary : Time -> List TestResult -> Value
+    , reportSummary : Time -> Maybe String -> List TestResult -> Value
     }
 
 

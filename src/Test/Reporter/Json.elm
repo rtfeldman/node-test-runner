@@ -63,8 +63,8 @@ encodeFailure { given, message } =
         ]
 
 
-reportSummary : Time -> List TestResults.TestResult -> Value
-reportSummary duration results =
+reportSummary : Time -> Maybe String -> List TestResults.TestResult -> Value
+reportSummary duration autoFail results =
     let
         failed =
             results
@@ -79,4 +79,9 @@ reportSummary duration results =
             , ( "passed", Encode.string <| toString passed )
             , ( "failed", Encode.string <| toString failed )
             , ( "duration", Encode.string <| toString duration )
+            , ( "autoFail"
+              , autoFail
+                    |> Maybe.map Encode.string
+                    |> Maybe.withDefault Encode.null
+              )
             ]
