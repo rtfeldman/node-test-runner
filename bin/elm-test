@@ -318,7 +318,7 @@ function compileAndRun(tests, filePathArgs) {
       _.map(mod.tests, function(test) {
         return mod.name + "." + test;
       }).join(",\n    ")
-      + "]\n";
+      + "]";
   });
 
   function sanitizedToString(str) {
