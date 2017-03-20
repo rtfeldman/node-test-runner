@@ -95,6 +95,7 @@ reportSummary duration results =
                       -- Would be nice to have this provided from elm-package.json of tests
                     , ( "@tests", Encode.int (List.length expectations) )
                     , ( "@failed", Encode.int failed )
+                    , ( "@errors", Encode.int 0 )
                     , ( "@time", encodeTime (List.foldl (+) 0 <| List.map .duration results) )
                     , ( "testcase", encodeSuites results )
                     ]
