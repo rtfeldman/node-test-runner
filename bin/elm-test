@@ -202,6 +202,38 @@ function checkNodeVersion() {
   }
 }
 
+function moduleFromFilePath(filePathArg) {
+  var parsed = path.parse(path.normalize(filePathArg));
+  var basename = path.basename(parsed.base, ".elm");
+
+  // Turn these into module name checks to be performed, in order.
+  // e.g. 'tests/All/Passing.elm' ===> ['Passing', 'All', 'tests']
+  // This way, if we're given 'All.Passing' as a module name, we can also
+  // flip it into ['Passing', 'All'], and see if the first N elements line up.
+  return _.compact(parsed.dir.split(path.sep).concat([basename])).reverse();
+}
+
+function moduleFromTestName(testName) {
+  return testName.split(".").reverse();
+}
+
+function filterTest(filePathArgs) {
+  var modulePaths = filePathArgs.map(moduleFromFilePath);
+
+  return function(test) {
+    var testModulePaths = moduleFromTestName(test.name);
+
+
+    // Must have at least one matching module path.
+    return modulePaths.some(function(modulePath) {
+      // A module path matches if it lines up completely with a known one.
+      return testModulePaths.every(function(testModulePath, index) {
+        return testModulePath === modulePath[index];
+      });
+    });
+  };
+}
+
 function runElmTest() {
   checkNodeVersion();
 
@@ -230,8 +262,11 @@ function runElmTest() {
 
   process.chdir(elmRootDir);
 
-  Runner.findTests().then(function(tests) {
-    compileAndRun(tests, filePathArgs);
+
+  Runner.findTests(_.uniq(_.map(testFilePaths, path.dirname))).then(function(tests) {
+    var runnableTests =
+      filePathArgs.length > 0 ? tests.filter(filterTest(filePathArgs)) : tests;
+    compileAndRun(runnableTests, filePathArgs);
   }).catch(function(err) {
     console.error(err);
     process.exit(1);

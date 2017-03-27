@@ -10,16 +10,20 @@ var elmTest = path.join(__dirname, '..', 'bin', 'elm-test');
 
 function run(testFile) {
   if (!testFile) {
+    echo("Running: elm-test");
     return exec(elmTest).code;
   } else {
-    return exec([elmTest, testFile].join(" ")).code
+    var cmd = [elmTest, testFile].join(" ");
+
+    echo("Running: " + cmd);
+    return exec(cmd).code
   }
 }
 
-function assertTestFailure(testFile) {
-  var code = run(testFile);
-  if (code !== 2) {
-    exec('echo ' + filename + ': ERROR: ' + (testFile ? testFile + ': ' : '') + 'Expected tests to fail >&2');
+function asserttestfailure(testfile) {
+  var code = run(testfile);
+  if (code < 2) {
+    exec('echo ' + filename + ': error: ' + (testfile ? testfile + ': ' : '') + 'expected tests to fail >&2');
     exit(1);
   }
 }
@@ -33,23 +37,10 @@ function assertTestSuccess(testFile) {
 }
 
 echo(filename + ': Installing elm-test...');
-exec('npm install --global');
+exec('npm link');
 
 echo(filename + ': Verifying installed elm-test version...');
 exec(elmTest + ' --version');
-
-ls("tests/*.elm").forEach(function(testToRun) {
-  if (/Passing\.elm$/.test(testToRun)) {
-    echo("\n### Testing " + testToRun + "\n");
-    assertTestSuccess(testToRun);
-  } else if (/Failing\.elm$/.test(testToRun)) {
-    echo("\n### Testing " + testToRun + "\n");
-    assertTestFailure(testToRun);
-  } else {
-    echo("Tried to run " + testToRun + " but it has an invalid filename; node-test-runner tests should fit the pattern \"*Passing.elm\" or \"*Failing.elm\"");
-    process.exit(1);
-  }
-});
 
 echo('### Testing elm-test on example/');
 
@@ -58,6 +49,19 @@ cd('example');
 assertTestSuccess(path.join("tests", "PassingTests.*"));
 assertTestFailure(path.join("tests", "Fail*"));
 assertTestFailure();
+
+ls("tests/*.elm").forEach(function(testToRun) {
+  if (/Passing\.elm$/.test(testToRun)) {
+    echo("\n### Testing " + testToRun + " (expecting it to pass)\n");
+    assertTestSuccess(testToRun);
+  } else if (/Failing\.elm$/.test(testToRun)) {
+    echo("\n### Testing " + testToRun + " (expecting it to fail)\n");
+    assertTestFailure(testToRun);
+  } else {
+    echo("Tried to run " + testToRun + " but it has an invalid filename; node-test-runner tests should fit the pattern \"*Passing.elm\" or \"*Failing.elm\"");
+    process.exit(1);
+  }
+});
 
 cd('..');
 
