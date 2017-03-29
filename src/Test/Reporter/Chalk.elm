@@ -188,28 +188,26 @@ reportSummary duration autoFail results =
                     Ok "TEST RUN PASSED"
 
                 ( Nothing, 0, 1 ) ->
-                    Err "TEST RUN FAILED because there is 1 TODO remaining"
+                    Err ( "yellow", "TEST RUN INCOMPLETE", " because there is 1 TODO remaining" )
 
                 ( Nothing, 0, numTodos ) ->
-                    Err ("TEST RUN FAILED because there are " ++ toString numTodos ++ " TODOs remaining")
+                    Err ( "yellow", "TEST RUN INCOMPLETE", " because there are " ++ toString numTodos ++ " TODOs remaining" )
 
                 ( Just failure, _, _ ) ->
-                    Err ("TEST RUN FAILED because " ++ failure)
+                    Err ( "yellow", "TEST RUN INCOMPLETE", " because " ++ failure )
 
                 ( Nothing, _, _ ) ->
-                    Err "TEST RUN FAILED"
+                    Err ( "red", "TEST RUN FAILED", "" )
 
         headline =
-            let
-                ( styles, text ) =
-                    case headlineResult of
-                        Ok str ->
-                            ( [ "underline", "green" ], str )
+            case headlineResult of
+                Ok str ->
+                    [ { styles = [ "underline", "green" ], text = "\n" ++ str ++ "\n\n" } ]
 
-                        Err str ->
-                            ( [ "underline", "red" ], str )
-            in
-                [ { styles = styles, text = "\n" ++ text ++ "\n\n" } ]
+                Err ( color, str, suffix ) ->
+                    [ { styles = [ "underline", color ], text = "\n" ++ str }
+                    , { styles = [ color ], text = suffix ++ "\n\n" }
+                    ]
 
         todoStats =
             -- Print stats for TODOs if there are any,
