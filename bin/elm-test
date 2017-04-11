@@ -262,7 +262,7 @@ function runElmTest() {
   process.chdir(elmRootDir);
 
 
-  Runner.findTests(_.uniq(_.map(testFilePaths, path.dirname))).then(function(tests) {
+  Runner.findTests(elmRootDir).then(function(tests) {
     var runnableTests =
       filePathArgs.length > 0 ? tests.filter(filterTest(filePathArgs)) : tests;
     compileAndRun(runnableTests, filePathArgs);
