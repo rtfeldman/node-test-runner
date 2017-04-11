@@ -223,7 +223,6 @@ function filterTest(filePathArgs) {
   return function(test) {
     var testModulePaths = moduleFromTestName(test.name);
 
-
     // Must have at least one matching module path.
     return modulePaths.some(function(modulePath) {
       // A module path matches if it lines up completely with a known one.
