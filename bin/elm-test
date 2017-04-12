@@ -251,13 +251,11 @@ function runElmTest() {
 
   process.chdir(elmRootDir);
 
-  // TODO: detect `SeveralFailing` does not expose `testExpectations` and translate into nicer error message: "top-level Test values must be exposed!"
-
   var [newElmPackageDir, generatedSrc] = generatePackageJson(filePathArgs);
 
   compileAllTests(testFilePaths).then(
     function() {
-      return Runner.findTests(elmRootDir, filePathArgs).then(function(runnableTests) {
+      return Runner.findTests(elmRootDir, testFilePaths).then(function(runnableTests) {
         process.chdir(newElmPackageDir);
 
         generateAndRunTests(runnableTests, filePathArgs, generatedSrc);
@@ -372,8 +370,8 @@ function generateAndRunTests(tests, filePathArgs, generatedSrc) {
   if (testList.length === 0) {
     var errorMessage =
       filePathArgs.length > 0
-        ? "I couldn't find any top-level values of type Test in files matching \"" + filePathArgs + "\"\n\nMaybe try running elm-test with no arguments?"
-        : "I couldn't find any top-level values of type Test in any *.elm files in the test/ (or tests/) directory of your project's root directory.\n\nTo generate some initial tests to get things going, run elm-test init"
+        ? "I couldn't find any exposed values of type Test in files matching \"" + filePathArgs + "\"\n\nMaybe try running elm-test with no arguments?"
+        : "I couldn't find any exposed values of type Test in any *.elm files in the test/ (or tests/) directory of your project's root directory.\n\nTo generate some initial tests to get things going, run elm-test init"
 
     console.error(errorMessage);
     process.exit(1);
