@@ -223,7 +223,7 @@ reportSummary duration autoFail results =
             if nonTodoFailures > 0 then
                 []
             else
-                summarizeTodos todos
+                summarizeTodos (List.reverse todos)
     in
         [ headline
         , stat "Duration: " (formatDuration duration)
