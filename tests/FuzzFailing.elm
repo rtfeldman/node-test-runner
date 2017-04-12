@@ -1,22 +1,10 @@
-module FuzzFailing exposing (suite)
+module FuzzFailing exposing (..)
 
 import String
 import Expect
 import Test exposing (..)
 import Fuzz exposing (..)
 import Char
-
-
-suite : Test
-suite =
-    [ testWithoutNums
-    , testOxfordify
-    , testExpectations
-    , testFailingFuzzTests
-    , testFuzz
-    , testShrinkables
-    ]
-        |> Test.concat
 
 
 withoutNums : String -> String

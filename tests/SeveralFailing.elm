@@ -1,19 +1,10 @@
-module SeveralFailing exposing (suite)
+module SeveralFailing exposing (..)
 
 import String
 import Expect
 import Test exposing (..)
 import Fuzz exposing (..)
 import Char
-
-
-suite : Test
-suite =
-    [ testWithoutNums
-    , testExpectations
-    , testFailingFuzzTests
-    ]
-        |> Test.concat
 
 
 withoutNums : String -> String

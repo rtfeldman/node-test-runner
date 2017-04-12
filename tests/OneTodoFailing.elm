@@ -1,4 +1,4 @@
-module OneTodoFailing exposing (suite)
+module OneTodoFailing exposing (..)
 
 import Expect
 import Test exposing (..)
@@ -7,8 +7,7 @@ import Test exposing (..)
 suite : Test
 suite =
     Test.describe "TODO tests"
-        [ aPassingTest
-        , Test.todo "write a test here"
+        [ Test.todo "write a test here"
         ]
 
 
