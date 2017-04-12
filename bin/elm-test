@@ -270,29 +270,46 @@ function runElmTest() {
 
   process.chdir(elmRootDir);
 
+  var [newElmPackageDir, generatedSrc] = generatePackageJson(filePathArgs);
 
-  Runner.findTests(elmRootDir).then(function(tests) {
-    var runnableTests =
-      filePathArgs.length > 0 ? tests.filter(filterTest(filePathArgs)) : tests;
-    compileAndRun(runnableTests, filePathArgs);
-  }).catch(function(err) {
-    console.error(err);
-    process.exit(1);
+  compileAllTests(testFilePaths).then(
+    function() {
+      return Runner.findTests(elmRootDir).then(function(tests) {
+        var runnableTests =
+          filePathArgs.length > 0 ? tests.filter(filterTest(filePathArgs)) : tests;
+        generateAndRunTests(runnableTests, filePathArgs, generatedSrc);
+      }).catch(function(err) {
+        console.error(err);
+        process.exit(1);
+      });
+    }
+  );
+}
+
+// This compiles all the tests so that we generate *.elmi files for them,
+// which we can then read to determine which tests need to be run.
+function compileAllTests(generatedTestFilePaths) {
+  return new Promise(function(resolve, reject) {
+    var compileProcess = compile(generatedTestFilePaths, {
+        output: "/dev/null",
+        verbose: args.verbose,
+        yes: true,
+        spawn: spawnCompiler,
+        pathToMake: pathToMake,
+        warn: args.warn
+    });
+
+    compileProcess.on('close', function(exitCode) {
+      if (exitCode !== 0) {
+        reject("Compilation failed for", testFile);
+      } else {
+        resolve();
+      }
+    });
   });
 }
 
-function compileAndRun(tests, filePathArgs) {
-  var pathToMake = undefined;
-
-  if (args.compiler !== undefined) {
-    pathToMake = args.compiler;
-
-    if (!pathToMake) {
-      console.error("The --compiler option must be given a path to an elm-make executable.");
-      process.exit(1);
-    }
-  }
-
+function generatePackageJson(filePathArgs) {
   function infoLog(msg) {
     if (report === "chalk") {
       console.log(msg);
@@ -350,6 +367,10 @@ function compileAndRun(tests, filePathArgs) {
 
   process.chdir(newElmPackageDir);
 
+  return [newElmPackageDir, generatedSrc];
+}
+
+function generateAndRunTests(tests, filePathArgs, generatedSrc) {
   // Building things like:
   //
   // import MyTests
