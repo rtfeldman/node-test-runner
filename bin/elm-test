@@ -283,7 +283,10 @@ function runElmTest() {
         process.exit(1);
       });
     }
-  );
+  ).catch(function(err){
+    console.error(err);
+    process.exit(1);
+  });
 }
 
 // This compiles all the tests so that we generate *.elmi files for them,
@@ -301,7 +304,7 @@ function compileAllTests(generatedTestFilePaths) {
 
     compileProcess.on('close', function(exitCode) {
       if (exitCode !== 0) {
-        reject("Compilation failed for", testFile);
+        reject("Compilation failed while attempting to build " + generatedTestFilePaths.join(" "));
       } else {
         resolve();
       }
