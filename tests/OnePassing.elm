@@ -1,13 +1,7 @@
-module OnePassing exposing (suite)
+module OnePassing exposing (..)
 
 import Expect
 import Test exposing (..)
-
-
-suite : Test
-suite =
-    [ plainExpectation ]
-        |> concat
 
 
 plainExpectation : Test

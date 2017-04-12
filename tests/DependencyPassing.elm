@@ -1,13 +1,8 @@
-module DependencyPassing exposing (suite)
+module DependencyPassing exposing (..)
 
 import String.Extra
 import Expect
 import Test exposing (..)
-
-
-suite : Test
-suite =
-    testDependency
 
 
 testDependency : Test

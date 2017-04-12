@@ -270,6 +270,12 @@ function runElmTest() {
 
   process.chdir(elmRootDir);
 
+  // TODO: detect `SeveralFailing` does not expose `testExpectations` and translate into nicer error message: "top-level Test values must be exposed!"
+  // TODO: passing "t" as CLI argument - Unhandled exception while running the tests: { Error: ENOENT: no such file or directory, lstat 't'
+  // TODO: if no tests pass the match, should give a better error message than 'This `concat` has no tests in it. Let's give it some!'
+  // TODO: if no filePathArgs given, should still work
+  // TODO: verify that a module like Foo.Bar.Baz works.
+
   var [newElmPackageDir, generatedSrc] = generatePackageJson(filePathArgs);
 
   compileAllTests(testFilePaths).then(

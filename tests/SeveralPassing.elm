@@ -1,16 +1,7 @@
-module SeveralPassing exposing (suite)
+module SeveralPassing exposing (..)
 
 import Expect
 import Test exposing (..)
-
-
-suite : Test
-suite =
-    [ testEqual
-    , testTrue
-    , testFalse
-    ]
-        |> concat
 
 
 testEqual : Test
