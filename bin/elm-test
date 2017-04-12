@@ -75,6 +75,15 @@ function resolveFilePath(filename) {
 
 var pathToMake = undefined;
 
+if (args.compiler !== undefined) {
+  pathToMake = args.compiler;
+
+  if (!pathToMake) {
+    console.error("The --compiler option must be given a path to an elm-make executable.");
+    process.exit(1);
+  }
+}
+
 function printUsage(str) {
   console.log("Usage: elm-test " + str + "\n");
 }
