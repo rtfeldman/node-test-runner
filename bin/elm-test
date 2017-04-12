@@ -56,7 +56,9 @@ var args = minimist(process.argv.slice(2), {
 function resolveFilePath(filename) {
   var candidates;
 
-  if (fs.lstatSync(filename).isDirectory()) {
+  if (!fs.existsSync(filename)) {
+    candidates = [];
+  } else if (fs.lstatSync(filename).isDirectory()) {
     candidates = _.flatMap(
       glob.sync(
         filename + "/**/*.elm",
@@ -70,7 +72,7 @@ function resolveFilePath(filename) {
   // Exclude everything having anything to do with elm-stuff
   return candidates.filter(function(candidate) {
     return candidate.split(path.sep).indexOf("elm-stuff") === -1;
-  })
+  });
 }
 
 var pathToMake = undefined;
@@ -264,6 +266,16 @@ function runElmTest() {
     ),
     resolveFilePath
   );
+
+  if (testFilePaths.length === 0) {
+    var errorMessage =
+      filePathArgs.length > 0
+        ? "No tests found for the file pattern \"" + filePathArgs + "\"\n\nMaybe try running elm-test with no arguments?"
+        : "No tests found in the test/ (or tests/) directory of your project's root directory.\n\nTo generate some initial tests to get things going, run elm-test init"
+
+    console.error(errorMessage);
+    process.exit(1);
+  }
 
   elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
   elmPackagePath = path.resolve(path.join(elmRootDir, "elm-package.json"));
