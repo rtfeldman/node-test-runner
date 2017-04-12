@@ -283,6 +283,9 @@ function runElmTest() {
       return Runner.findTests(elmRootDir).then(function(tests) {
         var runnableTests =
           filePathArgs.length > 0 ? tests.filter(filterTest(filePathArgs)) : tests;
+
+        process.chdir(newElmPackageDir);
+
         generateAndRunTests(runnableTests, filePathArgs, generatedSrc);
       }).catch(function(err) {
         console.error(err);
@@ -297,9 +300,9 @@ function runElmTest() {
 
 // This compiles all the tests so that we generate *.elmi files for them,
 // which we can then read to determine which tests need to be run.
-function compileAllTests(generatedTestFilePaths) {
+function compileAllTests(testFilePaths) {
   return new Promise(function(resolve, reject) {
-    var compileProcess = compile(generatedTestFilePaths, {
+    var compileProcess = compile(testFilePaths, {
         output: "/dev/null",
         verbose: args.verbose,
         yes: true,
@@ -373,8 +376,6 @@ function generatePackageJson(filePathArgs) {
     path.join(__dirname, "..", "native-src"),
     generatedSrc
   );
-
-  process.chdir(newElmPackageDir);
 
   return [newElmPackageDir, generatedSrc];
 }
