@@ -258,7 +258,7 @@ function runElmTest() {
   var testFilePaths = _.flatMap(
     (filePathArgs.length > 0 ? filePathArgs :
       glob.sync(
-        "test?(s)/**/*.elm",
+        path.resolve(Runner.findNearestElmPackageDir(process.cwd())) + "/test?(s)/**/*.elm",
         {nocase: true, ignore: "**/elm-stuff/**", nodir: false}
       )
     ),
