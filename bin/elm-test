@@ -283,7 +283,6 @@ function runElmTest() {
   process.chdir(elmRootDir);
 
   // TODO: detect `SeveralFailing` does not expose `testExpectations` and translate into nicer error message: "top-level Test values must be exposed!"
-  // TODO: if no tests were exposed, should give a better error message than 'This `concat` has no tests in it. Let's give it some!'
 
   var [newElmPackageDir, generatedSrc] = generatePackageJson(filePathArgs);
 
@@ -403,6 +402,16 @@ function generateAndRunTests(tests, filePathArgs, generatedSrc) {
       }).join(",\n    ")
       + "]";
   });
+
+  if (testList.length === 0) {
+    var errorMessage =
+      filePathArgs.length > 0
+        ? "I couldn't find any top-level values of type Test in files matching \"" + filePathArgs + "\"\n\nMaybe try running elm-test with no arguments?"
+        : "I couldn't find any top-level values of type Test in any *.elm files in the test/ (or tests/) directory of your project's root directory.\n\nTo generate some initial tests to get things going, run elm-test init"
+
+    console.error(errorMessage);
+    process.exit(1);
+  }
 
   function sanitizedToString(str) {
     return '"' + str.replace(/"/g, '\\\"') + '"';
