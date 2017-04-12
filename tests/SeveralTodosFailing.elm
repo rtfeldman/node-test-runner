@@ -1,15 +1,7 @@
-module SeveralTodosFailing exposing (suite)
+module SeveralTodosFailing exposing (..)
 
 import Expect
 import Test exposing (..)
-
-
-suite : Test
-suite =
-    Test.describe "TODO tests"
-        [ someTodos
-        , aPassingTest
-        ]
 
 
 someTodos : Test
