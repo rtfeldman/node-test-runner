@@ -11,12 +11,10 @@ npm install -g elm-test
 ## Usage
 
 ```bash
-elm-test init  # Adds the elm-test dependency and creates Main.elm and Tests.elm
-elm-test       # Runs the tests
+elm-test init    # Adds the elm-test dependency and creates Main.elm and Tests.elm
+elm-test         # Runs all exposed Test values in *.elm files in the test/ and tests/ directories
+elm-test Foo.elm # Runs all exposed Test values in Foo.elm
 ```
-
-Then add your tests to Tests.elm.
-
 
 ### Configuration
 
@@ -73,6 +71,6 @@ before_script:
   - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 elm-make ./tests/Main.elm
 
 script:
-  - elm-test ./tests/Main.elm
+  - elm-test
 
 ```
