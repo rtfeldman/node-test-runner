@@ -4,7 +4,7 @@
     "repository": "https://github.com/elm-community/elm-test.git",
     "license": "BSD-3-Clause",
     "source-directories": [
-        "sources/elm"
+        "src"
     ],
     "exposed-modules": [],
     "native-modules": true,

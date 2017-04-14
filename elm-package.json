@@ -5,7 +5,7 @@
     "license": "BSD-3-Clause",
     "source-directories": [
         "src",
-        "/Users/rtfeldman/code/elm-test/src/",
+        "../elm-test/src/",
         "native-src"
     ],
     "native-modules": true,

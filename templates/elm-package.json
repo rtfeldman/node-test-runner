@@ -4,7 +4,6 @@
     "repository": "https://github.com/user/project.git",
     "license": "BSD-3-Clause",
     "source-directories": [
-        "/Users/rtfeldman/code/elm-test/src/",
         "src"
     ],
     "exposed-modules": [],
