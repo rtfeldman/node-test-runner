@@ -1,29 +1,10 @@
-port module Main exposing (..)
+module FuzzFailing exposing (..)
 
-import Test.Runner.Node exposing (run, TestProgram)
 import String
 import Expect
 import Test exposing (..)
 import Fuzz exposing (..)
-import Json.Encode exposing (Value)
 import Char
-
-
-main : TestProgram
-main =
-    [ testWithoutNums
-    , testOxfordify
-    , noDescription
-    , testExpectations
-    , testFailingFuzzTests
-    , testFuzz
-    , testShrinkables
-    ]
-        |> Test.concat
-        |> run emit
-
-
-port emit : ( String, Value ) -> Cmd msg
 
 
 withoutNums : String -> String
@@ -59,18 +40,9 @@ testExpectations =
         ]
 
 
-{-| stubbed function under test
--}
 oxfordify : a -> b -> c -> String
 oxfordify _ _ _ =
     "Alice, Bob, and Claire"
-
-
-noDescription : Test
-noDescription =
-    test "" <|
-        \() ->
-            Expect.equal "No description" "Whatsoever!"
 
 
 testFuzz : Test
@@ -132,6 +104,10 @@ testOxfordify =
                 \() ->
                     oxfordify "This sentence contains " "." [ "one item", "two item", "three item" ]
                         |> Expect.equal "This sentence contains one item, two item, and three item."
+            , test "runs a Debug.crash on purpose" <|
+                \() ->
+                    oxfordify "Everything is normal"
+                        |> Debug.crash "this test runs a Debug.crash on purpose!"
             ]
         ]
 

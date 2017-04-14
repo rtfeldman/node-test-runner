@@ -9,24 +9,21 @@ var filename = __filename.replace(__dirname + '/', '');
 var elmTest = path.join(__dirname, '..', 'bin', 'elm-test');
 
 function run(testFile) {
-  var logFile = 'elm-test.test.log';
-  var retVal;
-
   if (!testFile) {
-    retVal = exec(elmTest);
+    echo("Running: elm-test");
+    return exec(elmTest).code;
   } else {
-    logFile = testFile + '.test.log';
-    retVal = exec(elmTest + ' '+ testFile);
-  }
+    var cmd = [elmTest, testFile].join(" ");
 
-  retVal.toEnd(logFile);
-  return retVal.code;
+    echo("Running: " + cmd);
+    return exec(cmd).code
+  }
 }
 
-function assertTestFailure(testFile) {
-  var code = run(testFile);
-  if (code !== 1) {
-    exec('echo ' + filename + ': ERROR: ' + (testFile ? testFile + ': ' : '') + 'Expected tests to fail >&2');
+function asserttestfailure(testfile) {
+  var code = run(testfile);
+  if (code < 2) {
+    exec('echo ' + filename + ': error: ' + (testfile ? testfile + ': ' : '') + 'expected tests to fail >&2');
     exit(1);
   }
 }
@@ -39,74 +36,52 @@ function assertTestSuccess(testFile) {
   }
 }
 
-function assertDocTest() {
-  var code = exec(elmTest + ' --doctest').code;
-  if (code !== 0) {
-    exec('Expected doc-tests to pass >&2');
-    exit(1);
-  }
-
-  sed('-i', /    >>> add 1 2/, '    >>> add 42 42', './DocTestExample.elm');
-
-  code = exec(elmTest + ' --doctest').code;
-  if (code !== 1) {
-    exec('Expected doc-tests to fail >&2');
-    exit(1);
-  }
-
-  sed('-i', /    >>> add 42 42/, '    >>> add 1 2', './DocTestExample.elm');
-}
-
-
 echo(filename + ': Installing elm-test...');
-exec('npm install --global');
+exec('npm link');
 
 echo(filename + ': Verifying installed elm-test version...');
 exec(elmTest + ' --version');
 
-echo(filename + ': Testing examples...');
+echo('### Testing elm-test on example/');
 
-cd('examples/tests');
-exec('elm-package install --yes');
-assertTestSuccess('PassingTests.elm');
-assertTestFailure('FailingTests.elm');
-cd('../..');
+cd('example');
 
-echo(filename + ': Testing doc-test...');
+assertTestSuccess(path.join("tests", "PassingTests.*"));
+assertTestFailure(path.join("tests", "Fail*"));
+assertTestFailure();
 
-cd('examples');
-assertDocTest();
+ls("tests/*.elm").forEach(function(testToRun) {
+  if (/Passing\.elm$/.test(testToRun)) {
+    echo("\n### Testing " + testToRun + " (expecting it to pass)\n");
+    assertTestSuccess(testToRun);
+  } else if (/Failing\.elm$/.test(testToRun)) {
+    echo("\n### Testing " + testToRun + " (expecting it to fail)\n");
+    assertTestFailure(testToRun);
+  } else {
+    echo("Tried to run " + testToRun + " but it has an invalid filename; node-test-runner tests should fit the pattern \"*Passing.elm\" or \"*Failing.elm\"");
+    process.exit(1);
+  }
+});
+
 cd('..');
 
-
-echo(filename + ': Testing elm-test init...');
+echo('### Testing elm-test init && elm-test');
 rm('-Rf', 'tmp');
 mkdir('-p', 'tmp');
 cd('tmp');
 exec(elmTest + ' init --yes');
-cd('tests');
-// use local node-test-runner
-var tmpPackage = fs.readJsonSync('./elm-package.json');
-tmpPackage['source-directories'].push('../../src');
-var keys = _.reject(_.keys(tmpPackage.dependencies), function(name) {
-  return name === "rtfeldman/node-test-runner";
-});
-tmpPackage.dependencies = _.pick(tmpPackage.dependencies, keys);
-fs.writeJsonSync('./elm-package.json', tmpPackage);
-exec('elm-package install --yes');
-cd('..');
 assertTestFailure();
 
-// update failing test to passing test
-sed('-i', /should fail/, 'should pass', 'tests/Tests.elm');
-sed('-i', /Expect.fail "Failed as expected!"/, 'Expect.pass', 'tests/Tests.elm');
-rm('-Rf', 'tests/elm-stuff');
-cd('tests');
-exec('elm-package install --yes');
 cd('..');
-assertTestSuccess();
 
-cd('..');
+echo('\n### Testing elm-test init on a non-empty directory\n');
+rm('-Rf', 'tmp');
+cp('-R', 'tests/init-test', 'tmp');
+cd('tmp');
+exec(elmTest + ' init --yes');
+assertTestFailure();
+
+
 rm('-Rf', 'tmp');
 
 echo('');

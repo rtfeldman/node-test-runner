@@ -3,7 +3,7 @@ module Test.Reporter.Reporter exposing (..)
 import Test.Reporter.Chalk as ChalkReporter
 import Test.Reporter.Json as JsonReporter
 import Test.Reporter.JUnit as JUnitReporter
-import Test.Reporter.Result exposing (TestResult)
+import Test.Reporter.TestResults exposing (TestResult)
 import Json.Encode as Encode exposing (Value)
 import Time exposing (Time)
 
@@ -14,11 +14,27 @@ type Report
     | JUnitReport
 
 
+fromString : String -> Result String Report
+fromString str =
+    case String.toLower str of
+        "chalk" ->
+            Ok ChalkReport
+
+        "json" ->
+            Ok JsonReport
+
+        "junit" ->
+            Ok JUnitReport
+
+        _ ->
+            Err ("Unrecognized report type: " ++ toString str)
+
+
 type alias TestReporter =
     { format : String
-    , reportBegin : { testCount : Int, initialSeed : Int } -> Maybe Value
+    , reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
     , reportComplete : TestResult -> Maybe Value
-    , reportSummary : Time -> List TestResult -> Value
+    , reportSummary : Time -> Maybe String -> List TestResult -> Value
     }
 
 

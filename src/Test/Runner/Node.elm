@@ -1,25 +1,35 @@
-module Test.Runner.Node exposing (run, runWithOptions, TestProgram)
+module Test.Runner.Node exposing (runWithOptions, TestProgram)
 
 {-| # Node Runner
 
 Runs a test and outputs its results to the console. Exit code is 0 if tests
-passed and 1 if any failed.
+passed and 2 if any failed. Returns 1 if something went wrong.
 
 @docs run, runWithOptions, TestProgram
 -}
 
-import Test.Reporter.Reporter exposing (TestReporter, Report(..), createReporter)
-import Test.Reporter.Result exposing (Failure, TestResult)
-import Test.Runner.Node.App as App
-import Test exposing (Test)
 import Dict exposing (Dict)
 import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
+import Native.RunTest
+import Platform
 import Set exposing (Set)
 import Task
+import Test exposing (Test)
+import Test.Reporter.Reporter exposing (Report(..), TestReporter, createReporter)
+import Test.Reporter.TestResults exposing (Failure, TestResult)
+import Test.Runner exposing (Runner, SeededRunners(..))
+import Test.Runner.Node.App as App
 import Time exposing (Time)
-import Tuple
-import Platform
+
+
+{-| Execute the given thunk.
+
+If it throws an exception, return a failure instead of crashing.
+-}
+runThunk : (() -> List Expectation) -> List Expectation
+runThunk =
+    Native.RunTest.runThunk
 
 
 type alias TestId =
@@ -27,13 +37,14 @@ type alias TestId =
 
 
 type alias Model =
-    { available : Dict TestId (() -> ( List String, List Expectation ))
+    { available : Dict TestId Runner
     , running : Set TestId
     , queue : List TestId
     , startTime : Time
     , finishTime : Maybe Time
     , completed : List TestResult
     , testReporter : TestReporter
+    , autoFail : Maybe String
     }
 
 
@@ -49,7 +60,7 @@ type alias Emitter msg =
 
 type Msg
     = Dispatch Time
-    | Complete TestId ( List String, List Expectation ) Time Time
+    | Complete TestId (List String) (List Expectation) Time Time
     | Finish Time
 
 
@@ -76,13 +87,15 @@ update emit msg ({ testReporter } as model) =
                     finishTime - model.startTime
 
                 summary =
-                    testReporter.reportSummary duration model.completed
+                    testReporter.reportSummary duration model.autoFail model.completed
 
                 exitCode =
-                    if failed == 0 then
-                        0
+                    if failed > 0 then
+                        2
+                    else if model.autoFail /= Nothing then
+                        3
                     else
-                        1
+                        0
 
                 data =
                     Encode.object
@@ -92,9 +105,8 @@ update emit msg ({ testReporter } as model) =
                         ]
             in
                 ( model, emit ( "FINISHED", data ) )
-                    |> warn "Attempted to Dispatch when all tests completed!"
 
-        Complete testId ( labels, expectations ) startTime endTime ->
+        Complete testId labels expectations startTime endTime ->
             let
                 result =
                     { labels = labels
@@ -132,10 +144,13 @@ update emit msg ({ testReporter } as model) =
                             ( model, Cmd.none )
                                 |> warn ("Could not find testId " ++ toString testId)
 
-                        Just run ->
+                        Just { labels, run } ->
                             let
+                                expectations =
+                                    runThunk run
+
                                 complete =
-                                    Complete testId (run ()) startTime
+                                    Complete testId labels expectations startTime
 
                                 available =
                                     Dict.remove testId model.available
@@ -157,41 +172,70 @@ dispatch =
 init :
     Emitter Msg
     -> { initialSeed : Int
+       , paths : List String
+       , fuzzRuns : Int
        , startTime : Time
-       , thunks : List (() -> ( List String, List Expectation ))
+       , runners : SeededRunners
        , report : Report
        }
     -> ( Model, Cmd Msg )
-init emit { startTime, initialSeed, thunks, report } =
+init emit { startTime, paths, fuzzRuns, initialSeed, runners, report } =
     let
-        indexedThunks : List ( TestId, () -> ( List String, List Expectation ) )
-        indexedThunks =
-            List.indexedMap (,) thunks
+        { indexedRunners, autoFail } =
+            case runners of
+                Plain runnerList ->
+                    { indexedRunners = List.indexedMap (,) runnerList
+                    , autoFail = Nothing
+                    }
+
+                Only runnerList ->
+                    { indexedRunners = List.indexedMap (,) runnerList
+                    , autoFail = Just "Test.only was used"
+                    }
+
+                Skipping runnerList ->
+                    { indexedRunners = List.indexedMap (,) runnerList
+                    , autoFail = Just "Test.skip was used"
+                    }
+
+                Invalid str ->
+                    { indexedRunners = []
+                    , autoFail = Just str
+                    }
 
         testCount =
-            List.length indexedThunks
+            List.length indexedRunners
 
         testReporter =
             createReporter report
 
         model =
-            { available = Dict.fromList indexedThunks
+            { available = Dict.fromList indexedRunners
             , running = Set.empty
-            , queue = List.map Tuple.first indexedThunks
+            , queue = List.map Tuple.first indexedRunners
             , completed = []
             , startTime = startTime
             , finishTime = Nothing
             , testReporter = testReporter
+            , autoFail = autoFail
             }
 
+        maybeReport =
+            testReporter.reportBegin
+                { paths = paths
+                , fuzzRuns = fuzzRuns
+                , testCount = testCount
+                , initialSeed = initialSeed
+                }
+
         reportCmd =
-            case (testReporter.reportBegin { testCount = testCount, initialSeed = initialSeed }) of
-                Just val ->
+            case maybeReport of
+                Just report ->
                     emit
                         ( "STARTED"
                         , Encode.object
                             [ ( "format", Encode.string testReporter.format )
-                            , ( "message", val )
+                            , ( "message", report )
                             ]
                         )
 
@@ -201,46 +245,16 @@ init emit { startTime, initialSeed, thunks, report } =
         ( model, Cmd.batch [ dispatch, reportCmd ] )
 
 
-{-| Run the test and report the results.
-
-Fuzz tests use a default run count of 100, and an initial seed based on the
-system time when the test runs begin.
--}
-run : Emitter Msg -> Test -> TestProgram
-run =
-    runWithOptions defaultOptions
-
-
-{-| The default Options for runWithOptions.
--}
-defaultOptions : Options
-defaultOptions =
-    { runs = 100
-    , seed = Nothing
-    }
-
-
-{-| The Options you can pass to runWithOptions.
--}
-type alias Options =
-    { runs : Int
-    , seed : Maybe Int
-    }
-
-
 {-| Run the test using the provided options. If `Nothing` is provided for either
 `runs` or `seed`, it will fall back on the options used in [`run`](#run).
 -}
 runWithOptions :
-    { a | runs : Int, seed : Maybe Int }
+    App.RunnerOptions
     -> Emitter Msg
     -> Test
     -> TestProgram
-runWithOptions { runs, seed } emit =
-    App.run
-        { runs = runs
-        , seed = seed
-        }
+runWithOptions options emit =
+    App.run options
         { init = init emit
         , update = update emit
         , subscriptions = \_ -> Sub.none

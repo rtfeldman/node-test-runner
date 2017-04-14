@@ -1,0 +1,20 @@
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+node_modules
+
+tmp
+
+.travis.yml
+
+examples
+tests
+README.md
+
+elm-package.json
