@@ -285,7 +285,7 @@ function compileAllTests(testFilePaths) {
 
     compileProcess.on('close', function(exitCode) {
       if (exitCode !== 0) {
-        reject("Compilation failed while attempting to build " + generatedTestFilePaths.join(" "));
+        reject("Compilation failed while attempting to build " + testFilePaths.join(" "));
       } else {
         resolve();
       }
