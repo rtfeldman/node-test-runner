@@ -294,11 +294,6 @@ function compileAllTests(testFilePaths) {
 }
 
 function generatePackageJson(filePathArgs) {
-  function infoLog(msg) {
-    if (report === "chalk") {
-      console.log(msg);
-    }
-  }
 
   // TODO we don't want to do this every single time. Instead,
   // verify that the generated elm-package.json is there, with the
@@ -465,6 +460,12 @@ if (args.report === "chalk" || args.report === "json" || args.report === "junit"
     process.exit(1);
 } else {
   report = "chalk";
+}
+
+function infoLog(msg) {
+  if (report === "chalk") {
+    console.log(msg);
+  }
 }
 
 function spawnCompiler(cmd, args, opts) {
