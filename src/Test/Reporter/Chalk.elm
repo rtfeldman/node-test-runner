@@ -210,8 +210,8 @@ reportSummary duration autoFail results =
                     ]
 
         todoStats =
-            -- Print stats for TODOs if there are any,
-            --but don't print details unless only TODOs remain
+            -- Print stats for Todos if there are any,
+            --but don't print details unless only Todos remain
             case List.length todos of
                 0 ->
                     []

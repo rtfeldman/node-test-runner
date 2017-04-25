@@ -6,7 +6,7 @@ import Test exposing (..)
 
 suite : Test
 suite =
-    Test.describe "TODO tests"
+    Test.describe "Todo tests"
         [ Test.todo "write a test here"
         ]
 

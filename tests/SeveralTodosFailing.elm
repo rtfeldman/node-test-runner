@@ -6,7 +6,7 @@ import Test exposing (..)
 
 someTodos : Test
 someTodos =
-    Test.describe "three TODO tests"
+    Test.describe "three Todo tests"
         [ Test.todo "write a test here"
         , Test.todo "write a second test here"
         , Test.todo "write a third test here"
