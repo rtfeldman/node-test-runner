@@ -20,7 +20,7 @@ function run(testFile) {
   }
 }
 
-function asserttestfailure(testfile) {
+function assertTestFailure(testfile) {
   var code = run(testfile);
   if (code < 2) {
     exec('echo ' + filename + ': error: ' + (testfile ? testfile + ': ' : '') + 'expected tests to fail >&2');
