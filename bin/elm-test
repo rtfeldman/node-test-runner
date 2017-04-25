@@ -226,9 +226,10 @@ function runElmTest() {
     return glob.sync(filename, {nocase: true, ignore: "**/elm-stuff/**", nodir: false} );
   }
 
-  // TODO on macOS if you give it a glob as its last argument, Node translates
-  // that into a list of file paths. Do we get the same result on Windows?
-  // If not, we need to do custom glob handling there.
+  // It's important to globify all the arguments.
+  // On Bash 4.x (or zsh), if you give it a glob as its last argument, Bash
+  // translates that into a list of file paths. On bash 3.x it's just a string.
+  // Ergo, globify all the arguments we receive.
   var filePathArgs = args._.length > 0 ? args._ : [];
   var globs = _.flatMap(
       (filePathArgs.length > 0
