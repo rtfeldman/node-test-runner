@@ -258,6 +258,7 @@ function runElmTest() {
 
   compileAllTests(testFilePaths).then(
     function() {
+      console.log("Runner.findTests")
       return Runner.findTests(elmRootDir, testFilePaths).then(function(runnableTests) {
         process.chdir(newElmPackageDir);
 
