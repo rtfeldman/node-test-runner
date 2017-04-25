@@ -1,4 +1,4 @@
-module FailingTests exposing (..)
+module TestsFailing exposing (..)
 
 import String
 import Expect
