@@ -20,7 +20,7 @@ function run(testFile) {
   }
 }
 
-function asserttestfailure(testfile) {
+function assertTestFailure(testfile) {
   var code = run(testfile);
   if (code < 2) {
     exec('echo ' + filename + ': error: ' + (testfile ? testfile + ': ' : '') + 'expected tests to fail >&2');
@@ -46,8 +46,8 @@ echo('### Testing elm-test on example/');
 
 cd('example');
 
-assertTestSuccess(path.join("tests", "PassingTests.*"));
-assertTestFailure(path.join("tests", "Fail*"));
+assertTestSuccess(path.join("tests", "TestsPass*"));
+assertTestFailure(path.join("tests", "TestsFail*"));
 assertTestFailure();
 
 ls("tests/*.elm").forEach(function(testToRun) {

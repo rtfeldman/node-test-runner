@@ -1,4 +1,4 @@
-module FailingTests exposing (..)
+module TestsFailing exposing (..)
 
 import String
 import Expect
@@ -18,7 +18,7 @@ ultimateTest =
 
 someTodos : Test
 someTodos =
-    Test.describe "you should not see these in normal output, because there are non-TODO failures"
+    Test.describe "you should not see these in normal output, because there are non-Todo failures"
         [ Test.todo "write a test here"
         , Test.todo "write a second test here"
         , Test.todo "write a third test here"

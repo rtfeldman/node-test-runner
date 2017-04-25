@@ -222,19 +222,21 @@ function runElmTest() {
     process.exit(0);
   }
 
+  function globify(filename) {
+    return glob.sync(filename, {nocase: true, ignore: "**/elm-stuff/**", nodir: false} );
+  }
+
   // TODO on macOS if you give it a glob as its last argument, Node translates
   // that into a list of file paths. Do we get the same result on Windows?
   // If not, we need to do custom glob handling there.
   var filePathArgs = args._.length > 0 ? args._ : [];
-  var testFilePaths = _.flatMap(
-    (filePathArgs.length > 0 ? filePathArgs :
-      glob.sync(
-        path.resolve(Runner.findNearestElmPackageDir(process.cwd())) + "/test?(s)/**/*.elm",
-        {nocase: true, ignore: "**/elm-stuff/**", nodir: false}
-      )
-    ),
-    resolveFilePath
-  );
+  var globs = _.flatMap(
+      (filePathArgs.length > 0
+        ? filePathArgs
+        : [path.resolve(Runner.findNearestElmPackageDir(process.cwd()) + "/test?(s)/**/*.elm")]
+      ),
+    globify);
+  var testFilePaths = _.flatMap(globs, resolveFilePath);
 
   if (testFilePaths.length === 0) {
     var errorMessage =
