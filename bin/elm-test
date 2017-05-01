@@ -260,6 +260,13 @@ function runElmTest() {
       return Runner.findTests(elmRootDir, testFilePaths, sourceDirs).then(function(runnableTests) {
         process.chdir(newElmPackageDir);
 
+        // Copy our elm-stuff into the generated code, to avoid re-downloading
+        // and re-building things we already just downloaded and built.
+        var newElmStuffPath = path.join(newElmPackageDir, "elm-stuff");
+
+        fs.mkdirpSync(newElmStuffPath);
+        fs.copySync(path.join(elmRootDir, "elm-stuff"), newElmStuffPath);
+
         generateAndRunTests(runnableTests, filePathArgs, generatedSrc);
       }).catch(function(err) {
         console.error(err);
