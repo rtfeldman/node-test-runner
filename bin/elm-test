@@ -254,11 +254,11 @@ function runElmTest() {
 
   process.chdir(elmRootDir);
 
-  var [newElmPackageDir, generatedSrc] = generatePackageJson(filePathArgs);
+  var [newElmPackageDir, generatedSrc, sourceDirs] = generatePackageJson(filePathArgs);
 
   compileAllTests(testFilePaths).then(
     function() {
-      return Runner.findTests(elmRootDir, testFilePaths).then(function(runnableTests) {
+      return Runner.findTests(elmRootDir, testFilePaths, sourceDirs).then(function(runnableTests) {
         process.chdir(newElmPackageDir);
 
         generateAndRunTests(runnableTests, filePathArgs, generatedSrc);
@@ -347,7 +347,7 @@ function generatePackageJson(filePathArgs) {
     generatedSrc
   );
 
-  return [newElmPackageDir, generatedSrc];
+  return [newElmPackageDir, generatedSrc, sourceDirs];
 }
 
 function generateAndRunTests(tests, filePathArgs, generatedSrc) {
