@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0",
+    "version": "4.0.0",
     "summary": "example for node-test-runner example",
     "repository": "https://github.com/elm-community/elm-test.git",
     "license": "BSD-3-Clause",
