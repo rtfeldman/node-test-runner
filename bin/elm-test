@@ -61,8 +61,8 @@ function resolveFilePath(filename) {
   } else if (fs.lstatSync(filename).isDirectory()) {
     candidates = _.flatMap(
       glob.sync(
-        filename + "/**/*.elm",
-        {nocase: true, ignore: "**/elm-stuff/**", nodir: true}
+        path.join(filename, "**", "*.elm"),
+        {nocase: true, ignore: path.join("**", "elm-stuff", "**"), nodir: true}
       ),
       resolveFilePath);
   } else {
@@ -91,9 +91,11 @@ function printUsage(str) {
 }
 
 if (args.help) {
+  var exampleGlob = path.join("tests", "**", "*.elm");
+
   [
     "init [--yes]  # Create example tests",
-    "TESTFILES # Run TESTFILES, for example tests/**/*.elm",
+    "TESTFILES # Run TESTFILES, for example " + exampleGlob,
     "[--compiler /path/to/compiler] # Run tests",
     "[--seed integer] # Run with initial fuzzer seed",
     "[--fuzz integer] # Run with each fuzz test performing this many iterations",
@@ -234,7 +236,7 @@ function runElmTest() {
   var globs = _.flatMap(
       (filePathArgs.length > 0
         ? filePathArgs
-        : [path.resolve(Runner.findNearestElmPackageDir(process.cwd()) + "/test?(s)/**/*.elm")]
+        : [path.join(path.resolve(Runner.findNearestElmPackageDir(process.cwd()), "test?(s)", "**", "*.elm"))]
       ),
     globify);
   var testFilePaths = _.flatMap(globs, resolveFilePath);
