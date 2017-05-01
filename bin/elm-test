@@ -317,6 +317,16 @@ function generatePackageJson(filePathArgs) {
   // the function that translates runtime exceptions into test failures.
   elmPackageContents["native-modules"] = true;
 
+  // TODO remove these next two conditionals once random-pcg has become core's new Random!
+  if (!elmPackageContents.dependencies) {
+    elmPackageContents.dependencies = [];
+  }
+
+  if (!elmPackageContents.dependencies["mgold/elm-random-pcg"]) {
+    // Test.Runner.Node.App needs this to create a Seed from the current timestamp
+    elmPackageContents.dependencies["mgold/elm-random-pcg"] = "4.0.2 <= v < 6.0.0";
+  }
+
   // Make all the source-directories absolute, and introduce a new one.
   var sourceDirs = (elmPackageContents["source-directories"] || []).map(function(src) {
     return path.resolve(src)
