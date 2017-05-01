@@ -159,12 +159,12 @@ function runTests (testFile) {
   var dest = path.resolve(path.join(generatedCodeDir, "elmTestOutput.js"));
 
   var compileProcess = compile([testFile], {
-      output: dest,
-      verbose: args.verbose,
-      yes: true,
-      spawn: spawnCompiler,
-      pathToMake: pathToMake,
-      warn: args.warn
+    output: dest,
+    verbose: args.verbose,
+    yes: true,
+    spawn: spawnCompiler,
+    pathToMake: pathToMake,
+    warn: args.warn
   });
 
   compileProcess.on('close', function(exitCode) {
