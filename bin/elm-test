@@ -58,8 +58,8 @@ function resolveFilePath(filename) {
   } else if (fs.lstatSync(filename).isDirectory()) {
     candidates = _.flatMap(
       glob.sync(
-        path.join(filename, "**", "*.elm"),
-        {nocase: true, ignore: path.join("**", "elm-stuff", "**"), nodir: true}
+        "/**/*.elm",
+        {root: filename, nocase: true, ignore: '/**/elm-stuff/**', nodir: true}
       ),
       resolveFilePath);
   } else {
@@ -225,17 +225,22 @@ function runElmTest() {
     return glob.sync(filename, {nocase: true, ignore: "**/elm-stuff/**", nodir: false} );
   }
 
+  function globifyWithRoot(root, filename) {
+    return glob.sync(filename, {root: root, nocase: true, ignore: "**/elm-stuff/**", nodir: false} );
+  }
+
   // It's important to globify all the arguments.
   // On Bash 4.x (or zsh), if you give it a glob as its last argument, Bash
   // translates that into a list of file paths. On bash 3.x it's just a string.
   // Ergo, globify all the arguments we receive.
   var filePathArgs = args._.length > 0 ? args._ : [];
-  var globs = _.flatMap(
-      (filePathArgs.length > 0
-        ? filePathArgs
-        : [path.join(path.resolve(Runner.findNearestElmPackageDir(process.cwd()), "test?(s)", "**", "*.elm"))]
-      ),
-    globify);
+  var globs =
+    filePathArgs.length > 0
+      ? _.flatMap(filePathArgs, globify)
+      : globifyWithRoot(
+          path.join(path.resolve(Runner.findNearestElmPackageDir(process.cwd()))),
+          "test?(s)/**/*.elm"
+      )
   var testFilePaths = _.flatMap(globs, resolveFilePath);
 
   if (testFilePaths.length === 0) {
@@ -395,7 +400,7 @@ function generateAndRunTests(tests, filePathArgs, generatedSrc) {
   }
 
   function sanitizedToString(str) {
-    return '"' + str.replace(/"/g, '\\\"') + '"';
+    return '"' + str.replace(/\\/g, '\\\\').replace(/"/g, '\\\"') + '"';
   }
 
   var fuzz = parseInt(args.fuzz);

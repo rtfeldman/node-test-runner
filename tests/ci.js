@@ -41,7 +41,8 @@ exec('npm remove --ignore-scripts=false --global ' + elmTest);
 echo(filename + ': Installing elm-test...');
 exec('npm link --ignore-scripts=false');
 
-var interfacePath = path.resolve(path.join(__dirname, "..", "bin", "elm-interface-to-json"));
+var binaryExtension = process.platform === "win32" ? ".exe" : "";
+var interfacePath = path.resolve(path.join(__dirname, "..", "bin", "elm-interface-to-json" + binaryExtension));
 if (!fs.existsSync(interfacePath)) {
   echo(filename + ': Failed because elm-interface-to-json was not found at ' + interfacePath);
   exit(1);
