@@ -13,6 +13,4 @@ tmp
 
 .travis.yml
 
-examples
-tests
 README.md
