@@ -35,7 +35,7 @@ function assertTestSuccess(testFile) {
 }
 
 echo(filename + ': Installing elm-test...');
-exec('npm link');
+exec('npm link --ignore-scripts=false');
 
 echo(filename + ': Verifying installed elm-test version...');
 exec(elmTest + ' --version');
