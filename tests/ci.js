@@ -34,8 +34,17 @@ function assertTestSuccess(testFile) {
   }
 }
 
+echo(filename + ': Uninstalling old elm-test...');
+exec('npm remove --ignore-scripts=false --global ' + elmTest);
+
 echo(filename + ': Installing elm-test...');
 exec('npm link --ignore-scripts=false');
+
+var interfacePath = path.resolve(path.join(__dirname, "..", "bin", "elm-interface-to-json"));
+if (!fs.existsSync(interfacePath)) {
+  echo(filename + ': Failed because elm-interface-to-json was not found at ' + interfacePath);
+  exit(1);
+}
 
 echo(filename + ': Verifying installed elm-test version...');
 exec(elmTest + ' --version');
