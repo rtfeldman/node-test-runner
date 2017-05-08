@@ -253,7 +253,10 @@ function runElmTest() {
 
   process.chdir(elmRootDir);
 
-  var [newElmPackageDir, generatedSrc, sourceDirs] = generatePackageJson(filePathArgs);
+  var returnValues = generatePackageJson(filePathArgs);
+  var newElmPackageDir = returnValues[0];
+  var generatedSrc = returnValues[1];
+  var sourceDirs = returnValues[2];
 
   compileAllTests(testFilePaths).then(
     function() {
