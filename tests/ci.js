@@ -35,7 +35,7 @@ function assertTestSuccess(testFile) {
 }
 
 echo(filename + ': Installing elm-test...');
-exec('npm link --verbose');
+exec('npm link');
 
 echo(filename + ': Verifying installed elm-test version...');
 exec(elmTest + ' --version');
