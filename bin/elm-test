@@ -395,7 +395,7 @@ function generateAndRunTests(tests, filePathArgs, generatedSrc) {
   }
 
   function sanitizedToString(str) {
-    return '"' + str.replace(/"/g, '\\\"') + '"';
+    return '"' + str.replace(/\\/g, '\\\\').replace(/"/g, '\\\"') + '"';
   }
 
   var fuzz = parseInt(args.fuzz);
