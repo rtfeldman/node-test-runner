@@ -63,8 +63,8 @@ echo('### Testing elm-test on example/');
 
 cd('example');
 
-assertTestSuccess(path.join("tests", "TestsPass*"));
-assertTestFailure(path.join("tests", "TestsFail*"));
+assertTestSuccess(path.join("tests", "*Pass*"));
+assertTestFailure(path.join("tests", "*Fail*"));
 assertTestFailure();
 
 ls("tests/*.elm").forEach(function(testToRun) {
