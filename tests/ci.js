@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 require('shelljs/global');
 var _ = require('lodash');
 var fs = require('fs-extra');
@@ -37,7 +35,7 @@ function assertTestSuccess(testFile) {
 }
 
 echo(filename + ': Installing elm-test...');
-exec('npm link');
+exec('npm link --verbose');
 
 echo(filename + ': Verifying installed elm-test version...');
 exec(elmTest + ' --version');
