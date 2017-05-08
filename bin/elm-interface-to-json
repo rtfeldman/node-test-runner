@@ -1,0 +1,1 @@
+echo "elm-test did not install properly! Please try reinstalling elm-test. If this problem persists, please file an issue at https://github.com/rtfeldman/node-test-runner/issues describing steps to reproduce the problem."
