@@ -2,6 +2,7 @@ require('shelljs/global');
 var _ = require('lodash');
 var fs = require('fs-extra');
 var path = require('path');
+var spawn = require('cross-spawn');
 
 var filename = __filename.replace(__dirname + '/', '');
 var elmTest = "elm-test";
@@ -43,6 +44,14 @@ exec('npm link --ignore-scripts=false');
 var interfacePath = path.resolve(path.join(__dirname, "..", "bin", "elm-interface-to-json"));
 if (!fs.existsSync(interfacePath)) {
   echo(filename + ': Failed because elm-interface-to-json was not found at ' + interfacePath);
+  exit(1);
+}
+
+echo(filename + ': Verifying installed elm-interface-to-json...');
+var interfaceExitCode = spawn.sync(interfacePath, ["--help"]).status;
+
+if (interfaceExitCode !== 0) {
+  echo(filename + ': Failed because `elm-interface-to-json` is present, but `elm-interface-to-json --help` returned with exit code ' + interfaceExitCode);
   exit(1);
 }
 
