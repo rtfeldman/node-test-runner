@@ -4,7 +4,7 @@ var fs = require('fs-extra');
 var path = require('path');
 
 var filename = __filename.replace(__dirname + '/', '');
-var elmTest = path.join(__dirname, '..', 'bin', 'elm-test');
+var elmTest = "elm-test";
 
 function run(testFile) {
   if (!testFile) {
