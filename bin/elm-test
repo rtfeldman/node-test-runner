@@ -315,7 +315,7 @@ function generatePackageJson(filePathArgs) {
   // TODO we don't want to do this every single time. Instead,
   // verify that the generated elm-package.json is there, with the
   // expected version number. Iff the version number is wrong, regenerate.
-  var newElmPackageDir = path.resolve(generatedCodeDir);
+  var newElmPackageDir = path.resolve(elmRootDir, generatedCodeDir);
   var generatedSrc = path.join(newElmPackageDir, "src");
 
   var elmPackageContents;
