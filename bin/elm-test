@@ -35,7 +35,7 @@ var compile    = require("node-elm-compiler").compile,
   Runner       = require("../lib/runner.js"),
   Init         = require("../lib/init.js");
 
-var generatedCodeDir = path.resolve(path.join("elm-stuff", "generated-code", "elm-community", "elm-test"));
+var generatedCodeDir = path.join("elm-stuff", "generated-code", "elm-community", "elm-test");
 var args = minimist(process.argv.slice(2), {
     alias: {
         'help': 'h',
@@ -157,7 +157,7 @@ var elmRootDir;
 var elmPackagePath;
 
 function runTests (testFile) {
-  var dest = path.resolve(path.join(generatedCodeDir, "elmTestOutput.js"));
+  var dest = path.join(generatedCodeDir, "elmTestOutput.js");
 
   var compileProcess = compile([testFile], {
     output: dest,
@@ -240,7 +240,7 @@ function runElmTest() {
     filePathArgs.length > 0
       ? _.flatMap(filePathArgs, globify)
       : globifyWithRoot(
-          path.join(path.resolve(Runner.findNearestElmPackageDir(process.cwd()))),
+          Runner.findNearestElmPackageDir(process.cwd()),
           "test?(s)/**/*.elm"
       )
   var testFilePaths = _.flatMap(globs, resolveFilePath);
@@ -319,7 +319,7 @@ function generatePackageJson(filePathArgs) {
   // TODO we don't want to do this every single time. Instead,
   // verify that the generated elm-package.json is there, with the
   // expected version number. Iff the version number is wrong, regenerate.
-  var newElmPackageDir = path.resolve(elmRootDir, generatedCodeDir);
+  var newElmPackageDir = path.join(elmRootDir, generatedCodeDir);
   var generatedSrc = path.join(newElmPackageDir, "src");
 
   var elmPackageContents;
@@ -346,16 +346,14 @@ function generatePackageJson(filePathArgs) {
   }
 
   // Make all the source-directories absolute, and introduce a new one.
-  var sourceDirs = (elmPackageContents["source-directories"] || []).map(function(src) {
-    return path.resolve(src)
-  });
+  var sourceDirs = (elmPackageContents["source-directories"] || []);
 
   elmPackageContents["source-directories"] = [
     // Include elm-stuff/generated-sources - since we'll be generating sources in there.
     generatedSrc,
 
     // Include node-test-runner's src directory, to allow access to the Runner code.
-    path.resolve(path.join(__dirname, "..", "src"))
+    path.join(__dirname, "..", "src")
   ].concat(sourceDirs)
 
   fs.mkdirpSync(newElmPackageDir);
