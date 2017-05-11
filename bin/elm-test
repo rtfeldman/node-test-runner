@@ -267,11 +267,7 @@ function runElmTest() {
 
   compileAllTests(testFilePaths).then(
     function() {
-      // Some combination of Travis CI and Haskell binaries need this to be relative.
-      // It's very unclear why, but otherwise you get stuff like https://travis-ci.org/rtfeldman/node-test-runner/jobs/231263698#L1424
-      var relativeRootDir = path.relative(process.cwd(), elmRootDir);
-
-      return Runner.findTests(relativeRootDir, testFilePaths, sourceDirs).then(function(runnableTests) {
+      return Runner.findTests(elmRootDir, testFilePaths, sourceDirs).then(function(runnableTests) {
         process.chdir(newElmPackageDir);
 
         // Copy our elm-stuff into the generated code, to avoid re-downloading
