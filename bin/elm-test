@@ -12,8 +12,10 @@ process.on('uncaughtException', function(error) {
     // initialization code to something like `Elm.Test.Generated.Main.fullscreen()`]"
     console.error("Error starting the node-test-runner.");
     console.error("Please check your Javascript 'elm-test' and Elm 'node-test-runner' package versions are compatible");
+    process.exit(1);
   } else {
     console.error("Unhandled exception while running the tests:", error);
+    process.exit(1);
   }
 });
 
