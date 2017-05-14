@@ -24,13 +24,7 @@ module.exports = function () {
   var executablePaths = [path.join(binariesDir, "elm-interface-to-json" + binaryExtension)];
   var errorMessage = "Unfortunately, there are no elm-test " + binVersion + " binaries available on your operating system and architecture.\n\nIf you would like to build Elm from source, there are instructions at https://github.com/elm-lang/elm-platform#build-from-source\n";
 
-  binstall(url, {path: binariesDir},
+  return binstall(url, {path: binariesDir},
     {verbose: true, verify: executablePaths, errorMessage: errorMessage}
-  ).then(function(successMessage) {
-      console.log(successMessage);
-    }, function(errorMessage) {
-      console.error(errorMessage);
-      process.exit(1);
-    }
   );
 };
