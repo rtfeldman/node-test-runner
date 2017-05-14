@@ -193,10 +193,10 @@ reportSummary duration autoFail results =
                 ( Nothing, 0, numTodos ) ->
                     Err ( "yellow", "TEST RUN INCOMPLETE", " because there are " ++ toString numTodos ++ " TODOs remaining" )
 
-                ( Just failure, _, _ ) ->
+                ( Just failure, 0, _ ) ->
                     Err ( "yellow", "TEST RUN INCOMPLETE", " because " ++ failure )
 
-                ( Nothing, _, _ ) ->
+                ( _, _, _ ) ->
                     Err ( "red", "TEST RUN FAILED", "" )
 
         headline =
