@@ -8,7 +8,7 @@
   },
   "scripts": {
     "install": "node install.js",
-    "test": "./node_modules/mocha/bin/mocha tests"
+    "test": "node tests/ci.js && mocha tests"
   },
   "repository": {
     "type": "git",
