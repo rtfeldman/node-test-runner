@@ -4,8 +4,7 @@ const fs = require('fs-extra');
 
 describe("finder", function() {
   it("should initialize okay twice in a row", done => {
-    finder.readExposing("./tests/SeveralFailingWithComments.elm").then((exposedFunctions) =>{
-      console.log(exposedFunctions)
+    finder.readExposing(__dirname + "/SeveralFailingWithComments.elm").then((exposedFunctions) =>{
       assert.deepEqual(exposedFunctions, [ 
         'withoutNums',
         'testWithoutNums',
