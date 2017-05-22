@@ -21,49 +21,49 @@ describe("finder", function() {
 
 describe("strip comments", () => {
   it("should strip a comment on the same line", done => {
-    let stripped = finder.stripComments(`module A exposing {- hello -} (f)`, false);
+    var stripped = finder.stripComments(`module A exposing {- hello -} (f)`, false);
     assert.equal(stripped.line, "module A exposing  (f)");
     done();
   });
 
   it("should strip multiple comments on the same line", done => {
-    let stripped = finder.stripComments(`module A {- woop woop -} exposing {- hello -} (f)`, false);
+    var stripped = finder.stripComments(`module A {- woop woop -} exposing {- hello -} (f)`, false);
     assert.equal(stripped.line, "module A  exposing  (f)");
     done();
   });
 
   it("should return everything up to the end of a comment", done => {
-    let stripped = finder.stripComments(`module A exposing {- (f)`, false);
+    var stripped = finder.stripComments(`module A exposing {- (f)`, false);
     assert.equal(stripped.line, "module A exposing ");
     done();
   });
 
   it("should return everything after the end of a comment", done => {
-    let stripped = finder.stripComments(`module A exposing -} (f)`, true);
+    var stripped = finder.stripComments(`module A exposing -} (f)`, true);
     assert.equal(stripped.line, " (f)");
     done();
   });
 
   it("should return nothing if in a comment and no comments inside", done => {
-    let stripped = finder.stripComments(`module A exposing (f)`, true);
+    var stripped = finder.stripComments(`module A exposing (f)`, true);
     assert.equal(stripped.line, "");
     done();
   });
 
   it("should return nothing if line starts with single-line comment", done => {
-    let stripped = finder.stripComments(`--module A exposing (f)`, false);
+    var stripped = finder.stripComments(`--module A exposing (f)`, false);
     assert.equal(stripped.line, "");
     done();
   });
 
   it("should return nothing if line starts with single-line comment and in comment", done => {
-    let stripped = finder.stripComments(`--module A exposing (f)`, true);
+    var stripped = finder.stripComments(`--module A exposing (f)`, true);
     assert.equal(stripped.line, "");
     done();
   });
 
   it("should return parts if line ends with single-line comment", done => {
-    let stripped = finder.stripComments(`module A exposing --(f)`, false);
+    var stripped = finder.stripComments(`module A exposing --(f)`, false);
     assert.equal(stripped.line, "module A exposing ");
     done();
   });
@@ -72,13 +72,13 @@ describe("strip comments", () => {
 
 describe("Parser", () => {
   it("should only read up to imports", done => {
-    let lines = [
+    var lines = [
       "module A exposing (..)",
       "import Html",
       "f = 4"
     ];
 
-    let parser = new finder.Parser();
+    var parser = new finder.Parser();
 
     lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
     assert.equal(parser.isDoneReading(), true);
@@ -87,7 +87,7 @@ describe("Parser", () => {
   });
 
   it("should list all exposed functions", done => {
-    let lines = [
+    var lines = [
       "module A exposing (hello, {- just a little comment -} goodbye)",
       "import Html",
       "-- hello",
@@ -95,7 +95,7 @@ describe("Parser", () => {
       "goodbye = 5"
     ];
 
-    let parser = new finder.Parser();
+    var parser = new finder.Parser();
 
     lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
     assert.equal(parser.isDoneReading(), true);
@@ -104,14 +104,14 @@ describe("Parser", () => {
   });
 
   it("should not get by confused by a missing module decl", done => {
-    let lines = [
+    var lines = [
       "import Html",
       "-- hello",
       "hello = 4",
       "goodbye = 5"
     ];
 
-    let parser = new finder.Parser();
+    var parser = new finder.Parser();
 
     lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
     assert.equal(parser.isDoneReading(), true);
@@ -121,7 +121,7 @@ describe("Parser", () => {
 
 
   it("should not get by confused by constructors being exposed", done => {
-    let lines = [
+    var lines = [
       "module A exposing (Foo(..), Bar(G, F), goat)",
       "import Html",
       "-- hello",
@@ -129,7 +129,7 @@ describe("Parser", () => {
       "goodbye = 5"
     ];
 
-    let parser = new finder.Parser();
+    var parser = new finder.Parser();
 
     lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
     assert.equal(parser.isDoneReading(), true);
@@ -138,7 +138,7 @@ describe("Parser", () => {
   });
 
   it("should not get by confused by multinline comments", done => {
-    let lines = [
+    var lines = [
       "module A exposing (Foo(..),",
       " Bar(G,",
       "-- something",
@@ -150,7 +150,7 @@ describe("Parser", () => {
       "goodbye = 5"
     ];
 
-    let parser = new finder.Parser();
+    var parser = new finder.Parser();
 
     lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
     assert.equal(parser.isDoneReading(), true);
@@ -159,7 +159,7 @@ describe("Parser", () => {
   });
 
   it("should not get by confused by lacking exposing", done => {
-    let lines = [
+    var lines = [
       "module A",
       " Bar(G,",
       "-- something",
@@ -171,7 +171,7 @@ describe("Parser", () => {
       "goodbye = 5"
     ];
 
-    let parser = new finder.Parser();
+    var parser = new finder.Parser();
 
     lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
     assert.equal(parser.isDoneReading(), true);
@@ -180,7 +180,7 @@ describe("Parser", () => {
   });
 
   it("should not get by confused by exposing across multiple lines", done => {
-    let lines = [
+    var lines = [
       "module",
       "Abananan",
       "exposing (",
@@ -194,7 +194,7 @@ describe("Parser", () => {
       "goodbye = 5"
     ];
 
-    let parser = new finder.Parser();
+    var parser = new finder.Parser();
 
     lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
     assert.equal(parser.isDoneReading(), true);
