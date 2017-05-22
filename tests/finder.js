@@ -157,4 +157,48 @@ describe("Parser", () => {
     assert.deepEqual(parser.getExposing(), [ 'goat' ]);
     done();
   });
+
+  it("should not get by confused by lacking exposing", done => {
+    let lines = [
+      "module A",
+      " Bar(G,",
+      "-- something",
+      "F),", 
+      "goat)",
+      "import Html",
+      "-- hello",
+      "hello = 4",
+      "goodbye = 5"
+    ];
+
+    let parser = new finder.Parser();
+
+    lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
+    assert.equal(parser.isDoneReading(), true);
+    assert.deepEqual(parser.getExposing(), [ ]);
+    done();
+  });
+
+  it("should not get by confused by exposing across multiple lines", done => {
+    let lines = [
+      "module",
+      "Abananan",
+      "exposing (",
+      " Bar(G,",
+      "-- something",
+      "F),", 
+      "goat))",
+      "import Html",
+      "-- hello",
+      "hello = 4",
+      "goodbye = 5"
+    ];
+
+    let parser = new finder.Parser();
+
+    lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
+    assert.equal(parser.isDoneReading(), true);
+    assert.deepEqual(parser.getExposing(), [ ]);
+    done();
+  });
 });
