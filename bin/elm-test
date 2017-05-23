@@ -75,6 +75,7 @@ function resolveFilePath(filename) {
 }
 
 var pathToMake = undefined;
+var originalDir = process.cwd();
 
 if (args.compiler !== undefined) {
   pathToMake = args.compiler;
@@ -236,13 +237,18 @@ function runElmTest() {
   // translates that into a list of file paths. On bash 3.x it's just a string.
   // Ergo, globify all the arguments we receive.
   var filePathArgs = args._.length > 0 ? args._ : [];
-  var globs =
-    filePathArgs.length > 0
-      ? _.flatMap(filePathArgs, globify)
-      : globifyWithRoot(
-          path.join(path.resolve(Runner.findNearestElmPackageDir(process.cwd()))),
-          "test?(s)/**/*.elm"
-      )
+  var getGlobs;
+
+  if (filePathArgs.length > 0) {
+    getGlobs = function() { return _.flatMap(filePathArgs, globify); };
+  } else {
+    var root = path.join(path.resolve(Runner.findNearestElmPackageDir(process.cwd())));
+
+    getGlobs = function() {
+      return globifyWithRoot(root, "test?(s)/**/*.elm");
+    };
+  }
+  var globs = getGlobs();
   var testFilePaths = _.flatMap(globs, resolveFilePath);
 
   if (testFilePaths.length === 0) {
@@ -279,7 +285,7 @@ function runElmTest() {
           fs.copySync(path.join(elmRootDir, "elm-stuff"), newElmStuffPath);
         }
 
-        generateAndRunTests(runnableTests, filePathArgs, generatedSrc);
+        generateAndRunTests(runnableTests, filePathArgs, generatedSrc, getGlobs);
       }).catch(function(err) {
         console.error(err);
         process.exit(1);
@@ -378,7 +384,7 @@ function generatePackageJson(filePathArgs) {
   return [newElmPackageDir, generatedSrc, sourceDirs];
 }
 
-function generateAndRunTests(tests, filePathArgs, generatedSrc) {
+function generateAndRunTests(tests, filePathArgs, generatedSrc, getGlobs) {
   // Building things like:
   //
   // import MyTests
@@ -457,14 +463,24 @@ function generateAndRunTests(tests, filePathArgs, generatedSrc) {
   if (args.watch) {
     infoLog('Running in watch mode');
 
-    var watchedPaths = fs.readJsonSync(elmPackagePath, 'utf8')['source-directories'].map(function(filepath) {
-      var basepath =
-        path.isAbsolute(filepath)
-          ? filepath
-          : path.resolve(path.dirname(elmPackagePath), filepath);
+    function resolveWatchPath(basedir) {
+      return function(filepath) {
+        var basepath =
+          path.isAbsolute(filepath)
+            ? filepath
+            : path.resolve(basedir, filepath);
 
-      return basepath + '/**/*.elm';
-    });
+        return basepath + '/**/*.elm';
+      };
+    }
+
+    var watchedSourcePaths = fs.readJsonSync(path.join(originalDir, "elm-package.json"), 'utf8')['source-directories'].map(
+      resolveWatchPath(originalDir)
+    );
+    var watchedTestPaths = fs.readJsonSync(elmPackagePath, 'utf8')['source-directories'].map(
+      resolveWatchPath(path.dirname(elmPackagePath))
+    );
+    var watchedPaths = watchedSourcePaths.concat(watchedTestPaths);
 
     var watcher = chokidar.watch(watchedPaths, {ignoreInitial: true, ignored: /(\/|^)elm-stuff(\/|$)/});
 
