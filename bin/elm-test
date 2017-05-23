@@ -457,7 +457,15 @@ function generateAndRunTests(tests, filePathArgs, generatedSrc) {
   if (args.watch) {
     infoLog('Running in watch mode');
 
-    var watchedPaths = fs.readJsonSync(elmPackagePath, 'utf8')['source-directories'].map(function(path) { return path + '/**/*.elm'; });
+    var watchedPaths = fs.readJsonSync(elmPackagePath, 'utf8')['source-directories'].map(function(filepath) {
+      var basepath =
+        path.isAbsolute(filepath)
+          ? filepath
+          : path.resolve(path.dirname(elmPackagePath), filepath);
+
+      return basepath + '/**/*.elm';
+    });
+
     var watcher = chokidar.watch(watchedPaths, {ignoreInitial: true, ignored: /(\/|^)elm-stuff(\/|$)/});
 
     var eventNameMap = {
