@@ -5,11 +5,11 @@ const fs = require('fs-extra');
 describe("finder", function() {
   it("should initialize okay twice in a row", done => {
     finder.readExposing(__dirname + "/SeveralFailingWithComments.elm").then((exposedFunctions) =>{
-      assert.deepEqual(exposedFunctions, [ 
+      assert.deepEqual(exposedFunctions, [
         'withoutNums',
         'testWithoutNums',
         'testExpectations',
-        'testFailingFuzzTests' 
+        'testFailingFuzzTests'
       ]);
       done();
     }).catch((err)=>{
@@ -103,7 +103,7 @@ describe("Parser", () => {
     done();
   });
 
-  it("should not get by confused by a missing module decl", done => {
+  it("should not get confused by a missing module decl", done => {
     var lines = [
       "import Html",
       "-- hello",
@@ -120,7 +120,7 @@ describe("Parser", () => {
   });
 
 
-  it("should not get by confused by constructors being exposed", done => {
+  it("should not get confused by constructors being exposed", done => {
     var lines = [
       "module A exposing (Foo(..), Bar(G, F), goat)",
       "import Html",
@@ -137,12 +137,12 @@ describe("Parser", () => {
     done();
   });
 
-  it("should not get by confused by multinline comments", done => {
+  it("should not get confused by multiline comments", done => {
     var lines = [
       "module A exposing (Foo(..),",
       " Bar(G,",
       "-- something",
-      "F),", 
+      "F),",
       "goat)",
       "import Html",
       "-- hello",
@@ -158,12 +158,35 @@ describe("Parser", () => {
     done();
   });
 
-  it("should not get by confused by lacking exposing", done => {
+  it("should not get confused by lacking exposing", done => {
     var lines = [
       "module A",
       " Bar(G,",
       "-- something",
-      "F),", 
+      "F),",
+      "goat)",
+      "import Html",
+      "-- hello",
+      "hello = 4",
+      "goodbye = 5"
+    ];
+
+    var parser = new finder.Parser();
+
+    lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
+    assert.equal(parser.isDoneReading(), false);
+    assert.deepEqual(parser.getExposing(), [ ]);
+    done();
+  });
+
+  it("should not get confused by exposing across multiple lines", done => {
+    var lines = [
+      "module",
+      "Abananan",
+      "exposing (",
+      " Bar(G,",
+      "-- something",
+      "F),",
       "goat)",
       "import Html",
       "-- hello",
@@ -175,30 +198,26 @@ describe("Parser", () => {
 
     lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
     assert.equal(parser.isDoneReading(), true);
-    assert.deepEqual(parser.getExposing(), [ ]);
+    assert.deepEqual(parser.getExposing(), [ 'goat' ]);
     done();
   });
 
-  it("should not get by confused by exposing across multiple lines", done => {
-    var lines = [
-      "module",
-      "Abananan",
-      "exposing (",
-      " Bar(G,",
-      "-- something",
-      "F),", 
-      "goat))",
-      "import Html",
-      "-- hello",
-      "hello = 4",
-      "goodbye = 5"
-    ];
+  it("should not be confused by exposing across multiple lines like #138", done => {
+      var lines = [
+        "module A",
+        "  exposing",
+        "    ( a",
+        "    , b",
+        "    , c",
+        "    )",
+        ""
+        ];
 
-    var parser = new finder.Parser();
+        var parser = new finder.Parser();
 
-    lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
-    assert.equal(parser.isDoneReading(), true);
-    assert.deepEqual(parser.getExposing(), [ ]);
-    done();
+        lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
+        assert.equal(parser.isDoneReading(), true);
+        assert.deepEqual(parser.getExposing(), [ 'a', 'b', 'c' ]);
+        done();
   });
 });
