@@ -214,6 +214,14 @@ function checkNodeVersion() {
   }
 }
 
+function globify(filename) {
+  return glob.sync(filename, {nocase: true, ignore: "**/elm-stuff/**", nodir: false} );
+}
+
+function globifyWithRoot(root, filename) {
+  return glob.sync(filename, {root: root, nocase: true, ignore: "**/elm-stuff/**", nodir: false} );
+}
+
 function runElmTest() {
   checkNodeVersion();
 
@@ -221,14 +229,6 @@ function runElmTest() {
     Init.init(args);
 
     process.exit(0);
-  }
-
-  function globify(filename) {
-    return glob.sync(filename, {nocase: true, ignore: "**/elm-stuff/**", nodir: false} );
-  }
-
-  function globifyWithRoot(root, filename) {
-    return glob.sync(filename, {root: root, nocase: true, ignore: "**/elm-stuff/**", nodir: false} );
   }
 
   // It's important to globify all the arguments.
