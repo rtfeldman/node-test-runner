@@ -75,7 +75,6 @@ function resolveFilePath(filename) {
 }
 
 var pathToMake = undefined;
-var originalDir = process.cwd();
 
 if (args.compiler !== undefined) {
   pathToMake = args.compiler;
@@ -154,6 +153,7 @@ if (args["add-dependencies"]) {
   }
 }
 
+var originalDir;
 var elmRootDir;
 var elmPackagePath;
 
@@ -255,14 +255,20 @@ function runElmTest() {
     var errorMessage =
       filePathArgs.length > 0
         ? "No tests found for the file pattern \"" + filePathArgs + "\"\n\nMaybe try running elm-test with no arguments?"
-        : "No tests found in the test/ (or tests/) directory of your project's root directory.\n\nTo generate some initial tests to get things going, run elm-test init"
+        : "No tests found in the test/ (or tests/) directory.\n\nNOTE: Make sure you're running elm-test from your project's root directory, where its elm-package.json lives.\n\nTo generate some initial tests to get things going, run elm-test init"
 
     console.error(errorMessage);
     process.exit(1);
   }
 
-  elmRootDir = Runner.findNearestElmPackageDir(testFilePaths);
+  elmRootDir = path.resolve(Runner.findNearestElmPackageDir(testFilePaths));
+  originalDir = path.resolve(Runner.findNearestElmPackageDir(path.resolve(elmRootDir, "..")));
   elmPackagePath = path.resolve(path.join(elmRootDir, "elm-package.json"));
+
+  if (elmRootDir === originalDir) {
+    console.error("It looks like you're running elm-test from within your tests directory.\n\nPlease run elm-test from your project's root directory, where its elm-package.json lives!")
+    process.exit(1);
+  }
 
   process.chdir(elmRootDir);
 
