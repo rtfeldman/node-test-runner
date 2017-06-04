@@ -429,7 +429,7 @@ function generateAndRunTests(tests, filePathArgs, generatedSrc, getGlobs) {
     {
       fuzz : isNaN(fuzz) ? "Nothing" : "Just " + fuzz,
       seed : isNaN(seed) ? "Nothing" : "Just " + seed,
-      reporter : typeof args.reporter === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.reporter),
+      reporter : typeof args.report === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.report),
       paths : filePathArgs.map(sanitizedToString).join(",")
     }
 
