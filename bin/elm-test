@@ -34,6 +34,7 @@ var compile    = require("node-elm-compiler").compile,
   chokidar     = require("chokidar"),
   Runner       = require("../lib/runner.js"),
   Init         = require("../lib/init.js");
+  child_process = require("child_process");
 
 var generatedCodeDir = path.resolve(path.join("elm-stuff", "generated-code", "elm-community", "elm-test"));
 var args = minimist(process.argv.slice(2), {
@@ -227,7 +228,10 @@ function runElmTest() {
   checkNodeVersion();
 
   if (args._[0] == "init") {
-    Init.init(args);
+    var cmdArgs = Init.init(args);
+    var cmd = ["elm-package", "install", "--yes"].concat(cmdArgs).join(" ");
+
+    child_process.execSync(cmd, { stdio: 'inherit', cwd: Init.elmPackageDir});
 
     process.exit(0);
   }
