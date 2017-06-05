@@ -167,7 +167,8 @@ function runTests (testFile) {
     yes: true,
     spawn: spawnCompiler,
     pathToMake: pathToMake,
-    warn: args.warn
+    warn: args.warn,
+    processOpts: processOptsForReporter(args.report),
   });
 
   compileProcess.on('close', function(exitCode) {
@@ -307,6 +308,24 @@ function runElmTest() {
   });
 }
 
+function isMachineReadableReporter(reporter) {
+  switch (reporter) {
+    case 'json':
+    case 'junit':
+      return true;
+    default:
+      return false;
+  }
+}
+
+function processOptsForReporter(reporter) {
+  if (isMachineReadableReporter) {
+    return {stdio: ['ignore', 'ignore', 'pipe']};
+  } else {
+    return {};
+  }
+}
+
 // This compiles all the tests so that we generate *.elmi files for them,
 // which we can then read to determine which tests need to be run.
 function compileAllTests(testFilePaths) {
@@ -317,7 +336,8 @@ function compileAllTests(testFilePaths) {
         yes: true,
         spawn: spawnCompiler,
         pathToMake: pathToMake,
-        warn: args.warn
+        warn: args.warn,
+        processOpts: processOptsForReporter(args.report),
     });
 
     compileProcess.on('close', function(exitCode) {
