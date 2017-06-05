@@ -40,7 +40,6 @@ var generatedCodeDir = path.resolve(path.join("elm-stuff", "generated-code", "el
 var args = minimist(process.argv.slice(2), {
     alias: {
         'help': 'h',
-        'yes': 'y',
         'fuzz': 'f',
         'seed': 's',
         'compiler': 'c',
@@ -48,7 +47,7 @@ var args = minimist(process.argv.slice(2), {
         'report': 'r',
         'watch': 'w'
     },
-    boolean: ['yes', 'warn', 'version', 'help', 'watch'],
+    boolean: ['warn', 'version', 'help', 'watch'],
     string: ['add-dependencies', 'compiler', 'seed', 'report', 'fuzz']
 });
 
@@ -94,7 +93,7 @@ if (args.help) {
   var exampleGlob = path.join("tests", "**", "*.elm");
 
   [
-    "init [--yes]  # Create example tests",
+    "init # Create example tests",
     "TESTFILES # Run TESTFILES, for example " + exampleGlob,
     "[--compiler /path/to/compiler] # Run tests",
     "[--seed integer] # Run with initial fuzzer seed",
