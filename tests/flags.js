@@ -52,7 +52,7 @@ describe('flags', () => {
       const runResult = shell.exec('elm-test --help', {silent: true});
       // Checking against a fixture is brittle here
       // For now, check that the output is non-empty.
-      console.log(runResult.stdout.length > 0);
+      assert.ok(runResult.stdout.length > 0);
     });
 
     it('Should exit indicating failure', () => {
@@ -77,7 +77,7 @@ describe('flags', () => {
       });
 
       assert.ok(linesReceived > 0);
-    });
+    }).timeout(10000);
 
     it('Should be able to report junit xml', (done) => {
       const runResult = shell.exec('elm-test --report=junit tests/OnePassing.elm', {silent: true});
