@@ -92,4 +92,32 @@ describe('flags', () => {
       });
     }).timeout(60000);
   });
+
+  describe('--seed', () => {
+    it('Should use and, thus, show the proper seed in the JSON report', () => {
+      const runResult = shell.exec('elm-test --report=json --seed=12345 tests/OnePassing.elm', {silent: true});
+
+      const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
+
+      assert.equal('12345', firstOutput.initialSeed);
+    }).timeout(60000);
+  });
+
+  describe('--fuzz', () => {
+    it('Should default to 100', () => {
+      const runResult = shell.exec('elm-test --report=json tests/OnePassing.elm', {silent: true});
+
+      const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
+
+      assert.equal('100', firstOutput.fuzzRuns);
+    }).timeout(60000);
+
+    it('Should use the provided value', () => {
+      const runResult = shell.exec('elm-test --fuzz=5 --report=json tests/OnePassing.elm', {silent: true});
+
+      const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
+
+      assert.equal('5', firstOutput.fuzzRuns);
+    }).timeout(60000);
+  });
 });
