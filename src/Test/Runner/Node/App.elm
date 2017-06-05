@@ -1,4 +1,4 @@
-module Test.Runner.Node.App exposing (run, Model, Msg, RunnerOptions)
+module Test.Runner.Node.App exposing (Model, Msg, RunnerOptions, run)
 
 {-| Test runner for a Node app
 
@@ -6,16 +6,14 @@ module Test.Runner.Node.App exposing (run, Model, Msg, RunnerOptions)
 
 -}
 
-import Test.Reporter.Reporter as Reporter exposing (Report(ChalkReport))
-import Test exposing (Test)
-import Test.Runner exposing (Runner, SeededRunners)
-import Task
-import Random.Pcg
-import Time exposing (Time)
-import Json.Decode as Decode exposing (Value, Decoder)
-import String
-import Tuple
+import Json.Decode as Decode exposing (Value)
 import Platform
+import Random.Pcg
+import Task
+import Test exposing (Test)
+import Test.Reporter.Reporter as Reporter exposing (Report(ChalkReport))
+import Test.Runner exposing (Runner, SeededRunners)
+import Time exposing (Time)
 
 
 type Msg subMsg
@@ -131,54 +129,6 @@ subscriptions subs model =
 
         Initialized _ subModel ->
             Sub.map SubMsg (subs subModel)
-
-
-intFromString : Decoder Int
-intFromString =
-    Decode.string
-        |> Decode.andThen
-            (\str ->
-                case String.toInt str of
-                    Ok num ->
-                        Decode.succeed num
-
-                    Err err ->
-                        Decode.fail err
-            )
-
-
-decodeReport : Decoder String -> Decoder Reporter.Report
-decodeReport decoder =
-    decoder
-        |> Decode.andThen
-            (\str ->
-                case str of
-                    "json" ->
-                        Decode.succeed Reporter.JsonReport
-
-                    "chalk" ->
-                        Decode.succeed Reporter.ChalkReport
-
-                    "junit" ->
-                        Decode.succeed Reporter.JUnitReport
-
-                    _ ->
-                        Decode.fail <| "Invalid --report argument: " ++ str
-            )
-
-
-decodeInitArgs : Value -> Result String ( Maybe Int, List String, Reporter.Report )
-decodeInitArgs args =
-    args
-        |> Decode.decodeValue
-            (Decode.oneOf
-                [ Decode.null ( Nothing, [], ChalkReport )
-                , Decode.map3 (,,)
-                    (Decode.field "seed" (Decode.nullable intFromString))
-                    (Decode.field "paths" (Decode.list Decode.string))
-                    (Decode.field "report" (decodeReport Decode.string))
-                ]
-            )
 
 
 defaultRunCount : Int
