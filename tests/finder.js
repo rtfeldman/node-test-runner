@@ -1,6 +1,5 @@
 const assert = require("assert");
 const finder = require("../lib/finder.js");
-const fs = require('fs-extra');
 
 describe("finder", function() {
   it("should initialize okay twice in a row", done => {
