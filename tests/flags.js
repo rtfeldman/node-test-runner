@@ -128,4 +128,28 @@ describe('flags', () => {
       assert.notEqual(0, runResult.code);
     });
   });
+
+  describe('--watch', () => {
+    it('Should re-run tests if a test file is touched', (done) => {
+      const child = shell.exec(
+        'elm-test --report=json --watch tests/OnePassing.elm',
+        {silent: true, async: true}
+      );
+
+      let hasRetriggered = false;
+
+      child.stdout.on('data', (line) => {
+        const parsedLine = JSON.parse(line);
+        if (parsedLine.event === 'runComplete' && !hasRetriggered) {
+          shell.touch('tests/OnePassing.elm');
+          hasRetriggered = true;
+        }
+
+        if (parsedLine.event == 'runComplete' && hasRetriggered) {
+          child.kill();
+          done();
+        }
+      });
+    }).timeout(60000);
+  });
 });
