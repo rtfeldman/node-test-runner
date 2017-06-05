@@ -11,12 +11,18 @@ npm install -g elm-test
 ## Usage
 
 ```bash
-elm-test init    # Adds the elm-test dependency and creates Main.elm and Tests.elm
+elm-test init    # Adds the elm-test dependency and creates a suitable folder structure
 elm-test         # Runs all exposed Test values in *.elm files in the test/ and tests/ directories
 elm-test Foo.elm # Runs all exposed Test values in Foo.elm
 ```
 
 ### Configuration
+
+#### `init`
+
+Initializes the recommended project setup for testable Elm. It will create a `tests` folder with an `elm-package.json` based on your project's main `elm-package.json` with `elm-test` dependencies added, add `elm-stuff` to a `.gitignore` file and make your `elm-package.json` point to the `src/` folder.
+
+#### `--compiler`
 
 The `--compiler` flag can be used to use a version of the Elm compiler that
 has not been installed globally.
@@ -26,6 +32,62 @@ npm install elm
 elm-test --compiler ./node_modules/.bin/elm-make
 ```
 
+#### `--seed`
+
+Allow running the tests with a predefined seed, rather than a randomly generated seed. This is especially helpful when trying to reproduce a failing fuzz-test.
+
+```
+elm-test --seed=12345
+```
+
+#### `--fuzz`
+
+Define how many times a fuzzer should run. Defaults to `100`
+
+```
+elm-test --fuzz=500
+```
+
+#### `--add-dependencies`
+
+Utility to add missing dependencies from the `elm-package.json` in the current directory to a target `elm-package.json` file. Helpful after adding a dependency to your application.
+
+```
+elm-test --add-dependencies tests/elm-package.json
+```
+
+#### `--report`
+
+Specify which reporter to use for reporting your test results. Valid options are:
+
+- `chalk` (default): pretty, human readable formatted output
+- `json`: every event will be written to stdout as a json-encoded object
+- `junit`: junit-compatible xml will be written to stdout
+
+```
+elm-test --report=json
+```
+
+#### `--version`
+
+Displays the version of the current elm-test.
+
+```
+$ elm-test --version
+0.18.4
+```
+
+#### `--watch`
+
+Starts the runner in watch-mode. Upon changing any currently watched tests, your tests will be rerun.
+
+```
+elm-test --watch
+```
+
+#### `--help`
+
+Displays all the available options and commands.
 
 ### Travis CI
 
@@ -33,6 +95,9 @@ If you want to run your tests on Travis CI, here's a good starter `.travis.yml`:
 
 ```yml
 sudo: false
+
+language: node_js
+node_js: node
 
 cache:
   directories:
@@ -42,16 +107,12 @@ cache:
 os:
   - linux
 
-env:
-  matrix:
-    - ELM_VERSION=0.18.0 TARGET_NODE_VERSION=node
+env: ELM_VERSION=0.18.0
 
 before_install:
   - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
 
 install:
-  - nvm install $TARGET_NODE_VERSION
-  - nvm use $TARGET_NODE_VERSION
   - node --version
   - npm --version
   - npm install -g elm@$ELM_VERSION elm-test

@@ -98,7 +98,7 @@ cd('tmp');
 exec(elmTest + ' init --yes');
 assertTestFailure();
 
-
+cd('..');
 rm('-Rf', 'tmp');
 
 echo('');

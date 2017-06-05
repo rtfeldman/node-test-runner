@@ -40,7 +40,6 @@ var generatedCodeDir = path.resolve(path.join("elm-stuff", "generated-code", "el
 var args = minimist(process.argv.slice(2), {
     alias: {
         'help': 'h',
-        'yes': 'y',
         'fuzz': 'f',
         'seed': 's',
         'compiler': 'c',
@@ -48,7 +47,7 @@ var args = minimist(process.argv.slice(2), {
         'report': 'r',
         'watch': 'w'
     },
-    boolean: ['yes', 'warn', 'version', 'help', 'watch'],
+    boolean: ['warn', 'version', 'help', 'watch'],
     string: ['add-dependencies', 'compiler', 'seed', 'report', 'fuzz']
 });
 
@@ -94,7 +93,7 @@ if (args.help) {
   var exampleGlob = path.join("tests", "**", "*.elm");
 
   [
-    "init [--yes]  # Create example tests",
+    "init # Create example tests",
     "TESTFILES # Run TESTFILES, for example " + exampleGlob,
     "[--compiler /path/to/compiler] # Run tests",
     "[--seed integer] # Run with initial fuzzer seed",
@@ -167,7 +166,8 @@ function runTests (testFile) {
     yes: true,
     spawn: spawnCompiler,
     pathToMake: pathToMake,
-    warn: args.warn
+    warn: args.warn,
+    processOpts: processOptsForReporter(args.report),
   });
 
   compileProcess.on('close', function(exitCode) {
@@ -307,6 +307,24 @@ function runElmTest() {
   });
 }
 
+function isMachineReadableReporter(reporter) {
+  switch (reporter) {
+    case 'json':
+    case 'junit':
+      return true;
+    default:
+      return false;
+  }
+}
+
+function processOptsForReporter(reporter) {
+  if (isMachineReadableReporter) {
+    return {stdio: ['ignore', 'ignore', 'pipe']};
+  } else {
+    return {};
+  }
+}
+
 // This compiles all the tests so that we generate *.elmi files for them,
 // which we can then read to determine which tests need to be run.
 function compileAllTests(testFilePaths) {
@@ -317,7 +335,8 @@ function compileAllTests(testFilePaths) {
         yes: true,
         spawn: spawnCompiler,
         pathToMake: pathToMake,
-        warn: args.warn
+        warn: args.warn,
+        processOpts: processOptsForReporter(args.report),
     });
 
     compileProcess.on('close', function(exitCode) {
@@ -429,7 +448,7 @@ function generateAndRunTests(tests, filePathArgs, generatedSrc, getGlobs) {
     {
       fuzz : isNaN(fuzz) ? "Nothing" : "Just " + fuzz,
       seed : isNaN(seed) ? "Nothing" : "Just " + seed,
-      reporter : typeof args.reporter === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.reporter),
+      reporter : typeof args.report === "undefined" ? "Nothing" : "Just " + sanitizedToString(args.report),
       paths : filePathArgs.map(sanitizedToString).join(",")
     }
 
