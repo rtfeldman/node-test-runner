@@ -79,7 +79,9 @@ $ elm-test --version
 
 #### `--watch`
 
-Starts the runner in watch-mode. Upon changing any currently watched tests, your tests will be rerun.
+Starts the runner in watch mode. Upon changing any currently watched source
+files (either in your your source-directories or in your tests'
+source-directories), your tests will get rerun.
 
 ```
 elm-test --watch
