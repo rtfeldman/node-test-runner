@@ -90,6 +90,6 @@ describe('flags', () => {
         assert.ok(data);
         done();
       });
-    });
+    }).timeout(60000);
   });
 });
