@@ -120,4 +120,12 @@ describe('flags', () => {
       assert.equal('5', firstOutput.fuzzRuns);
     }).timeout(60000);
   });
+
+  describe('--compiler', () => {
+    it('Should fail if the given compiler can\'t be executed', () => {
+      const runResult = shell.exec('elm-test --compiler=foobar tests/OnePassing.elm', {silent: true});
+
+      assert.notEqual(0, runResult.code);
+    });
+  });
 });
