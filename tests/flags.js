@@ -1,3 +1,5 @@
+"use strict";
+
 const assert = require('assert');
 const shell = require('shelljs');
 const fs = require('fs-extra');
@@ -77,7 +79,7 @@ describe('flags', () => {
       });
 
       assert.ok(linesReceived > 0);
-    }).timeout(10000);
+    }).timeout(60000);
 
     it('Should be able to report junit xml', (done) => {
       const runResult = shell.exec('elm-test --report=junit tests/OnePassing.elm', {silent: true});
