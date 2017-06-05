@@ -1,7 +1,7 @@
 const assert = require('assert');
 const shell = require('shelljs');
 const fs = require('fs-extra');
-const libxml = require('libxmljs');
+const xml2js = require('xml2js');
 
 describe('flags', () => {
   describe('--add-dependencies', () => {
@@ -79,10 +79,15 @@ describe('flags', () => {
       assert.ok(linesReceived > 0);
     });
 
-    it('Should be able to report junit xml', () => {
+    it('Should be able to report junit xml', (done) => {
       const runResult = shell.exec('elm-test --report=junit tests/OnePassing.elm', {silent: true});
 
-      assert.doesNotThrow(() => libxml.parseXml(runResult.stdout));
+      xml2js.parseString(runResult.stdout, (err, data) => {
+        if (err) throw err;
+
+        assert.ok(data);
+        done();
+      });
     });
   });
 });
