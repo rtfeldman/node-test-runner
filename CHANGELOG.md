@@ -1,26 +1,37 @@
-# Unreleased
+# Changelog
 
-# 0.18.5 - 2017-06-11
+Notable changes to this project will be documented in this file.
 
-## Fixed
+The format is based on [Keep a Changelog](http://keepachangelog.com/).
+This project mirrors Elm versions.
+
+## Unreleased
+
+### Added
+
+- We have a changelog! (#151)
+
+## 0.18.5 - 2017-06-11
+
+### Fixed
 
 - `--report` flag broken (#155)
 
-## Added
+### Added
 
 - If your project depends on `elm-lang/html`, `elm-test init` will add a
 dependency to `eeue56/elm-html-test` so you can test your HTML. (#154)
 
-# 0.18.4 - 2017-05-30
+## 0.18.4 - 2017-05-30
 
-## Fixed
+### Fixed
 
 - Runner no longer fails when CWD has spaces in it (#147)
 - Tests that are `port modules` or `effect modules` are no longer rejected (#143)
 
-# 0.18.3 - 2017-05-25
+## 0.18.3 - 2017-05-25
 
-## Added
+### Added
 
 - `--add-dependencies target/elm-package.json` flag to add any missing
 dependencies _from_ the `elm-package.json` file in the current director _to_ the
@@ -29,7 +40,7 @@ dependencies _from_ the `elm-package.json` file in the current director _to_ the
 - `--fuzz` flag to override the default fuzz count. (#77)
 - `Test.only` and `Test.skip` to limit which tests will be executed.
 
-## Changed
+### Changed
 
 - `elm-test init` now adds all dependencies from the package `elm-package.json`
 to the generated `tests/elm-package.json` file. (#68)
@@ -42,13 +53,13 @@ and `test/`. (#72)
 - Empty describes are no longer allowed. (#95)
 
 
-## Fixed
+### Fixed
 
 - Ignores `elm-stuff` (#100)
 - Tests that throw a runtime exception fail with the exception message as
 failure, rather than crashing the runner. (#69)
 
-### Migrating from `0.18.2`
+#### Migrating from `0.18.2`
 
 - Upgrade the runner `npm i -g elm-test`
 - Remove `tests/Main.elm`
