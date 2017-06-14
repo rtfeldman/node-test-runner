@@ -318,7 +318,7 @@ function isMachineReadableReporter(reporter) {
 }
 
 function processOptsForReporter(reporter) {
-  if (isMachineReadableReporter) {
+  if (isMachineReadableReporter(reporter)) {
     return {stdio: ['ignore', 'ignore', 'pipe']};
   } else {
     return {};
