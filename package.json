@@ -9,7 +9,7 @@
   "scripts": {
     "install": "node install.js",
     "flow": "flow",
-    "test": "mocha tests"
+    "test": "flow check && mocha tests"
   },
   "repository": {
     "type": "git",
