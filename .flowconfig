@@ -1,0 +1,9 @@
+[ignore]
+
+.*elm-package.json
+
+[include]
+
+[libs]
+
+[options]
