@@ -47,4 +47,11 @@ describe("mapping repository to native package name", () => {
 
     assertThrowsErrorMessage(() => runner.repositoryToNativePackageName(malformedRepositoryName), expectedErrorMessage);
   });
+
+  it("should throw error if repository name includes dots", () => {
+    const malformedRepositoryName = "https://github.com/antivanov/underscore.elm.git";
+    const expectedErrorMessage = "Elm currently doesn't support having periods in the user/project part of the repository field of elm-package.json. Aborting test run.";
+
+    assertThrowsErrorMessage(() => runner.repositoryToNativePackageName(malformedRepositoryName), expectedErrorMessage);
+  });
 });
