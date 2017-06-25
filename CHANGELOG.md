@@ -7,15 +7,15 @@ This project mirrors Elm versions.
 
 ## Unreleased
 
-### Added
-
-- We have a changelog! (#151)
-- Proper error messages when username or repository name contains dots (#166)
-
 ### Fixed
 
 - All reporters were considered "machine readable", resulting in the error
 stream being ignored (#161)
+
+### Added
+
+- We have a changelog! (#151)
+- Proper error messages when username or repository name contains dots (#166)
 
 ### Internal
 
