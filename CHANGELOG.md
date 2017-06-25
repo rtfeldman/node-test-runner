@@ -10,6 +10,23 @@ This project mirrors Elm versions.
 ### Added
 
 - We have a changelog! (#151)
+- Proper error messages when username or repository name contains dots (#166)
+
+### Fixed
+
+- All reporters were considered "machine readable", resulting in the error
+stream being ignored (#161)
+
+### Internal
+
+- Add flow type annotations to prevent silly JS mistakes! (#162)
+
+## 0.18.6 - 2017-06-12
+
+### Changed
+
+- Imports in the `Example.elm` file are now sorted for compatibility with
+`elm-format@exp`
 
 ## 0.18.5 - 2017-06-11
 
