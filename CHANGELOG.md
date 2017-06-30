@@ -5,7 +5,7 @@ Notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors Elm versions.
 
-## Unreleased
+## 0.18.7 - 2017-06-30
 
 ### Fixed
 
