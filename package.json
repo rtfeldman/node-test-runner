@@ -46,6 +46,7 @@
   "devDependencies": {
     "flow-bin": "0.48.0",
     "mocha": "^3.4.1",
+    "prettier": "1.5.2",
     "shelljs": "0.7.3",
     "xml2js": "^0.4.17"
   }
