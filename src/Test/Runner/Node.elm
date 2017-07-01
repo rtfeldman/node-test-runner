@@ -1,11 +1,15 @@
-module Test.Runner.Node exposing (runWithOptions, TestProgram)
+port module Test.Runner.Node exposing (TestProgram, runWithOptions)
 
-{-| # Node Runner
+{-|
+
+
+# Node Runner
 
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
 @docs run, runWithOptions, TestProgram
+
 -}
 
 import Dict exposing (Dict)
@@ -14,7 +18,7 @@ import Json.Encode as Encode exposing (Value)
 import Native.RunTest
 import Platform
 import Set exposing (Set)
-import Task
+import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Failure, TestResult)
@@ -26,10 +30,19 @@ import Time exposing (Time)
 {-| Execute the given thunk.
 
 If it throws an exception, return a failure instead of crashing.
+
 -}
 runThunk : (() -> List Expectation) -> List Expectation
 runThunk =
     Native.RunTest.runThunk
+
+
+nativeMessages : Sub String
+nativeMessages =
+    Native.RunTest.messages
+
+
+port receive : (String -> msg) -> Sub msg
 
 
 type alias TestId =
@@ -54,14 +67,14 @@ type alias TestProgram =
     Platform.Program Value (App.Model Msg Model) (App.Msg Msg)
 
 
-type alias Emitter msg =
-    ( String, Value ) -> Cmd msg
-
-
 type Msg
     = Dispatch Time
+    | Receive String
     | Complete TestId (List String) (List Expectation) Time Time
     | Finish Time
+
+
+port send : String -> Cmd msg
 
 
 warn : String -> a -> a
@@ -70,12 +83,15 @@ warn str result =
         _ =
             Debug.log str
     in
-        result
+    result
 
 
-update : Emitter Msg -> Msg -> Model -> ( Model, Cmd Msg )
-update emit msg ({ testReporter } as model) =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg ({ testReporter } as model) =
     case msg of
+        Receive str ->
+            ( model, Cmd.none )
+
         Finish finishTime ->
             let
                 failed =
@@ -97,14 +113,17 @@ update emit msg ({ testReporter } as model) =
                     else
                         0
 
-                data =
+                cmd =
                     Encode.object
-                        [ ( "exitCode", Encode.int exitCode )
+                        [ ( "type", Encode.string "FINISHED" )
+                        , ( "exitCode", Encode.int exitCode )
                         , ( "format", Encode.string testReporter.format )
                         , ( "message", summary )
                         ]
+                        |> Encode.encode 0
+                        |> send
             in
-                ( model, emit ( "FINISHED", data ) )
+            ( model, cmd )
 
         Complete testId labels expectations startTime endTime ->
             let
@@ -118,20 +137,20 @@ update emit msg ({ testReporter } as model) =
                     { model | completed = result :: model.completed }
 
                 reportCmd =
-                    case (testReporter.reportComplete result) of
+                    case testReporter.reportComplete result of
                         Just val ->
-                            emit
-                                ( "TEST_COMPLETED"
-                                , Encode.object
-                                    [ ( "format", Encode.string testReporter.format )
-                                    , ( "message", val )
-                                    ]
-                                )
+                            Encode.object
+                                [ ( "type", Encode.string "TEST_COMPLETED" )
+                                , ( "format", Encode.string testReporter.format )
+                                , ( "message", val )
+                                ]
+                                |> Encode.encode 0
+                                |> send
 
                         Nothing ->
                             Cmd.none
             in
-                ( newModel, Cmd.batch [ reportCmd, dispatch ] )
+            ( newModel, Cmd.batch [ reportCmd, dispatch ] )
 
         Dispatch startTime ->
             case model.queue of
@@ -161,7 +180,7 @@ update emit msg ({ testReporter } as model) =
                                         , queue = newQueue
                                     }
                             in
-                                ( newModel, Task.perform complete Time.now )
+                            ( newModel, Task.perform complete Time.now )
 
 
 dispatch : Cmd Msg
@@ -170,16 +189,15 @@ dispatch =
 
 
 init :
-    Emitter Msg
-    -> { initialSeed : Int
-       , paths : List String
-       , fuzzRuns : Int
-       , startTime : Time
-       , runners : SeededRunners
-       , report : Report
-       }
+    { initialSeed : Int
+    , paths : List String
+    , fuzzRuns : Int
+    , startTime : Time
+    , runners : SeededRunners
+    , report : Report
+    }
     -> ( Model, Cmd Msg )
-init emit { startTime, paths, fuzzRuns, initialSeed, runners, report } =
+init { startTime, paths, fuzzRuns, initialSeed, runners, report } =
     let
         { indexedRunners, autoFail } =
             case runners of
@@ -231,18 +249,18 @@ init emit { startTime, paths, fuzzRuns, initialSeed, runners, report } =
         reportCmd =
             case maybeReport of
                 Just report ->
-                    emit
-                        ( "STARTED"
-                        , Encode.object
-                            [ ( "format", Encode.string testReporter.format )
-                            , ( "message", report )
-                            ]
-                        )
+                    Encode.object
+                        [ ( "type", Encode.string "STARTED" )
+                        , ( "format", Encode.string testReporter.format )
+                        , ( "message", report )
+                        ]
+                        |> Encode.encode 0
+                        |> send
 
                 Nothing ->
                     Cmd.none
     in
-        ( model, Cmd.batch [ dispatch, reportCmd ] )
+    ( model, Cmd.batch [ dispatch, reportCmd ] )
 
 
 {-| Run the test using the provided options. If `Nothing` is provided for either
@@ -250,12 +268,11 @@ init emit { startTime, paths, fuzzRuns, initialSeed, runners, report } =
 -}
 runWithOptions :
     App.RunnerOptions
-    -> Emitter Msg
     -> Test
     -> TestProgram
-runWithOptions options emit =
+runWithOptions options =
     App.run options
-        { init = init emit
-        , update = update emit
-        , subscriptions = \_ -> Sub.none
+        { init = init
+        , update = update
+        , subscriptions = \_ -> receive Receive
         }
