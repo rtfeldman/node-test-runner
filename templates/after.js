@@ -16,43 +16,6 @@ if (potentialModuleNames.length !== 1) {
 
 var testModule = Elm.Test.Generated[potentialModuleNames[0]];
 
-// Fix Windows Unicode problems. Credit to https://github.com/sindresorhus/figures for the Windows compat idea!
-var windowsSubstitutions = [
-  [/[↓✗►]/g, ">"],
-  [/╵│╷╹┃╻/g, "|"],
-  [/═/g, "="],
-  ,
-  [/▔/g, "-"],
-  [/✔/g, "√"]
-];
-
-function windowsify(str) {
-  return windowsSubstitutions.reduce(function(result, sub) {
-    return result.replace(sub[0], sub[1]);
-  }, str);
-}
-
-function chalkify(messages) {
-  return messages
-    .map(function(msg) {
-      var path = msg.styles;
-      var text = process.platform === "win32" ? windowsify(msg.text) : msg.text;
-
-      if (path.length === 0) {
-        return text;
-      } else {
-        var fn = chalk;
-
-        path.forEach(function(nextPath) {
-          fn = fn[nextPath];
-        });
-
-        return fn(text);
-      }
-    })
-    .join("");
-}
-
 // Run the Elm app.
 var app = testModule.worker({ seed: initialSeed, report: report });
 

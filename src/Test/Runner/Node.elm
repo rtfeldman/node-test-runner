@@ -36,12 +36,7 @@ runThunk =
     Native.RunTest.runThunk
 
 
-nativeMessages : Sub String
-nativeMessages =
-    Native.RunTest.messages
-
-
-port receive : (String -> msg) -> Sub msg
+port receive : ({ message : String } -> msg) -> Sub msg
 
 
 type alias TestId =
@@ -299,5 +294,5 @@ runWithOptions options =
     App.run options
         { init = init
         , update = update
-        , subscriptions = \_ -> receive Receive
+        , subscriptions = \_ -> receive (.message >> Receive)
         }
