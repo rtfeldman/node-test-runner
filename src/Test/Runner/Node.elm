@@ -17,6 +17,7 @@ import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
 import Native.RunTest
 import Platform
+import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (TestResult)
@@ -64,6 +65,7 @@ type alias TestProgram =
 
 type Msg
     = Receive String
+    | Dispatch TestId Time
     | Complete TestId (List String) (List Expectation) Time Time
     | Summary (List TestResult) Time
 
@@ -80,6 +82,27 @@ warn str result =
     result
 
 
+dispatch : Model -> TestId -> Time -> Cmd Msg
+dispatch model testId startTime =
+    case Dict.get testId model.available of
+        Nothing ->
+            Cmd.none
+                |> warn ("Could not find testId " ++ toString testId)
+
+        Just { labels, run } ->
+            let
+                expectations =
+                    runThunk run
+
+                complete =
+                    Complete testId labels expectations startTime
+
+                available =
+                    Dict.remove testId model.available
+            in
+            Task.perform complete Time.now
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ testReporter } as model) =
     case msg of
@@ -93,19 +116,20 @@ update msg ({ testReporter } as model) =
                     else
                         case String.toInt str of
                             Ok index ->
-                                -- TODO memoize available tests since we'll be doing this often
-                                if index >= Dict.size model.available then
+                                if index >= model.runInfo.testCount then
                                     -- TODO send something more proper
                                     send "{\"type\": \"FINISHED\"}"
                                 else
-                                    -- TODO send something more proper
-                                    send ("{\"type\": \"PROCESSING\", \"index\":" ++ toString index ++ "}")
+                                    Task.perform (Dispatch index) Time.now
 
                             Err err ->
                                 -- TODO send an ERROR message
                                 Cmd.none
             in
             ( model, cmd )
+
+        Dispatch index startTime ->
+            ( model, dispatch model index startTime )
 
         Summary completed finishTime ->
             let
@@ -148,53 +172,25 @@ update msg ({ testReporter } as model) =
                     , duration = endTime - startTime
                     }
 
-                cmd =
+                encodedOutcome =
                     case testReporter.reportComplete result of
                         Just val ->
-                            Encode.object
-                                [ ( "type", Encode.string "TEST_COMPLETED" )
-                                , ( "format", Encode.string testReporter.format )
-                                , ( "message", val )
-                                ]
-                                |> Encode.encode 0
-                                |> send
+                            val
 
                         Nothing ->
-                            Cmd.none
+                            Encode.null
+
+                cmd =
+                    Encode.object
+                        [ ( "type", Encode.string "TEST_COMPLETED" )
+                        , ( "index", Encode.int testId )
+                        , ( "format", Encode.string testReporter.format )
+                        , ( "message", encodedOutcome )
+                        ]
+                        |> Encode.encode 0
+                        |> send
             in
             ( model, cmd )
-
-
-
--- Dispatch index startTime ->
---     case model.queue of
---         [] ->
---             ( model, Task.perform Finish Time.now )
---
---         testId :: newQueue ->
---             case Dict.get testId model.available of
---                 Nothing ->
---                     ( model, Cmd.none )
---                         |> warn ("Could not find testId " ++ toString testId)
---
---                 Just { labels, run } ->
---                     let
---                         expectations =
---                             runThunk run
---
---                         complete =
---                             Complete testId labels expectations startTime
---
---                         available =
---                             Dict.remove testId model.available
---
---                         newModel =
---                             { model
---                                 | available = available
---                                 , queue = newQueue
---                             }
---                     in
---                     ( newModel, Task.perform complete Time.now )
 
 
 sendSummary : Model -> Cmd msg

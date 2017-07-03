@@ -1,26 +1,3 @@
-// var msgType = msg[0];
-// var data = msg[1];
-//
-// if (msgType === "FINISHED") {
-//   if (data.format === "CHALK") {
-//     console.log(chalkify(data.message));
-//   } else if (data.format === "JUNIT") {
-//     console.log(builder.create(data.message).end());
-//   } else {
-//     console.log(JSON.stringify(data.message));
-//   }
-//
-//   if (!args.watch) {
-//     process.exit(data.exitCode);
-//   }
-// } else if (msgType === "STARTED" || msgType === "TEST_COMPLETED") {
-//   if (data.format === "CHALK") {
-//     console.log(chalkify(data.message));
-//   } else if (data.format === "JSON") {
-//     console.log(JSON.stringify(data.message));
-//   }
-// }
-
 // Make sure necessary things are defined.
 if (typeof Elm === "undefined") {
   throw "test runner config error: Elm is not defined. Make sure you provide a file compiled by Elm!";
