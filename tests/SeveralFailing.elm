@@ -1,10 +1,10 @@
 module SeveralFailing exposing (..)
 
-import String
-import Expect
-import Test exposing (..)
-import Fuzz exposing (..)
 import Char
+import Expect
+import Fuzz exposing (..)
+import String
+import Test exposing (..)
 
 
 withoutNums : String -> String

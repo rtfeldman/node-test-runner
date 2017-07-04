@@ -1,9 +1,7 @@
 module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 
-import Test.Reporter.TestResults as TestResults
-import Test.Runner
-import Expect exposing (Expectation)
 import Json.Encode as Encode exposing (Value)
+import Test.Reporter.TestResults as TestResults exposing (Outcome(Failed), isFailure)
 import Time exposing (Time)
 
 
@@ -13,16 +11,18 @@ reportBegin _ =
 
 
 reportComplete : TestResults.TestResult -> Maybe Value
-reportComplete { duration, labels, expectations } =
+reportComplete { duration, labels, outcomes } =
     Nothing
 
 
-encodeTestcaseFailure : Expectation -> List ( String, Value )
-encodeTestcaseFailure expectation =
-    expectation
-        |> Test.Runner.getFailure
-        |> Maybe.map encodeFailureMessage
-        |> Maybe.withDefault []
+encodeTestcaseFailure : Outcome -> List ( String, Value )
+encodeTestcaseFailure outcome =
+    case outcome of
+        Failed failure ->
+            encodeFailureMessage failure
+
+        _ ->
+            []
 
 
 encodeFailureMessage : TestResults.Failure -> List ( String, Value )
@@ -48,44 +48,44 @@ encodeTime time =
         |> Encode.string
 
 
-encodeTest : TestResults.TestResult -> Expectation -> Value
-encodeTest { labels, duration } expectation =
+encodeTest : TestResults.TestResult -> Outcome -> Value
+encodeTest { labels, duration } outcome =
     let
         ( classname, name ) =
             formatClassAndName labels
     in
-        Encode.object
-            ([ ( "@classname", Encode.string classname )
-             , ( "@name", Encode.string name )
-             , ( "@time", encodeTime duration )
-             ]
-                ++ (encodeTestcaseFailure expectation)
-            )
+    Encode.object
+        ([ ( "@classname", Encode.string classname )
+         , ( "@name", Encode.string name )
+         , ( "@time", encodeTime duration )
+         ]
+            ++ encodeTestcaseFailure outcome
+        )
 
 
 encodeSuite : Maybe String -> TestResults.TestResult -> List Value
 encodeSuite extraFailure result =
     let
-        baseExpectations =
-            List.map (encodeTest result) result.expectations
+        baseOutcomes =
+            List.map (encodeTest result) result.outcomes
     in
-        case extraFailure of
-            Nothing ->
-                baseExpectations
+    case extraFailure of
+        Nothing ->
+            baseOutcomes
 
-            Just failure ->
-                let
-                    expectation =
-                        Expect.fail failure
-                in
-                    expectation
-                        |> encodeTest
-                            { labels = []
-                            , duration = 0
-                            , expectations = [ expectation ]
-                            }
-                        |> List.singleton
-                        |> List.append baseExpectations
+        Just failure ->
+            let
+                outcome =
+                    Failed { given = Nothing, message = failure }
+            in
+            outcome
+                |> encodeTest
+                    { labels = []
+                    , duration = 0
+                    , outcomes = [ outcome ]
+                    }
+                |> List.singleton
+                |> List.append baseOutcomes
 
 
 encodeSuites : Maybe String -> List TestResults.TestResult -> Value
@@ -96,12 +96,12 @@ encodeSuites extraFailure results =
 reportSummary : Time -> Maybe String -> List TestResults.TestResult -> Value
 reportSummary duration autoFail results =
     let
-        expectations =
-            List.concatMap .expectations results
+        outcomes =
+            List.concatMap .outcomes results
 
         failed =
-            expectations
-                |> List.filter ((/=) Expect.pass)
+            outcomes
+                |> List.filter isFailure
                 |> List.length
 
         extraFailure =
@@ -117,19 +117,20 @@ reportSummary duration autoFail results =
                 Nothing
 
         passed =
-            (List.length expectations) - failed
+            List.length outcomes - failed
     in
-        Encode.object
-            [ ( "testsuite"
-              , Encode.object
-                    [ ( "@name", Encode.string "elm-test" )
-                    , ( "@package", Encode.string "elm-test" )
-                      -- Would be nice to have this provided from elm-package.json of tests
-                    , ( "@tests", Encode.int (List.length expectations) )
-                    , ( "@failed", Encode.int failed )
-                    , ( "@errors", Encode.int 0 )
-                    , ( "@time", encodeTime (List.foldl (+) 0 <| List.map .duration results) )
-                    , ( "testcase", encodeSuites extraFailure results )
-                    ]
-              )
-            ]
+    Encode.object
+        [ ( "testsuite"
+          , Encode.object
+                [ ( "@name", Encode.string "elm-test" )
+                , ( "@package", Encode.string "elm-test" )
+
+                -- Would be nice to have this provided from elm-package.json of tests
+                , ( "@tests", Encode.int (List.length outcomes) )
+                , ( "@failed", Encode.int failed )
+                , ( "@errors", Encode.int 0 )
+                , ( "@time", encodeTime (List.foldl (+) 0 <| List.map .duration results) )
+                , ( "testcase", encodeSuites extraFailure results )
+                ]
+          )
+        ]

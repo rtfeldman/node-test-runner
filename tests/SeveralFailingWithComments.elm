@@ -1,10 +1,10 @@
-module SeveralFailingWithComments exposing (withoutNums, {- hello -} testWithoutNums, testExpectations, testFailingFuzzTests)
+module SeveralFailingWithComments exposing (testExpectations, testFailingFuzzTests, {- hello -} testWithoutNums, withoutNums)
 
-import String
-import Expect
-import Test exposing (..)
-import Fuzz exposing (..)
 import Char
+import Expect
+import Fuzz exposing (..)
+import String
+import Test exposing (..)
 
 
 withoutNums : String -> String

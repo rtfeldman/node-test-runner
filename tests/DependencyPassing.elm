@@ -1,7 +1,7 @@
 module DependencyPassing exposing (..)
 
-import String.Extra
 import Expect
+import String.Extra
 import Test exposing (..)
 
 

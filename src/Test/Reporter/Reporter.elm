@@ -1,10 +1,10 @@
 module Test.Reporter.Reporter exposing (..)
 
-import Test.Reporter.Chalk as ChalkReporter
-import Test.Reporter.Json as JsonReporter
-import Test.Reporter.JUnit as JUnitReporter
-import Test.Reporter.TestResults exposing (TestResult)
 import Json.Encode as Encode exposing (Value)
+import Test.Reporter.Chalk as ChalkReporter
+import Test.Reporter.JUnit as JUnitReporter
+import Test.Reporter.Json as JsonReporter
+import Test.Reporter.TestResults exposing (TestResult)
 import Time exposing (Time)
 
 
@@ -32,9 +32,17 @@ fromString str =
 
 type alias TestReporter =
     { format : String
-    , reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+    , reportBegin : RunInfo -> Maybe Value
     , reportComplete : TestResult -> Maybe Value
     , reportSummary : Time -> Maybe String -> List TestResult -> Value
+    }
+
+
+type alias RunInfo =
+    { paths : List String
+    , fuzzRuns : Int
+    , testCount : Int
+    , initialSeed : Int
     }
 
 

@@ -1,12 +1,10 @@
 module PolyfillPassing exposing (..)
 
-import Expect
-import Test exposing (..)
-
-
 -- Native.Polyfilled is only for testing node-test-runner
 
+import Expect
 import Native.Polyfilled
+import Test exposing (..)
 
 
 plainExpectation : Test

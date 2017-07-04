@@ -84,7 +84,7 @@ initOrUpdate msg maybeModel =
                                 , report = report
                                 }
                     in
-                        ( Initialized update subModel, Cmd.map SubMsg subCmd )
+                    ( Initialized update subModel, Cmd.map SubMsg subCmd )
 
                 SubMsg _ ->
                     Debug.crash "Attempted to run a SubMsg pre-Init!"
@@ -96,7 +96,7 @@ initOrUpdate msg maybeModel =
                         ( newModel, cmd ) =
                             update subMsg model
                     in
-                        ( Initialized update newModel, Cmd.map SubMsg cmd )
+                    ( Initialized update newModel, Cmd.map SubMsg cmd )
 
                 Init _ ->
                     Debug.crash "Attempted to init twice!"
@@ -159,19 +159,19 @@ run { runs, seed, reporter, paths } appOpts test =
                                 Err err ->
                                     Debug.crash err
             in
-                ( Uninitialized appOpts.update
-                    { maybeInitialSeed = seed
-                    , report = report
-                    , runs = Maybe.withDefault defaultRunCount runs
-                    , paths = paths
-                    , test = test
-                    , init = appOpts.init
-                    }
-                , cmd
-                )
+            ( Uninitialized appOpts.update
+                { maybeInitialSeed = seed
+                , report = report
+                , runs = Maybe.withDefault defaultRunCount runs
+                , paths = paths
+                , test = test
+                , init = appOpts.init
+                }
+            , cmd
+            )
     in
-        Platform.programWithFlags
-            { init = init
-            , update = initOrUpdate
-            , subscriptions = subscriptions appOpts.subscriptions
-            }
+    Platform.programWithFlags
+        { init = init
+        , update = initOrUpdate
+        , subscriptions = subscriptions appOpts.subscriptions
+        }
