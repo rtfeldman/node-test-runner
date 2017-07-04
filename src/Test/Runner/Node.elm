@@ -21,7 +21,7 @@ import Platform
 import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome(..), TestResult, encodeRawTestResultString, isFailure, outcomeFromExpectation)
+import Test.Reporter.TestResults exposing (Outcome(..), TestResult, encodeRawTestResult, isFailure, outcomeFromExpectation)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Test.Runner.Node.App as App
@@ -182,7 +182,7 @@ update msg ({ testReporter } as model) =
                     Encode.object
                         [ ( "type", Encode.string "TEST_COMPLETED" )
                         , ( "index", Encode.int testId )
-                        , ( "summary", Encode.string (encodeRawTestResultString result) )
+                        , ( "summary", encodeRawTestResult result )
                         , ( "format", Encode.string testReporter.format )
                         , ( "message", encodedOutcome )
                         ]

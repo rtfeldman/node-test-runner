@@ -1,8 +1,8 @@
 var _rtfeldman$node_test_runner$Native_RunTest = (function() {
   return {
-    rawStringify: JSON.stringify,
-
-    unsafeParse: JSON.parse,
+    unsafeCoerce: function(a) {
+      return a;
+    },
 
     runThunk: function(thunk) {
       try {

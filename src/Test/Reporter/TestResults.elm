@@ -1,4 +1,4 @@
-module Test.Reporter.TestResults exposing (Failure, Outcome(..), TestResult, encodeFailure, encodeRawTestResultString, isFailure, isTodo, outcomeFromExpectation, unsafeTestResultDecoder)
+module Test.Reporter.TestResults exposing (Failure, Outcome(..), TestResult, encodeFailure, encodeRawTestResult, isFailure, isTodo, outcomeFromExpectation, unsafeTestResultDecoder)
 
 import Expect exposing (Expectation)
 import Json.Decode as Decode exposing (Decoder)
@@ -8,14 +8,14 @@ import Test.Runner
 import Time exposing (Time)
 
 
-rawStringify : a -> String
-rawStringify val =
-    Native.RunTest.rawStringify val
+unsafeToValue : a -> Value
+unsafeToValue a =
+    Native.RunTest.unsafeCoerce a
 
 
-unsafeParseJson : String -> a
-unsafeParseJson str =
-    Native.RunTest.unsafeParse str
+unsafeFromValue : Value -> a
+unsafeFromValue val =
+    Native.RunTest.unsafeCoerce val
 
 
 type Outcome
@@ -37,7 +37,7 @@ type alias Failure =
 
 unsafeTestResultDecoder : Decoder TestResult
 unsafeTestResultDecoder =
-    Decode.map unsafeParseJson Decode.string
+    Decode.map unsafeFromValue Decode.value
 
 
 failureDecoder : Decoder Failure
@@ -113,6 +113,6 @@ outcomeFromExpectation expectation =
             Passed
 
 
-encodeRawTestResultString : TestResult -> String
-encodeRawTestResultString testResult =
-    rawStringify testResult
+encodeRawTestResult : TestResult -> Value
+encodeRawTestResult =
+    unsafeToValue
