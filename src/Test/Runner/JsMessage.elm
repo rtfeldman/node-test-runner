@@ -1,7 +1,7 @@
 module Test.Runner.JsMessage exposing (JsMessage(..), decoder)
 
 import Json.Decode as Decode exposing (Decoder)
-import Test.Reporter.TestResults exposing (TestResult, testResultDecoder)
+import Test.Reporter.TestResults exposing (TestResult, unsafeTestResultDecoder)
 
 
 type JsMessage
@@ -27,7 +27,7 @@ decodeMessageFromType messageType =
             Decode.succeed Begin
 
         "SUMMARY" ->
-            Decode.field "testResults" (Decode.list testResultDecoder)
+            Decode.field "testResults" (Decode.list unsafeTestResultDecoder)
                 |> Decode.map Summary
 
         _ ->

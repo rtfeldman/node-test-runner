@@ -1,5 +1,9 @@
 var _rtfeldman$node_test_runner$Native_RunTest = (function() {
   return {
+    unsafeCoerce: function(a) {
+      return a;
+    },
+
     runThunk: function(thunk) {
       try {
         // Attempt to run the thunk as normal.
