@@ -236,22 +236,23 @@ encodeExpectation expectation =
 sendBegin : Model -> Cmd msg
 sendBegin model =
     let
-        maybeReport =
-            model.testReporter.reportBegin model.runInfo
-    in
-    case maybeReport of
-        Just report ->
-            Encode.object
-                [ ( "type", Encode.string "BEGIN" )
-                , ( "format", Encode.string model.testReporter.format )
-                , ( "testCount", Encode.int model.runInfo.testCount )
-                , ( "message", report )
-                ]
-                |> Encode.encode 0
-                |> send
+        baseFields =
+            [ ( "type", Encode.string "BEGIN" )
+            , ( "format", Encode.string model.testReporter.format )
+            , ( "testCount", Encode.int model.runInfo.testCount )
+            ]
 
-        Nothing ->
-            Cmd.none
+        extraFields =
+            case model.testReporter.reportBegin model.runInfo of
+                Just report ->
+                    [ ( "message", report ) ]
+
+                Nothing ->
+                    []
+    in
+    Encode.object (baseFields ++ extraFields)
+        |> Encode.encode 0
+        |> send
 
 
 init :
