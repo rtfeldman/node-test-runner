@@ -5,10 +5,10 @@ describe("finder", function() {
   it("should initialize okay twice in a row", done => {
     finder.readExposing(__dirname + "/SeveralFailingWithComments.elm").then((exposedFunctions) =>{
       assert.deepEqual(exposedFunctions, [
-        'withoutNums',
-        'testWithoutNums',
         'testExpectations',
         'testFailingFuzzTests'
+        'testWithoutNums',
+        'withoutNums',
       ]);
       done();
     }).catch((err)=>{
