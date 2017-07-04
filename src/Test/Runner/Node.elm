@@ -219,6 +219,7 @@ sendBegin model =
             Encode.object
                 [ ( "type", Encode.string "BEGIN" )
                 , ( "format", Encode.string model.testReporter.format )
+                , ( "testCount", Encode.int model.runInfo.testCount )
                 , ( "message", report )
                 ]
                 |> Encode.encode 0
