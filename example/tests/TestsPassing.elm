@@ -1,8 +1,8 @@
 module TestsPassing exposing (..)
 
+import Example
 import Expect
 import Test exposing (Test, test)
-import Example
 
 
 testEqual : Test

@@ -1,9 +1,7 @@
 module Test.Reporter.Json exposing (reportBegin, reportComplete, reportSummary)
 
-import Test.Reporter.TestResults as TestResults
-import Expect exposing (Expectation)
-import Test.Runner
 import Json.Encode as Encode exposing (Value)
+import Test.Reporter.TestResults as TestResults exposing (Outcome(..), encodeFailure, isFailure)
 import Time exposing (Time)
 
 
@@ -20,25 +18,53 @@ reportBegin { paths, fuzzRuns, testCount, initialSeed } =
 
 
 reportComplete : TestResults.TestResult -> Maybe Value
-reportComplete { duration, labels, expectations } =
+reportComplete { duration, labels, outcomes } =
     Just <|
         Encode.object
             [ ( "event", Encode.string "testCompleted" )
-            , ( "status", Encode.string (getStatus expectations) )
+            , ( "status", Encode.string (getStatus outcomes) )
             , ( "labels", encodeLabels labels )
-            , ( "failures", encodeFailures expectations )
+            , ( "failures", Encode.list (List.filterMap maybeEncodeFailures outcomes) )
             , ( "duration", Encode.string <| toString duration )
             ]
 
 
-getStatus : List Expectation -> String
-getStatus expectations =
-    case (List.filterMap Test.Runner.getFailure expectations) of
-        [] ->
-            "pass"
+maybeEncodeFailures : Outcome -> Maybe Value
+maybeEncodeFailures outcome =
+    case outcome of
+        Failed failure ->
+            Just (encodeFailure failure)
 
-        xs ->
+        _ ->
+            Nothing
+
+
+{-| Algorithm:
+
+  - If any fail, return "fail"
+  - Otherwise, if any are todo, return "todo"
+  - Otherwise, return "pass"
+
+-}
+getStatus : List Outcome -> String
+getStatus =
+    getStatusHelp "pass"
+
+
+getStatusHelp : String -> List Outcome -> String
+getStatusHelp result outcomes =
+    case outcomes of
+        [] ->
+            result
+
+        (Failed _) :: _ ->
             "fail"
+
+        (Todo _) :: rest ->
+            getStatusHelp "todo" rest
+
+        Passed :: rest ->
+            getStatusHelp result rest
 
 
 encodeLabels : List String -> Value
@@ -48,40 +74,25 @@ encodeLabels labels =
         |> Encode.list
 
 
-encodeFailures : List Expectation -> Value
-encodeFailures expectations =
-    expectations
-        |> List.filterMap (Test.Runner.getFailure >> Maybe.map encodeFailure)
-        |> Encode.list
-
-
-encodeFailure : TestResults.Failure -> Value
-encodeFailure { given, message } =
-    Encode.object
-        [ ( "given", Maybe.withDefault Encode.null (Maybe.map Encode.string given) )
-        , ( "actual", Encode.string message )
-        ]
-
-
 reportSummary : Time -> Maybe String -> List TestResults.TestResult -> Value
 reportSummary duration autoFail results =
     let
         failed =
             results
-                |> List.filter (.expectations >> List.all ((/=) Expect.pass))
+                |> List.filter (.outcomes >> List.any isFailure)
                 |> List.length
 
         passed =
-            (List.length results) - failed
+            List.length results - failed
     in
-        Encode.object
-            [ ( "event", Encode.string "runComplete" )
-            , ( "passed", Encode.string <| toString passed )
-            , ( "failed", Encode.string <| toString failed )
-            , ( "duration", Encode.string <| toString duration )
-            , ( "autoFail"
-              , autoFail
-                    |> Maybe.map Encode.string
-                    |> Maybe.withDefault Encode.null
-              )
-            ]
+    Encode.object
+        [ ( "event", Encode.string "runComplete" )
+        , ( "passed", Encode.string <| toString passed )
+        , ( "failed", Encode.string <| toString failed )
+        , ( "duration", Encode.string <| toString duration )
+        , ( "autoFail"
+          , autoFail
+                |> Maybe.map Encode.string
+                |> Maybe.withDefault Encode.null
+          )
+        ]

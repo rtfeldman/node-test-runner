@@ -1,11 +1,11 @@
 module TestsFailing exposing (..)
 
-import String
-import Expect
-import Test exposing (..)
-import Fuzz exposing (..)
 import Char
 import Example
+import Expect
+import Fuzz exposing (..)
+import String
+import Test exposing (..)
 
 
 ultimateTest : Test

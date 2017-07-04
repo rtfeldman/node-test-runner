@@ -14,14 +14,16 @@ passed and 2 if any failed. Returns 1 if something went wrong.
 
 import Dict exposing (Dict)
 import Expect exposing (Expectation)
+import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Native.RunTest
 import Platform
 import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (TestResult)
+import Test.Reporter.TestResults exposing (Outcome, TestResult, encodeOutcome, encodeTestResult, isFailure, outcomeFromExpectation)
 import Test.Runner exposing (Runner, SeededRunners(..))
+import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Test.Runner.Node.App as App
 import Time exposing (Time)
 
@@ -36,7 +38,7 @@ runThunk =
     Native.RunTest.runThunk
 
 
-port receive : ({ message : String } -> msg) -> Sub msg
+port receive : (Decode.Value -> msg) -> Sub msg
 
 
 type alias TestId =
@@ -59,10 +61,10 @@ type alias TestProgram =
 
 
 type Msg
-    = Receive String
+    = Receive Decode.Value
     | Dispatch TestId Time
-    | Complete TestId (List String) (List Expectation) Time Time
-    | Summary (List TestResult) Time
+    | Complete TestId (List String) (List Outcome) Time Time
+    | SendSummary (List TestResult) Time
 
 
 port send : String -> Cmd msg
@@ -86,11 +88,12 @@ dispatch model testId startTime =
 
         Just { labels, run } ->
             let
-                expectations =
+                outcomes =
                     runThunk run
+                        |> List.map outcomeFromExpectation
 
                 complete =
-                    Complete testId labels expectations startTime
+                    Complete testId labels outcomes startTime
 
                 available =
                     Dict.remove testId model.available
@@ -101,36 +104,44 @@ dispatch model testId startTime =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ testReporter } as model) =
     case msg of
-        Receive str ->
+        Receive val ->
             let
                 cmd =
-                    if str == "BEGIN" then
-                        sendBegin model
-                    else if str == "SUMMARY" then
-                        sendSummary model
-                    else
-                        case String.toInt str of
-                            Ok index ->
-                                if index >= model.runInfo.testCount then
-                                    -- TODO send something more proper
-                                    send "{\"type\": \"FINISHED\"}"
-                                else
-                                    Task.perform (Dispatch index) Time.now
+                    case Decode.decodeValue JsMessage.decoder val of
+                        Ok Begin ->
+                            sendBegin model
 
-                            Err err ->
-                                -- TODO send an ERROR message
-                                Cmd.none
+                        Ok (Summary results) ->
+                            Time.now
+                                |> Task.perform (SendSummary results)
+
+                        Ok (Test index) ->
+                            if index >= model.runInfo.testCount then
+                                Encode.object
+                                    [ ( "type", Encode.string "FINISHED" ) ]
+                                    |> Encode.encode 0
+                                    |> send
+                            else
+                                Task.perform (Dispatch index) Time.now
+
+                        Err err ->
+                            Encode.object
+                                [ ( "type", Encode.string "ERROR" )
+                                , ( "message", Encode.string err )
+                                ]
+                                |> Encode.encode 0
+                                |> send
             in
             ( model, cmd )
 
         Dispatch index startTime ->
             ( model, dispatch model index startTime )
 
-        Summary completed finishTime ->
+        SendSummary completed finishTime ->
             let
                 failed =
                     completed
-                        |> List.filter (.expectations >> List.all ((/=) Expect.pass))
+                        |> List.concatMap (.outcomes >> List.filter isFailure)
                         |> List.length
 
                 duration =
@@ -149,9 +160,9 @@ update msg ({ testReporter } as model) =
 
                 cmd =
                     Encode.object
-                        [ ( "type", Encode.string "FINISHED" )
+                        [ ( "type", Encode.string "SUMMARY" )
                         , ( "exitCode", Encode.int exitCode )
-                        , ( "format", Encode.string testReporter.format )
+                        , ( "format", Encode.string model.testReporter.format )
                         , ( "message", summary )
                         ]
                         |> Encode.encode 0
@@ -159,11 +170,11 @@ update msg ({ testReporter } as model) =
             in
             ( model, cmd )
 
-        Complete testId labels expectations startTime endTime ->
+        Complete testId labels outcomes startTime endTime ->
             let
                 result =
                     { labels = labels
-                    , expectations = expectations
+                    , outcomes = outcomes
                     , duration = endTime - startTime
                     }
 
@@ -179,6 +190,7 @@ update msg ({ testReporter } as model) =
                     Encode.object
                         [ ( "type", Encode.string "TEST_COMPLETED" )
                         , ( "index", Encode.int testId )
+                        , ( "summary", encodeTestResult result )
                         , ( "format", Encode.string testReporter.format )
                         , ( "message", encodedOutcome )
                         ]
@@ -188,24 +200,24 @@ update msg ({ testReporter } as model) =
             ( model, cmd )
 
 
-sendSummary : Model -> Cmd msg
-sendSummary model =
+encodeExpectation : Expectation -> Value
+encodeExpectation expectation =
     let
-        maybeReport =
-            model.testReporter.reportBegin model.runInfo
-    in
-    case maybeReport of
-        Just report ->
-            Encode.object
-                [ ( "type", Encode.string "SUMMARY" )
-                , ( "format", Encode.string model.testReporter.format )
-                , ( "message", report )
-                ]
-                |> Encode.encode 0
-                |> send
+        fields =
+            if Test.Runner.isTodo expectation then
+                [ ( "type", Encode.string "TODO" ) ]
+            else
+                case Test.Runner.getFailure expectation of
+                    Nothing ->
+                        [ ( "type", Encode.string "PASS" ) ]
 
-        Nothing ->
-            Cmd.none
+                    Just { given, message } ->
+                        [ ( "type", Encode.string "FAIL" )
+                        , ( "message", Encode.string message )
+                        , ( "given", Maybe.withDefault Encode.null (Maybe.map Encode.string given) )
+                        ]
+    in
+    Encode.object fields
 
 
 sendBegin : Model -> Cmd msg
@@ -295,5 +307,5 @@ runWithOptions options =
     App.run options
         { init = init
         , update = update
-        , subscriptions = \_ -> receive (.message >> Receive)
+        , subscriptions = \_ -> receive Receive
         }
