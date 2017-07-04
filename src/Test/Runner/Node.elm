@@ -21,7 +21,7 @@ import Platform
 import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome, TestResult, encodeOutcome, encodeTestResult, isFailure, outcomeFromExpectation)
+import Test.Reporter.TestResults exposing (Outcome(..), TestResult, encodeOutcome, encodeTestResult, isFailure, outcomeFromExpectation)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Test.Runner.Node.App as App
@@ -139,24 +139,21 @@ update msg ({ testReporter } as model) =
 
         SendSummary completed finishTime ->
             let
-                failed =
-                    completed
-                        |> List.concatMap (.outcomes >> List.filter isFailure)
-                        |> List.length
-
                 duration =
                     finishTime - model.startTime
 
                 summary =
                     testReporter.reportSummary duration model.autoFail completed
 
-                exitCode =
-                    if failed > 0 then
-                        2
-                    else if model.autoFail /= Nothing then
-                        3
-                    else
+                defaultExitCode =
+                    if model.autoFail == Nothing then
                         0
+                    else
+                        3
+
+                exitCode =
+                    List.concatMap .outcomes completed
+                        |> getExitCode defaultExitCode
 
                 cmd =
                     Encode.object
@@ -198,6 +195,22 @@ update msg ({ testReporter } as model) =
                         |> send
             in
             ( model, cmd )
+
+
+getExitCode : Int -> List Outcome -> Int
+getExitCode exitCode outcomes =
+    case outcomes of
+        [] ->
+            exitCode
+
+        Passed :: rest ->
+            getExitCode exitCode rest
+
+        (Todo _) :: rest ->
+            getExitCode 4 rest
+
+        (Failed _) :: rest ->
+            2
 
 
 encodeExpectation : Expectation -> Value
