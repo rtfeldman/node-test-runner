@@ -1,10 +1,21 @@
-module Test.Reporter.TestResults exposing (Failure, Outcome(..), TestResult, encodeFailure, encodeOutcome, encodeTestResult, isFailure, isTodo, outcomeFromExpectation, testResultDecoder)
+module Test.Reporter.TestResults exposing (Failure, Outcome(..), TestResult, encodeFailure, encodeRawTestResultString, isFailure, isTodo, outcomeFromExpectation, unsafeTestResultDecoder)
 
 import Expect exposing (Expectation)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
+import Native.RunTest
 import Test.Runner
 import Time exposing (Time)
+
+
+rawStringify : a -> String
+rawStringify val =
+    Native.RunTest.rawStringify val
+
+
+unsafeParseJson : String -> a
+unsafeParseJson str =
+    Native.RunTest.unsafeParse str
 
 
 type Outcome
@@ -24,37 +35,9 @@ type alias Failure =
     { given : Maybe String, message : String }
 
 
-testResultDecoder : Decoder TestResult
-testResultDecoder =
-    Decode.map3
-        TestResult
-        (Decode.field "labels" (Decode.list Decode.string))
-        (Decode.field "outcomes" (Decode.list outcomeDecoder))
-        (Decode.field "duration" Decode.float)
-
-
-outcomeDecoder : Decoder Outcome
-outcomeDecoder =
-    Decode.field "type" Decode.string
-        |> Decode.andThen outcomeFromTypeDecoder
-
-
-outcomeFromTypeDecoder : String -> Decoder Outcome
-outcomeFromTypeDecoder outcomeType =
-    case outcomeType of
-        "PASS" ->
-            Decode.succeed Passed
-
-        "FAIL" ->
-            Decode.field "failure" failureDecoder
-                |> Decode.map Failed
-
-        "TODO" ->
-            Decode.field "message" Decode.string
-                |> Decode.map Todo
-
-        _ ->
-            Decode.fail ("Unrecognized outcome type: " ++ outcomeType)
+unsafeTestResultDecoder : Decoder TestResult
+unsafeTestResultDecoder =
+    Decode.map unsafeParseJson Decode.string
 
 
 failureDecoder : Decoder Failure
@@ -130,10 +113,6 @@ outcomeFromExpectation expectation =
             Passed
 
 
-encodeTestResult : TestResult -> Value
-encodeTestResult { labels, outcomes, duration } =
-    Encode.object
-        [ ( "labels", Encode.list (List.map Encode.string labels) )
-        , ( "outcomes", Encode.list (List.map encodeOutcome outcomes) )
-        , ( "duration", Encode.float duration )
-        ]
+encodeRawTestResultString : TestResult -> String
+encodeRawTestResultString testResult =
+    rawStringify testResult

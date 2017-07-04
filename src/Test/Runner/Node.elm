@@ -21,7 +21,7 @@ import Platform
 import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome(..), TestResult, encodeOutcome, encodeTestResult, isFailure, outcomeFromExpectation)
+import Test.Reporter.TestResults exposing (Outcome(..), TestResult, encodeRawTestResultString, isFailure, outcomeFromExpectation)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Test.Runner.Node.App as App
@@ -91,14 +91,9 @@ dispatch model testId startTime =
                 outcomes =
                     runThunk run
                         |> List.map outcomeFromExpectation
-
-                complete =
-                    Complete testId labels outcomes startTime
-
-                available =
-                    Dict.remove testId model.available
             in
-            Task.perform complete Time.now
+            Time.now
+                |> Task.perform (Complete testId labels outcomes startTime)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -187,7 +182,7 @@ update msg ({ testReporter } as model) =
                     Encode.object
                         [ ( "type", Encode.string "TEST_COMPLETED" )
                         , ( "index", Encode.int testId )
-                        , ( "summary", encodeTestResult result )
+                        , ( "summary", Encode.string (encodeRawTestResultString result) )
                         , ( "format", Encode.string testReporter.format )
                         , ( "message", encodedOutcome )
                         ]
