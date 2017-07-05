@@ -181,7 +181,6 @@ update msg ({ testReporter } as model) =
                 cmd =
                     Encode.object
                         [ ( "type", Encode.string "TEST_COMPLETED" )
-                        , ( "index", Encode.int testId )
                         , ( "summary", encodeRawTestResult result )
                         , ( "format", Encode.string testReporter.format )
                         , ( "message", encodedOutcome )
