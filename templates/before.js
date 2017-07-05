@@ -25,3 +25,5 @@ if (typeof FormData === "undefined") {
     this._data.push(Array.prototype.slice.call(arguments));
   };
 }
+
+setTimeout = process.nextTick;
