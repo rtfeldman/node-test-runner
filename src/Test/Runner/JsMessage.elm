@@ -7,7 +7,7 @@ import Test.Reporter.TestResults exposing (TestResult, unsafeTestResultDecoder)
 type JsMessage
     = Begin
     | Test Int
-    | Summary (List TestResult)
+    | Summary Float (List TestResult)
 
 
 decoder : Decoder JsMessage
@@ -27,8 +27,9 @@ decodeMessageFromType messageType =
             Decode.succeed Begin
 
         "SUMMARY" ->
-            Decode.field "testResults" (Decode.list unsafeTestResultDecoder)
-                |> Decode.map Summary
+            Decode.map2 Summary
+                (Decode.field "duration" Decode.float)
+                (Decode.field "testResults" (Decode.list unsafeTestResultDecoder))
 
         _ ->
             Decode.fail ("Unrecognized message type: " ++ messageType)

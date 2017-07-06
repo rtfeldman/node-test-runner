@@ -47,7 +47,6 @@ type alias TestId =
 
 type alias Model =
     { available : Dict TestId Runner
-    , startTime : Time
     , runInfo : RunInfo
     , testReporter : TestReporter
     , autoFail : Maybe String
@@ -64,7 +63,6 @@ type Msg
     = Receive Decode.Value
     | Dispatch TestId Time
     | Complete TestId (List String) (List Outcome) Time Time
-    | SendSummary (List TestResult) Time
 
 
 port send : String -> Cmd msg
@@ -106,9 +104,29 @@ update msg ({ testReporter } as model) =
                         Ok Begin ->
                             sendBegin model
 
-                        Ok (Summary results) ->
-                            Time.now
-                                |> Task.perform (SendSummary results)
+                        Ok (Summary duration completed) ->
+                            let
+                                summary =
+                                    testReporter.reportSummary duration model.autoFail completed
+
+                                defaultExitCode =
+                                    if model.autoFail == Nothing then
+                                        0
+                                    else
+                                        3
+
+                                exitCode =
+                                    List.concatMap .outcomes completed
+                                        |> getExitCode defaultExitCode
+                            in
+                            Encode.object
+                                [ ( "type", Encode.string "SUMMARY" )
+                                , ( "exitCode", Encode.int exitCode )
+                                , ( "format", Encode.string model.testReporter.format )
+                                , ( "message", summary )
+                                ]
+                                |> Encode.encode 0
+                                |> send
 
                         Ok (Test index) ->
                             if index >= model.runInfo.testCount then
@@ -132,36 +150,6 @@ update msg ({ testReporter } as model) =
         Dispatch index startTime ->
             ( model, dispatch model index startTime )
 
-        SendSummary completed finishTime ->
-            let
-                duration =
-                    finishTime - model.startTime
-
-                summary =
-                    testReporter.reportSummary duration model.autoFail completed
-
-                defaultExitCode =
-                    if model.autoFail == Nothing then
-                        0
-                    else
-                        3
-
-                exitCode =
-                    List.concatMap .outcomes completed
-                        |> getExitCode defaultExitCode
-
-                cmd =
-                    Encode.object
-                        [ ( "type", Encode.string "SUMMARY" )
-                        , ( "exitCode", Encode.int exitCode )
-                        , ( "format", Encode.string model.testReporter.format )
-                        , ( "message", summary )
-                        ]
-                        |> Encode.encode 0
-                        |> send
-            in
-            ( model, cmd )
-
         Complete testId labels outcomes startTime endTime ->
             let
                 result =
@@ -181,7 +169,6 @@ update msg ({ testReporter } as model) =
                 cmd =
                     Encode.object
                         [ ( "type", Encode.string "TEST_COMPLETED" )
-                        , ( "index", Encode.int testId )
                         , ( "summary", encodeRawTestResult result )
                         , ( "format", Encode.string testReporter.format )
                         , ( "message", encodedOutcome )
@@ -291,7 +278,6 @@ init { startTime, paths, fuzzRuns, initialSeed, runners, report } =
 
         model =
             { available = Dict.fromList indexedRunners
-            , startTime = startTime
             , runInfo =
                 { testCount = testCount
                 , paths = paths
