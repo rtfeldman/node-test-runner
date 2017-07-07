@@ -5,6 +5,18 @@ Notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors Elm versions.
 
+## Unreleased
+
+### Internal
+
+- More accurate timetracking
+
+## 0.18.8-beta
+
+### Added
+
+- Parallelized test-runs! (#45)
+
 ## 0.18.7 - 2017-06-30
 
 ### Fixed
