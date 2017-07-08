@@ -5,8 +5,7 @@ import Test.Reporter.TestResults exposing (TestResult, unsafeTestResultDecoder)
 
 
 type JsMessage
-    = Begin
-    | Test Int
+    = Test Int
     | Summary Float (List TestResult)
 
 
@@ -22,9 +21,6 @@ decodeMessageFromType messageType =
         "TEST" ->
             Decode.field "index" Decode.int
                 |> Decode.map Test
-
-        "BEGIN" ->
-            Decode.succeed Begin
 
         "SUMMARY" ->
             Decode.map2 Summary
