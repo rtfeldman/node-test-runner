@@ -49,6 +49,9 @@ type alias Model =
     { available : Dict TestId Runner
     , runInfo : RunInfo
     , testReporter : TestReporter
+    , summaries : List Outcome
+    , processes : Int
+    , nextTestToRun : Maybe TestId
     , autoFail : Maybe String
     }
 
@@ -237,16 +240,8 @@ sendBegin model =
         |> send
 
 
-init :
-    { initialSeed : Int
-    , paths : List String
-    , fuzzRuns : Int
-    , startTime : Time
-    , runners : SeededRunners
-    , report : Report
-    }
-    -> ( Model, Cmd Msg )
-init { startTime, paths, fuzzRuns, initialSeed, runners, report } =
+init : App.InitArgs -> ( Model, Cmd Msg )
+init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
     let
         { indexedRunners, autoFail } =
             case runners of
@@ -284,6 +279,9 @@ init { startTime, paths, fuzzRuns, initialSeed, runners, report } =
                 , fuzzRuns = fuzzRuns
                 , initialSeed = initialSeed
                 }
+            , processes = processes
+            , nextTestToRun = Nothing
+            , summaries = []
             , testReporter = testReporter
             , autoFail = autoFail
             }
