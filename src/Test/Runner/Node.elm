@@ -49,7 +49,7 @@ type alias Model =
     { available : Dict TestId Runner
     , runInfo : RunInfo
     , testReporter : TestReporter
-    , summaries : List Outcome
+    , summaries : List TestResult
     , processes : Int
     , nextTestToRun : Maybe TestId
     , autoFail : Maybe String
@@ -125,7 +125,6 @@ update msg ({ testReporter } as model) =
                             Encode.object
                                 [ ( "type", Encode.string "SUMMARY" )
                                 , ( "exitCode", Encode.int exitCode )
-                                , ( "format", Encode.string model.testReporter.format )
                                 , ( "message", summary )
                                 ]
                                 |> Encode.encode 0
@@ -170,16 +169,19 @@ update msg ({ testReporter } as model) =
                             Encode.null
 
                 cmd =
-                    Encode.object
-                        [ ( "type", Encode.string "TEST_COMPLETED" )
-                        , ( "summary", encodeRawTestResult result )
-                        , ( "format", Encode.string testReporter.format )
-                        , ( "message", encodedOutcome )
-                        ]
-                        |> Encode.encode 0
-                        |> send
+                    if List.any ((/=) Passed) outcomes then
+                        Encode.object
+                            [ ( "type", Encode.string "TEST_COMPLETED" )
+                            , ( "summary", encodeRawTestResult result )
+                            , ( "message", encodedOutcome )
+                            ]
+                            |> Encode.encode 0
+                            |> send
+                    else
+                        Cmd.none
             in
-            ( model, cmd )
+            -- TODO for Console reporters, Passed tests can skip this entire let-block and do nothing
+            ( { model | summaries = result :: model.summaries }, cmd )
 
 
 getExitCode : Int -> List Outcome -> Int
@@ -223,7 +225,6 @@ sendBegin model =
     let
         baseFields =
             [ ( "type", Encode.string "BEGIN" )
-            , ( "format", Encode.string model.testReporter.format )
             , ( "testCount", Encode.int model.runInfo.testCount )
             ]
 
