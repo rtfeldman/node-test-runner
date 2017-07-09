@@ -16,16 +16,15 @@ reportBegin { paths, fuzzRuns, testCount, initialSeed } =
         |> Just
 
 
-reportComplete : TestResults.TestResult -> Maybe Value
+reportComplete : TestResults.TestResult -> Value
 reportComplete { duration, labels, outcome } =
-    [ ( "event", Encode.string "testCompleted" )
-    , ( "status", Encode.string (getStatus outcome) )
-    , ( "labels", encodeLabels labels )
-    , ( "failures", Encode.list (encodeFailures outcome) )
-    , ( "duration", Encode.string <| toString duration )
-    ]
-        |> Encode.object
-        |> Just
+    Encode.object
+        [ ( "event", Encode.string "testCompleted" )
+        , ( "status", Encode.string (getStatus outcome) )
+        , ( "labels", encodeLabels labels )
+        , ( "failures", Encode.list (encodeFailures outcome) )
+        , ( "duration", Encode.string <| toString duration )
+        ]
 
 
 encodeFailures : Outcome -> List Value

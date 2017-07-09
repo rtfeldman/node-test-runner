@@ -228,40 +228,13 @@ sendResults isFinished testReporter results =
         [ ( "type", Encode.string typeStr )
         , ( "results"
           , results
-                |> encodeResultsHelp testReporter []
+                |> List.reverse
+                |> List.map (\( testId, result ) -> ( toString testId, testReporter.reportComplete result ))
                 |> Encode.object
           )
         ]
         |> Encode.encode 0
         |> send
-
-
-{-| Results have been accumulated in reverse order. This reverses them again,
-while converting them to the desired format.
--}
-encodeResultsHelp :
-    TestReporter
-    -> List ( String, Value )
-    -> List ( TestId, TestResult )
-    -> List ( String, Value )
-encodeResultsHelp testReporter output pairs =
-    case pairs of
-        [] ->
-            output
-
-        ( testId, result ) :: rest ->
-            case testReporter.reportComplete result of
-                Nothing ->
-                    -- Leave out Nothing values on purpose. The Chalk runner
-                    -- uses this as a performance optimization, avoiding sending
-                    -- a lot of Pass results between processes.
-                    encodeResultsHelp testReporter output rest
-
-                Just val ->
-                    encodeResultsHelp
-                        testReporter
-                        (( toString testId, val ) :: output)
-                        rest
 
 
 encodeExpectation : Expectation -> Value
