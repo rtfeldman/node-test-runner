@@ -4,8 +4,7 @@ import Json.Encode as Encode exposing (Value)
 import Test.Reporter.Chalk as ChalkReporter
 import Test.Reporter.JUnit as JUnitReporter
 import Test.Reporter.Json as JsonReporter
-import Test.Reporter.TestResults exposing (TestResult)
-import Time exposing (Time)
+import Test.Reporter.TestResults exposing (SummaryInfo, TestResult)
 
 
 type Report
@@ -33,8 +32,8 @@ fromString str =
 type alias TestReporter =
     { format : String
     , reportBegin : RunInfo -> Maybe Value
-    , reportComplete : TestResult -> Maybe Value
-    , reportSummary : Time -> Maybe String -> List TestResult -> Value
+    , reportComplete : TestResult -> Value
+    , reportSummary : SummaryInfo -> Maybe String -> Value
     }
 
 

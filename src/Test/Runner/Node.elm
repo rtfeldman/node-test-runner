@@ -21,7 +21,7 @@ import Platform
 import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome(..), TestResult, encodeRawTestResult, isFailure, outcomeFromExpectation)
+import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, outcomesFromExpectations)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Test.Runner.Node.App as App
@@ -90,8 +90,7 @@ dispatch model startTime =
         Just { labels, run } ->
             let
                 outcomes =
-                    runThunk run
-                        |> List.map outcomeFromExpectation
+                    outcomesFromExpectations (runThunk run)
             in
             Time.now
                 |> Task.perform (Complete labels outcomes startTime)
@@ -102,20 +101,29 @@ update msg ({ testReporter } as model) =
     case msg of
         Receive val ->
             case Decode.decodeValue JsMessage.decoder val of
-                Ok (Summary duration completed) ->
+                Ok (Summary duration failed todos) ->
                     let
-                        summary =
-                            testReporter.reportSummary duration model.autoFail completed
+                        testCount =
+                            model.runInfo.testCount
 
-                        defaultExitCode =
-                            if model.autoFail == Nothing then
+                        summaryInfo =
+                            { testCount = testCount
+                            , passed = testCount - failed - List.length todos
+                            , failed = failed
+                            , todos = todos
+                            , duration = duration
+                            }
+
+                        summary =
+                            testReporter.reportSummary summaryInfo model.autoFail
+
+                        exitCode =
+                            if failed > 0 then
+                                2
+                            else if model.autoFail == Nothing then
                                 0
                             else
                                 3
-
-                        exitCode =
-                            List.concatMap .outcomes completed
-                                |> getExitCode defaultExitCode
 
                         cmd =
                             Encode.object
@@ -157,33 +165,28 @@ update msg ({ testReporter } as model) =
 
         Complete labels outcomes startTime endTime ->
             let
-                result =
-                    { labels = labels
-                    , outcomes = outcomes
-                    , duration = endTime - startTime
-                    }
+                duration =
+                    endTime - startTime
+
+                prependOutcome outcome results =
+                    ( model.nextTestToRun
+                    , { labels = labels, outcome = outcome, duration = duration }
+                    )
+                        :: results
+
+                results =
+                    List.foldl prependOutcome model.results outcomes
 
                 nextTestToRun =
                     model.nextTestToRun + model.processes
 
                 isFinished =
                     nextTestToRun >= model.runInfo.testCount
-
-                results =
-                    ( model.nextTestToRun, result ) :: model.results
             in
-            if isFinished || List.any ((/=) Passed) outcomes then
+            if isFinished || List.any isFailure outcomes then
                 let
-                    encodedOutcome =
-                        case testReporter.reportComplete result of
-                            Just val ->
-                                val
-
-                            Nothing ->
-                                Encode.null
-
                     cmd =
-                        sendResults isFinished encodedOutcome results
+                        sendResults isFinished testReporter results
                 in
                 if isFinished then
                     -- Don't bother updating the model, since we're done
@@ -202,8 +205,18 @@ update msg ({ testReporter } as model) =
                 )
 
 
-sendResults : Bool -> Value -> List ( TestId, TestResult ) -> Cmd msg
-sendResults isFinished encodedOutcome results =
+countFailures : ( TestId, TestResult ) -> Int -> Int
+countFailures ( _, { outcome } ) failures =
+    case outcome of
+        Failed _ ->
+            failures + 1
+
+        _ ->
+            failures
+
+
+sendResults : Bool -> TestReporter -> List ( TestId, TestResult ) -> Cmd msg
+sendResults isFinished testReporter results =
     let
         typeStr =
             if isFinished then
@@ -211,35 +224,17 @@ sendResults isFinished encodedOutcome results =
             else
                 "RESULTS"
     in
-    -- TODO for Console reporters, Passed tests can skip this entire let-block and do nothing
     Encode.object
         [ ( "type", Encode.string typeStr )
-        , ( "message", encodedOutcome )
         , ( "results"
           , results
                 |> List.reverse
-                |> List.map (\( testId, result ) -> ( toString testId, encodeRawTestResult result ))
+                |> List.map (\( testId, result ) -> ( toString testId, testReporter.reportComplete result ))
                 |> Encode.object
           )
         ]
         |> Encode.encode 0
         |> send
-
-
-getExitCode : Int -> List Outcome -> Int
-getExitCode exitCode outcomes =
-    case outcomes of
-        [] ->
-            exitCode
-
-        Passed :: rest ->
-            getExitCode exitCode rest
-
-        (Todo _) :: rest ->
-            getExitCode 4 rest
-
-        (Failed _) :: rest ->
-            2
 
 
 encodeExpectation : Expectation -> Value

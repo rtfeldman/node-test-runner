@@ -2,7 +2,7 @@ module Test.Reporter.Chalk exposing (reportBegin, reportComplete, reportSummary)
 
 import Chalk exposing (Chalk)
 import Json.Encode as Encode exposing (Value)
-import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), TestResult, isTodo)
+import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo, TestResult, isTodo)
 import Test.Runner exposing (formatLabels)
 import Time exposing (Time)
 
@@ -47,7 +47,7 @@ todoToChalk message =
     [ { styles = [], text = "◦ TODO: " ++ message ++ "\n\n" } ]
 
 
-failuresToChalk : List String -> List Results.Failure -> List Chalk
+failuresToChalk : List String -> List Failure -> List Chalk
 failuresToChalk labels failures =
     failureLabelsToChalk labels ++ List.concatMap failureToChalk failures
 
@@ -91,102 +91,32 @@ reportBegin { paths, fuzzRuns, testCount, initialSeed } =
                 ++ " --seed "
                 ++ toString initialSeed
     in
-    chalkWith
-        [ { styles = []
-          , text = String.join " " (prefix :: paths) ++ "\n"
-          }
-        ]
+    [ { styles = []
+      , text = String.join " " (prefix :: paths) ++ "\n"
+      }
+    ]
+        |> chalkWith
         |> Just
 
 
-getNonTodoFailure : Outcome -> Maybe Failure
-getNonTodoFailure outcome =
+reportComplete : Results.TestResult -> Value
+reportComplete { duration, labels, outcome } =
     case outcome of
-        Todo _ ->
-            Nothing
-
         Passed ->
-            Nothing
+            -- No failures of any kind.
+            Encode.null
 
         Failed failures ->
-            Just failures
-
-
-reportComplete : Results.TestResult -> Maybe Value
-reportComplete { duration, labels, outcomes } =
-    -- Don't report TODOs eagerly; report them at the summary if at all.
-    case List.filterMap getNonTodoFailure outcomes of
-        [] ->
-            -- No failures of any kind.
-            Nothing
-
-        failures ->
             -- We have non-TODOs still failing; report them, not the TODOs.
-            failuresToChalk labels failures
+            failures
+                |> failuresToChalk labels
                 |> chalkWith
-                |> Just
 
-
-getTodosAndFailures : List Results.TestResult -> { todos : List ( List String, String ), nonTodoFailures : Int }
-getTodosAndFailures =
-    getTodosAndFailuresHelp { todos = [], nonTodoFailures = 0 }
-
-
-getTodosAndFailuresHelp :
-    { todos : List ( List String, String ), nonTodoFailures : Int }
-    -> List TestResult
-    -> { todos : List ( List String, String ), nonTodoFailures : Int }
-getTodosAndFailuresHelp outcome testResults =
-    case testResults of
-        [] ->
-            outcome
-
-        { outcomes, labels } :: rest ->
-            let
-                { todoFailures, nonTodoFailures } =
-                    partitionTodos outcomes
-
-                newOutcome =
-                    if todoFailures == [] && nonTodoFailures == 0 then
-                        outcome
-                    else
-                        { todos = outcome.todos ++ List.map (\message -> ( labels, message )) todoFailures
-                        , nonTodoFailures = outcome.nonTodoFailures + nonTodoFailures
-                        }
-            in
-            getTodosAndFailuresHelp newOutcome rest
-
-
-type alias PartitionedTodos =
-    { todoFailures : List String, nonTodoFailures : Int }
-
-
-partitionTodos : List Outcome -> PartitionedTodos
-partitionTodos outcomes =
-    let
-        result =
-            partitionTodosHelp outcomes { todoFailures = [], nonTodoFailures = 0 }
-    in
-    { result | todoFailures = List.reverse result.todoFailures }
-
-
-partitionTodosHelp : List Outcome -> PartitionedTodos -> PartitionedTodos
-partitionTodosHelp outcomes result =
-    case outcomes of
-        [] ->
-            result
-
-        (Todo message) :: rest ->
-            { result | todoFailures = message :: result.todoFailures }
-                |> partitionTodosHelp rest
-
-        (Failed _) :: rest ->
-            { result | nonTodoFailures = 1 }
-                |> partitionTodosHelp rest
-
-        Passed :: rest ->
-            result
-                |> partitionTodosHelp rest
+        Todo str ->
+            Encode.object
+                [ ( "todo", Encode.string str )
+                , ( "labels", Encode.list (List.map Encode.string labels) )
+                ]
 
 
 summarizeTodos : List ( List String, String ) -> List Chalk
@@ -199,17 +129,11 @@ summarizeTodos todos =
             { styles = [], text = "\n\n" } :: todoChalks
 
 
-reportSummary : Time -> Maybe String -> List Results.TestResult -> Value
-reportSummary duration autoFail results =
+reportSummary : SummaryInfo -> Maybe String -> Value
+reportSummary { todos, passed, failed, duration } autoFail =
     let
-        { todos, nonTodoFailures } =
-            getTodosAndFailures results
-
-        passed =
-            List.length results - nonTodoFailures - List.length todos
-
         headlineResult =
-            case ( autoFail, nonTodoFailures, List.length todos ) of
+            case ( autoFail, failed, List.length todos ) of
                 ( Nothing, 0, 0 ) ->
                     Ok "TEST RUN PASSED"
 
@@ -246,7 +170,7 @@ reportSummary duration autoFail results =
                     stat "Todo:     " (toString numTodos)
 
         individualTodos =
-            if nonTodoFailures > 0 then
+            if failed > 0 then
                 []
             else
                 summarizeTodos (List.reverse todos)
@@ -254,7 +178,7 @@ reportSummary duration autoFail results =
     [ headline
     , stat "Duration: " (formatDuration duration)
     , stat "Passed:   " (toString passed)
-    , stat "Failed:   " (toString nonTodoFailures)
+    , stat "Failed:   " (toString failed)
     , todoStats
     , individualTodos
     ]
