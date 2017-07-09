@@ -53,7 +53,6 @@ type alias Model =
     , processes : Int
     , nextTestToRun : TestId
     , autoFail : Maybe String
-    , loadBalanced : Bool
     }
 
 
@@ -146,16 +145,8 @@ update msg ({ testReporter } as model) =
                         ( { model | nextTestToRun = index + model.processes }
                         , Cmd.batch [ cmd, sendBegin model ]
                         )
-                    else if index >= model.runInfo.testCount then
-                        -- If the index is out of bounds, we're all finished!
-                        ( model, sendResults True testReporter model.results )
                     else
                         ( { model | nextTestToRun = index }, cmd )
-
-                Ok LoadBalance ->
-                    ( { model | loadBalanced = True }
-                    , sendLoadBalanceInfo model.nextTestToRun
-                    )
 
                 Err err ->
                     let
@@ -190,68 +181,28 @@ update msg ({ testReporter } as model) =
                     model.nextTestToRun + model.processes
 
                 isFinished =
-                    -- If we're load balanced, the load balancer will tell us
-                    -- when we're finished by sending us a Test index that's
-                    -- out of bounds.
-                    not model.loadBalanced
-                        && (nextTestToRun >= model.runInfo.testCount)
-
-                needsLoadBalancing =
-                    -- If this is our last run before we will be finished,
-                    -- we're gonna need load balancing!
-                    not model.loadBalanced
-                        && (nextTestToRun + model.processes >= model.runInfo.testCount)
-
-                shouldBeLoadBalanced =
-                    model.loadBalanced || needsLoadBalancing
+                    nextTestToRun >= model.runInfo.testCount
             in
             if isFinished || List.any isFailure outcomes then
                 let
-                    newModel =
-                        { model
-                            | nextTestToRun = nextTestToRun
-                            , results = []
-                            , loadBalanced = shouldBeLoadBalanced
-                        }
-
                     cmd =
                         sendResults isFinished testReporter results
                 in
                 if isFinished then
-                    ( newModel, cmd )
+                    -- Don't bother updating the model, since we're done
+                    ( model, cmd )
                 else
                     -- Clear out the results, now that we've flushed them.
-                    ( newModel
-                    , if model.loadBalanced then
-                        cmd
-                      else if needsLoadBalancing then
-                        Cmd.batch
-                            [ cmd
-                            , sendLoadBalanceInfo nextTestToRun
-                            , Task.perform Dispatch Time.now
-                            ]
-                      else
-                        Cmd.batch
-                            [ cmd
-                            , Task.perform Dispatch Time.now
-                            ]
+                    ( { model | nextTestToRun = nextTestToRun, results = [] }
+                    , Cmd.batch
+                        [ cmd
+                        , Task.perform Dispatch Time.now
+                        ]
                     )
             else
-                let
-                    newModel =
-                        { model
-                            | nextTestToRun = nextTestToRun
-                            , results = results
-                            , loadBalanced = shouldBeLoadBalanced
-                        }
-
-                    cmd =
-                        Task.perform Dispatch Time.now
-                in
-                if needsLoadBalancing then
-                    ( newModel, Cmd.batch [ cmd, sendLoadBalanceInfo nextTestToRun ] )
-                else
-                    ( newModel, cmd )
+                ( { model | nextTestToRun = nextTestToRun, results = results }
+                , Task.perform Dispatch Time.now
+                )
 
 
 countFailures : ( TestId, TestResult ) -> Int -> Int
@@ -327,16 +278,6 @@ sendBegin model =
         |> send
 
 
-sendLoadBalanceInfo : Int -> Cmd msg
-sendLoadBalanceInfo index =
-    [ ( "type", Encode.string "LOADBALANCE" )
-    , ( "index", Encode.int index )
-    ]
-        |> Encode.object
-        |> Encode.encode 0
-        |> send
-
-
 init : App.InitArgs -> ( Model, Cmd Msg )
 init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
     let
@@ -381,7 +322,6 @@ init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
             , results = []
             , testReporter = testReporter
             , autoFail = autoFail
-            , loadBalanced = False
             }
     in
     ( model, Cmd.none )
