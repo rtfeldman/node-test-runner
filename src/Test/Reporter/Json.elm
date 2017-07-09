@@ -1,8 +1,7 @@
 module Test.Reporter.Json exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
-import Test.Reporter.TestResults as TestResults exposing (Outcome(..), encodeFailure, isFailure)
-import Time exposing (Time)
+import Test.Reporter.TestResults as TestResults exposing (Outcome(..), SummaryInfo, encodeFailure, isFailure)
 
 
 reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
@@ -17,26 +16,25 @@ reportBegin { paths, fuzzRuns, testCount, initialSeed } =
         |> Just
 
 
-reportComplete : TestResults.TestResult -> Maybe Value
-reportComplete { duration, labels, outcomes } =
-    Just <|
-        Encode.object
-            [ ( "event", Encode.string "testCompleted" )
-            , ( "status", Encode.string (getStatus outcomes) )
-            , ( "labels", encodeLabels labels )
-            , ( "failures", Encode.list (List.filterMap maybeEncodeFailures outcomes) )
-            , ( "duration", Encode.string <| toString duration )
-            ]
+reportComplete : TestResults.TestResult -> Value
+reportComplete { duration, labels, outcome } =
+    Encode.object
+        [ ( "event", Encode.string "testCompleted" )
+        , ( "status", Encode.string (getStatus outcome) )
+        , ( "labels", encodeLabels labels )
+        , ( "failures", Encode.list (encodeFailures outcome) )
+        , ( "duration", Encode.string <| toString duration )
+        ]
 
 
-maybeEncodeFailures : Outcome -> Maybe Value
-maybeEncodeFailures outcome =
+encodeFailures : Outcome -> List Value
+encodeFailures outcome =
     case outcome of
-        Failed failure ->
-            Just (encodeFailure failure)
+        Failed failures ->
+            List.map encodeFailure failures
 
         _ ->
-            Nothing
+            []
 
 
 {-| Algorithm:
@@ -46,25 +44,17 @@ maybeEncodeFailures outcome =
   - Otherwise, return "pass"
 
 -}
-getStatus : List Outcome -> String
-getStatus =
-    getStatusHelp "pass"
-
-
-getStatusHelp : String -> List Outcome -> String
-getStatusHelp result outcomes =
-    case outcomes of
-        [] ->
-            result
-
-        (Failed _) :: _ ->
+getStatus : Outcome -> String
+getStatus outcome =
+    case outcome of
+        Failed _ ->
             "fail"
 
-        (Todo _) :: rest ->
-            getStatusHelp "todo" rest
+        Todo _ ->
+            "todo"
 
-        Passed :: rest ->
-            getStatusHelp result rest
+        Passed ->
+            "pass"
 
 
 encodeLabels : List String -> Value
@@ -74,17 +64,8 @@ encodeLabels labels =
         |> Encode.list
 
 
-reportSummary : Time -> Maybe String -> List TestResults.TestResult -> Value
-reportSummary duration autoFail results =
-    let
-        failed =
-            results
-                |> List.filter (.outcomes >> List.any isFailure)
-                |> List.length
-
-        passed =
-            List.length results - failed
-    in
+reportSummary : SummaryInfo -> Maybe String -> Value
+reportSummary { duration, passed, failed, todos, testCount } autoFail =
     Encode.object
         [ ( "event", Encode.string "runComplete" )
         , ( "passed", Encode.string <| toString passed )

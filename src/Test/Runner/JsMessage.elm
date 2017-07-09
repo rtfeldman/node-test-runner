@@ -1,13 +1,11 @@
 module Test.Runner.JsMessage exposing (JsMessage(..), decoder)
 
 import Json.Decode as Decode exposing (Decoder)
-import Test.Reporter.TestResults exposing (TestResult, unsafeTestResultDecoder)
 
 
 type JsMessage
-    = Begin
-    | Test Int
-    | Summary Float (List TestResult)
+    = Test Int
+    | Summary Float Int (List ( List String, String ))
 
 
 decoder : Decoder JsMessage
@@ -23,13 +21,18 @@ decodeMessageFromType messageType =
             Decode.field "index" Decode.int
                 |> Decode.map Test
 
-        "BEGIN" ->
-            Decode.succeed Begin
-
         "SUMMARY" ->
-            Decode.map2 Summary
+            Decode.map3 Summary
                 (Decode.field "duration" Decode.float)
-                (Decode.field "testResults" (Decode.list unsafeTestResultDecoder))
+                (Decode.field "failures" Decode.int)
+                (Decode.field "todos" (Decode.list todoDecoder))
 
         _ ->
             Decode.fail ("Unrecognized message type: " ++ messageType)
+
+
+todoDecoder : Decoder ( List String, String )
+todoDecoder =
+    Decode.map2 (,)
+        (Decode.field "labels" (Decode.list Decode.string))
+        (Decode.field "todo" Decode.string)

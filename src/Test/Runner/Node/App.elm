@@ -1,4 +1,4 @@
-module Test.Runner.Node.App exposing (Model, Msg, RunnerOptions, run)
+module Test.Runner.Node.App exposing (InitArgs, Model, Msg, RunnerOptions, run)
 
 {-| Test runner for a Node app
 
@@ -23,11 +23,12 @@ type Msg subMsg
 
 type alias InitArgs =
     { initialSeed : Int
+    , processes : Int
+    , paths : List String
     , fuzzRuns : Int
     , startTime : Time
-    , paths : List String
     , runners : SeededRunners
-    , report : Reporter.Report
+    , report : Report
     }
 
 
@@ -37,6 +38,7 @@ type Model subMsg subModel
         (SubUpdate subMsg subModel)
         { maybeInitialSeed : Maybe Int
         , report : Reporter.Report
+        , processes : Int
         , runs : Int
         , paths : List String
         , test : Test
@@ -56,7 +58,7 @@ timeToNumericSeed time =
 initOrUpdate : Msg subMsg -> Model subMsg subModel -> ( Model subMsg subModel, Cmd (Msg subMsg) )
 initOrUpdate msg maybeModel =
     case maybeModel of
-        Uninitialized update { maybeInitialSeed, report, paths, runs, test, init } ->
+        Uninitialized update { maybeInitialSeed, processes, report, paths, runs, test, init } ->
             case msg of
                 Init time ->
                     let
@@ -77,6 +79,7 @@ initOrUpdate msg maybeModel =
                         ( subModel, subCmd ) =
                             init
                                 { initialSeed = numericSeed
+                                , processes = processes
                                 , fuzzRuns = runs
                                 , paths = paths
                                 , startTime = time
@@ -111,6 +114,7 @@ type alias RunnerOptions =
     , runs : Maybe Int
     , reporter : Maybe String
     , paths : List String
+    , processes : Int
     }
 
 
@@ -139,7 +143,7 @@ defaultRunCount =
 {-| Run the tests and render the results as a Web page.
 -}
 run : RunnerOptions -> AppOptions msg model -> Test -> Program Value (Model msg model) (Msg msg)
-run { runs, seed, reporter, paths } appOpts test =
+run { runs, seed, reporter, paths, processes } appOpts test =
     let
         init args =
             let
@@ -161,6 +165,7 @@ run { runs, seed, reporter, paths } appOpts test =
             in
             ( Uninitialized appOpts.update
                 { maybeInitialSeed = seed
+                , processes = processes
                 , report = report
                 , runs = Maybe.withDefault defaultRunCount runs
                 , paths = paths

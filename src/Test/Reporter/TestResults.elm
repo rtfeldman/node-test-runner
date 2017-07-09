@@ -1,43 +1,46 @@
-module Test.Reporter.TestResults exposing (Failure, Outcome(..), TestResult, encodeFailure, encodeRawTestResult, isFailure, isTodo, outcomeFromExpectation, unsafeTestResultDecoder)
+module Test.Reporter.TestResults
+    exposing
+        ( Failure
+        , Outcome(..)
+        , SummaryInfo
+        , TestResult
+        , encodeFailure
+        , isFailure
+        , isTodo
+        , outcomesFromExpectations
+        )
 
 import Expect exposing (Expectation)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Native.RunTest
 import Test.Runner
 import Time exposing (Time)
-
-
-unsafeToValue : a -> Value
-unsafeToValue a =
-    Native.RunTest.unsafeCoerce a
-
-
-unsafeFromValue : Value -> a
-unsafeFromValue val =
-    Native.RunTest.unsafeCoerce val
 
 
 type Outcome
     = Passed
     | Todo String
-    | Failed Failure
+    | Failed (List Failure)
 
 
 type alias TestResult =
     { labels : List String
-    , outcomes : List Outcome
+    , outcome : Outcome
+    , duration : Time
+    }
+
+
+type alias SummaryInfo =
+    { testCount : Int
+    , passed : Int
+    , failed : Int
+    , todos : List ( List String, String )
     , duration : Time
     }
 
 
 type alias Failure =
     { given : Maybe String, message : String }
-
-
-unsafeTestResultDecoder : Decoder TestResult
-unsafeTestResultDecoder =
-    Decode.map unsafeFromValue Decode.value
 
 
 failureDecoder : Decoder Failure
@@ -55,10 +58,10 @@ encodeOutcome outcome =
             Encode.object
                 [ ( "type", Encode.string "PASS" ) ]
 
-        Failed failure ->
+        Failed failures ->
             Encode.object
                 [ ( "type", Encode.string "FAIL" )
-                , ( "failure", encodeFailure failure )
+                , ( "failures", Encode.list (List.map encodeFailure failures) )
                 ]
 
         Todo message ->
@@ -100,19 +103,58 @@ isFailure outcome =
             False
 
 
-outcomeFromExpectation : Expectation -> Outcome
-outcomeFromExpectation expectation =
+outcomesFromExpectations : List Expectation -> List Outcome
+outcomesFromExpectations expectations =
+    case expectations of
+        expectation :: [] ->
+            -- Most often we'll get exactly 1 pass, so try that case first!
+            case Test.Runner.getFailure expectation of
+                Nothing ->
+                    [ Passed ]
+
+                Just failure ->
+                    if Test.Runner.isTodo expectation then
+                        [ Todo failure.message ]
+                    else
+                        [ Failed [ failure ] ]
+
+        first :: rest ->
+            let
+                builder =
+                    List.foldl outcomesFromExpectationsHelp
+                        { passes = 0, todos = [], failures = [] }
+                        expectations
+
+                failuresList =
+                    case builder.failures of
+                        [] ->
+                            []
+
+                        failures ->
+                            [ Failed failures ]
+            in
+            List.concat
+                [ List.repeat builder.passes Passed
+                , List.map Todo builder.todos
+                , failuresList
+                ]
+
+        [] ->
+            []
+
+
+type alias OutcomeBuilder =
+    { passes : Int, todos : List String, failures : List Failure }
+
+
+outcomesFromExpectationsHelp : Expectation -> OutcomeBuilder -> OutcomeBuilder
+outcomesFromExpectationsHelp expectation builder =
     case Test.Runner.getFailure expectation of
         Just failure ->
             if Test.Runner.isTodo expectation then
-                Todo failure.message
+                { builder | todos = failure.message :: builder.todos }
             else
-                Failed failure
+                { builder | failures = failure :: builder.failures }
 
         Nothing ->
-            Passed
-
-
-encodeRawTestResult : TestResult -> Value
-encodeRawTestResult =
-    unsafeToValue
+            { builder | passes = builder.passes + 1 }

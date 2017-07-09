@@ -21,7 +21,7 @@ import Platform
 import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome(..), TestResult, encodeRawTestResult, isFailure, outcomeFromExpectation)
+import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, outcomesFromExpectations)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Test.Runner.Node.App as App
@@ -49,6 +49,9 @@ type alias Model =
     { available : Dict TestId Runner
     , runInfo : RunInfo
     , testReporter : TestReporter
+    , results : List ( TestId, TestResult )
+    , processes : Int
+    , nextTestToRun : TestId
     , autoFail : Maybe String
     }
 
@@ -61,8 +64,8 @@ type alias TestProgram =
 
 type Msg
     = Receive Decode.Value
-    | Dispatch TestId Time
-    | Complete TestId (List String) (List Outcome) Time Time
+    | Dispatch Time
+    | Complete (List String) (List Outcome) Time Time
 
 
 port send : String -> Cmd msg
@@ -77,122 +80,161 @@ warn str result =
     result
 
 
-dispatch : Model -> TestId -> Time -> Cmd Msg
-dispatch model testId startTime =
-    case Dict.get testId model.available of
+dispatch : Model -> Time -> Cmd Msg
+dispatch model startTime =
+    case Dict.get model.nextTestToRun model.available of
         Nothing ->
             Cmd.none
-                |> warn ("Could not find testId " ++ toString testId)
+                |> warn ("Could not find testId " ++ toString model.nextTestToRun)
 
         Just { labels, run } ->
             let
                 outcomes =
-                    runThunk run
-                        |> List.map outcomeFromExpectation
+                    outcomesFromExpectations (runThunk run)
             in
             Time.now
-                |> Task.perform (Complete testId labels outcomes startTime)
+                |> Task.perform (Complete labels outcomes startTime)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ testReporter } as model) =
     case msg of
         Receive val ->
-            let
-                cmd =
-                    case Decode.decodeValue JsMessage.decoder val of
-                        Ok Begin ->
-                            sendBegin model
+            case Decode.decodeValue JsMessage.decoder val of
+                Ok (Summary duration failed todos) ->
+                    let
+                        testCount =
+                            model.runInfo.testCount
 
-                        Ok (Summary duration completed) ->
-                            let
-                                summary =
-                                    testReporter.reportSummary duration model.autoFail completed
+                        summaryInfo =
+                            { testCount = testCount
+                            , passed = testCount - failed - List.length todos
+                            , failed = failed
+                            , todos = todos
+                            , duration = duration
+                            }
 
-                                defaultExitCode =
-                                    if model.autoFail == Nothing then
-                                        0
-                                    else
-                                        3
+                        summary =
+                            testReporter.reportSummary summaryInfo model.autoFail
 
-                                exitCode =
-                                    List.concatMap .outcomes completed
-                                        |> getExitCode defaultExitCode
-                            in
+                        exitCode =
+                            if failed > 0 then
+                                2
+                            else if model.autoFail == Nothing && List.isEmpty todos then
+                                0
+                            else
+                                3
+
+                        cmd =
                             Encode.object
                                 [ ( "type", Encode.string "SUMMARY" )
                                 , ( "exitCode", Encode.int exitCode )
-                                , ( "format", Encode.string model.testReporter.format )
                                 , ( "message", summary )
                                 ]
                                 |> Encode.encode 0
                                 |> send
+                    in
+                    ( model, cmd )
 
-                        Ok (Test index) ->
-                            if index >= model.runInfo.testCount then
-                                Encode.object
-                                    [ ( "type", Encode.string "FINISHED" ) ]
-                                    |> Encode.encode 0
-                                    |> send
-                            else
-                                Task.perform (Dispatch index) Time.now
+                Ok (Test index) ->
+                    let
+                        cmd =
+                            Task.perform Dispatch Time.now
+                    in
+                    if index == -1 then
+                        ( { model | nextTestToRun = index + model.processes }
+                        , Cmd.batch [ cmd, sendBegin model ]
+                        )
+                    else
+                        ( { model | nextTestToRun = index }, cmd )
 
-                        Err err ->
+                Err err ->
+                    let
+                        cmd =
                             Encode.object
                                 [ ( "type", Encode.string "ERROR" )
                                 , ( "message", Encode.string err )
                                 ]
                                 |> Encode.encode 0
                                 |> send
-            in
-            ( model, cmd )
+                    in
+                    ( model, cmd )
 
-        Dispatch index startTime ->
-            ( model, dispatch model index startTime )
+        Dispatch startTime ->
+            ( model, dispatch model startTime )
 
-        Complete testId labels outcomes startTime endTime ->
+        Complete labels outcomes startTime endTime ->
             let
-                result =
-                    { labels = labels
-                    , outcomes = outcomes
-                    , duration = endTime - startTime
-                    }
+                duration =
+                    endTime - startTime
 
-                encodedOutcome =
-                    case testReporter.reportComplete result of
-                        Just val ->
-                            val
+                prependOutcome outcome results =
+                    ( model.nextTestToRun
+                    , { labels = labels, outcome = outcome, duration = duration }
+                    )
+                        :: results
 
-                        Nothing ->
-                            Encode.null
+                results =
+                    List.foldl prependOutcome model.results outcomes
 
-                cmd =
-                    Encode.object
-                        [ ( "type", Encode.string "TEST_COMPLETED" )
-                        , ( "summary", encodeRawTestResult result )
-                        , ( "format", Encode.string testReporter.format )
-                        , ( "message", encodedOutcome )
-                        ]
-                        |> Encode.encode 0
-                        |> send
+                nextTestToRun =
+                    model.nextTestToRun + model.processes
+
+                isFinished =
+                    nextTestToRun >= model.runInfo.testCount
             in
-            ( model, cmd )
+            if isFinished || List.any isFailure outcomes then
+                let
+                    cmd =
+                        sendResults isFinished testReporter results
+                in
+                if isFinished then
+                    -- Don't bother updating the model, since we're done
+                    ( model, cmd )
+                else
+                    -- Clear out the results, now that we've flushed them.
+                    ( { model | nextTestToRun = nextTestToRun, results = [] }
+                    , Cmd.batch
+                        [ cmd
+                        , Task.perform Dispatch Time.now
+                        ]
+                    )
+            else
+                ( { model | nextTestToRun = nextTestToRun, results = results }
+                , Task.perform Dispatch Time.now
+                )
 
 
-getExitCode : Int -> List Outcome -> Int
-getExitCode exitCode outcomes =
-    case outcomes of
-        [] ->
-            exitCode
+countFailures : ( TestId, TestResult ) -> Int -> Int
+countFailures ( _, { outcome } ) failures =
+    case outcome of
+        Failed _ ->
+            failures + 1
 
-        Passed :: rest ->
-            getExitCode exitCode rest
+        _ ->
+            failures
 
-        (Todo _) :: rest ->
-            getExitCode 4 rest
 
-        (Failed _) :: rest ->
-            2
+sendResults : Bool -> TestReporter -> List ( TestId, TestResult ) -> Cmd msg
+sendResults isFinished testReporter results =
+    let
+        typeStr =
+            if isFinished then
+                "FINISHED"
+            else
+                "RESULTS"
+    in
+    Encode.object
+        [ ( "type", Encode.string typeStr )
+        , ( "results"
+          , results
+                |> List.reverse
+                |> List.map (\( testId, result ) -> ( toString testId, testReporter.reportComplete result ))
+                |> Encode.object
+          )
+        ]
+        |> Encode.encode 0
+        |> send
 
 
 encodeExpectation : Expectation -> Value
@@ -220,7 +262,6 @@ sendBegin model =
     let
         baseFields =
             [ ( "type", Encode.string "BEGIN" )
-            , ( "format", Encode.string model.testReporter.format )
             , ( "testCount", Encode.int model.runInfo.testCount )
             ]
 
@@ -237,16 +278,8 @@ sendBegin model =
         |> send
 
 
-init :
-    { initialSeed : Int
-    , paths : List String
-    , fuzzRuns : Int
-    , startTime : Time
-    , runners : SeededRunners
-    , report : Report
-    }
-    -> ( Model, Cmd Msg )
-init { startTime, paths, fuzzRuns, initialSeed, runners, report } =
+init : App.InitArgs -> ( Model, Cmd Msg )
+init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
     let
         { indexedRunners, autoFail } =
             case runners of
@@ -284,6 +317,9 @@ init { startTime, paths, fuzzRuns, initialSeed, runners, report } =
                 , fuzzRuns = fuzzRuns
                 , initialSeed = initialSeed
                 }
+            , processes = processes
+            , nextTestToRun = 0
+            , results = []
             , testReporter = testReporter
             , autoFail = autoFail
             }
