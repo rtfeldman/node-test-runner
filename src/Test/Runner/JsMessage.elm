@@ -5,7 +5,6 @@ import Json.Decode as Decode exposing (Decoder)
 
 type JsMessage
     = Test Int
-    | LoadBalance
     | Summary Float Int (List ( List String, String ))
 
 
@@ -21,9 +20,6 @@ decodeMessageFromType messageType =
         "TEST" ->
             Decode.field "index" Decode.int
                 |> Decode.map Test
-
-        "LOAD_BALANCE" ->
-            Decode.succeed LoadBalance
 
         "SUMMARY" ->
             Decode.map3 Summary

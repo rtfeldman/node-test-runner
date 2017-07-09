@@ -53,7 +53,6 @@ type alias Model =
     , processes : Int
     , nextTestToRun : TestId
     , autoFail : Maybe String
-    , runNextImmediately : Bool
     }
 
 
@@ -136,9 +135,6 @@ update msg ({ testReporter } as model) =
                                 |> send
                     in
                     ( model, cmd )
-
-                Ok LoadBalance ->
-                    ( { model | runNextImmediately = False }, Cmd.none )
 
                 Ok (Test index) ->
                     let
@@ -326,7 +322,6 @@ init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
             , results = []
             , testReporter = testReporter
             , autoFail = autoFail
-            , runNextImmediately = True
             }
     in
     ( model, Cmd.none )
