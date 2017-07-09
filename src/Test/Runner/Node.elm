@@ -84,8 +84,8 @@ dispatch : Model -> Time -> Cmd Msg
 dispatch model startTime =
     case Dict.get model.nextTestToRun model.available of
         Nothing ->
-            Cmd.none
-                |> warn ("Could not find testId " ++ toString model.nextTestToRun)
+            -- We're finished! Nothing left to run.
+            sendResults True model.testReporter model.results
 
         Just { labels, run } ->
             let
