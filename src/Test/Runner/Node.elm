@@ -120,7 +120,7 @@ update msg ({ testReporter } as model) =
                         exitCode =
                             if failed > 0 then
                                 2
-                            else if model.autoFail == Nothing then
+                            else if model.autoFail == Nothing && List.isEmpty todos then
                                 0
                             else
                                 3
