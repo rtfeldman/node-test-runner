@@ -99,24 +99,25 @@ reportBegin { paths, fuzzRuns, testCount, initialSeed } =
         |> Just
 
 
-reportComplete : Results.TestResult -> Value
+reportComplete : Results.TestResult -> Maybe Value
 reportComplete { duration, labels, outcome } =
     case outcome of
         Passed ->
-            -- No failures of any kind.
-            Encode.null
+            Nothing
 
         Failed failures ->
             -- We have non-TODOs still failing; report them, not the TODOs.
             failures
                 |> failuresToChalk labels
                 |> chalkWith
+                |> Just
 
         Todo str ->
-            Encode.object
-                [ ( "todo", Encode.string str )
-                , ( "labels", Encode.list (List.map Encode.string labels) )
-                ]
+            [ ( "todo", Encode.string str )
+            , ( "labels", Encode.list (List.map Encode.string labels) )
+            ]
+                |> Encode.object
+                |> Just
 
 
 summarizeTodos : List ( List String, String ) -> List Chalk

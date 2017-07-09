@@ -32,7 +32,7 @@ fromString str =
 type alias TestReporter =
     { format : String
     , reportBegin : RunInfo -> Maybe Value
-    , reportComplete : TestResult -> Value
+    , reportComplete : TestResult -> Maybe Value
     , reportSummary : SummaryInfo -> Maybe String -> Value
     }
 

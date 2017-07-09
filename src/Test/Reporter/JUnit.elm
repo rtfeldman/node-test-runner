@@ -57,24 +57,29 @@ encodeTime time =
         |> Encode.string
 
 
-reportComplete : TestResult -> Value
-reportComplete { labels, duration, outcome } =
+reportComplete : TestResult -> Maybe Value
+reportComplete =
+    encodeTestResult >> Just
+
+
+encodeTestResult : TestResult -> Value
+encodeTestResult { labels, duration, outcome } =
     let
         ( classname, name ) =
             formatClassAndName labels
     in
-    Encode.object
-        ([ ( "@classname", Encode.string classname )
-         , ( "@name", Encode.string name )
-         , ( "@time", encodeTime duration )
-         ]
-            ++ encodeOutcome outcome
-        )
+    ([ ( "@classname", Encode.string classname )
+     , ( "@name", Encode.string name )
+     , ( "@time", encodeTime duration )
+     ]
+        ++ encodeOutcome outcome
+    )
+        |> Encode.object
 
 
 encodeExtraFailure : String -> Value
 encodeExtraFailure failure =
-    reportComplete { labels = [], duration = 0, outcome = Failed [] }
+    encodeTestResult { labels = [], duration = 0, outcome = Failed [] }
 
 
 reportSummary : SummaryInfo -> Maybe String -> Value
