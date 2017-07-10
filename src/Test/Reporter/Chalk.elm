@@ -84,7 +84,7 @@ reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSee
 reportBegin { paths, fuzzRuns, testCount, initialSeed } =
     let
         prefix =
-            "\nelm-test\n--------\n\nRunning "
+            "Running "
                 ++ pluralize "test" "tests" testCount
                 ++ ". To reproduce these results, run: elm-test --fuzz "
                 ++ toString fuzzRuns
