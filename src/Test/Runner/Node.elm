@@ -223,13 +223,17 @@ sendResults isFinished testReporter results =
                 "FINISHED"
             else
                 "RESULTS"
+
+        addToKeyValues ( testId, result ) list =
+            -- These are coming in in reverse order. Doing a foldl with ::
+            -- means we reverse the list again, while also doing the conversion!
+            ( toString testId, testReporter.reportComplete result ) :: list
     in
     Encode.object
         [ ( "type", Encode.string typeStr )
         , ( "results"
           , results
-                |> List.reverse
-                |> List.map (\( testId, result ) -> ( toString testId, testReporter.reportComplete result ))
+                |> List.foldl addToKeyValues []
                 |> Encode.object
           )
         ]
