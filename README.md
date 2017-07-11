@@ -61,7 +61,7 @@ elm-test --add-dependencies tests/elm-package.json
 
 Specify which reporter to use for reporting your test results. Valid options are:
 
-- `chalk` (default): pretty, human readable formatted output
+- `console` (default): pretty, human readable formatted output
 - `json`: every event will be written to stdout as a json-encoded object
 - `junit`: junit-compatible xml will be written to stdout
 
