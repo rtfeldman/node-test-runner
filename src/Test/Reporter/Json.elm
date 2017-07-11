@@ -33,6 +33,9 @@ encodeFailures outcome =
         Failed failures ->
             List.map encodeFailure failures
 
+        Todo str ->
+            [ Encode.string str ]
+
         _ ->
             []
 

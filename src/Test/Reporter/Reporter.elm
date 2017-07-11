@@ -1,32 +1,17 @@
 module Test.Reporter.Reporter exposing (..)
 
+import Console.Text exposing (UseColor)
 import Json.Encode as Encode exposing (Value)
-import Test.Reporter.Chalk as ChalkReporter
+import Test.Reporter.Console as ConsoleReporter
 import Test.Reporter.JUnit as JUnitReporter
 import Test.Reporter.Json as JsonReporter
 import Test.Reporter.TestResults exposing (SummaryInfo, TestResult)
 
 
 type Report
-    = ChalkReport
+    = ConsoleReport UseColor
     | JsonReport
     | JUnitReport
-
-
-fromString : String -> Result String Report
-fromString str =
-    case String.toLower str of
-        "chalk" ->
-            Ok ChalkReport
-
-        "json" ->
-            Ok JsonReport
-
-        "junit" ->
-            Ok JUnitReport
-
-        _ ->
-            Err ("Unrecognized report type: " ++ toString str)
 
 
 type alias TestReporter =
@@ -54,11 +39,11 @@ createReporter report =
                 JsonReporter.reportComplete
                 JsonReporter.reportSummary
 
-        ChalkReport ->
+        ConsoleReport useColor ->
             TestReporter "CHALK"
-                ChalkReporter.reportBegin
-                ChalkReporter.reportComplete
-                ChalkReporter.reportSummary
+                (ConsoleReporter.reportBegin useColor)
+                (ConsoleReporter.reportComplete useColor)
+                (ConsoleReporter.reportSummary useColor)
 
         JUnitReport ->
             TestReporter "JUNIT"

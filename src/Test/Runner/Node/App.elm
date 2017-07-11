@@ -11,7 +11,7 @@ import Platform
 import Random.Pcg
 import Task
 import Test exposing (Test)
-import Test.Reporter.Reporter as Reporter exposing (Report(ChalkReport))
+import Test.Reporter.Reporter as Reporter exposing (Report(ConsoleReport))
 import Test.Runner exposing (Runner, SeededRunners)
 import Time exposing (Time)
 
@@ -37,7 +37,7 @@ type Model subMsg subModel
     | Uninitialized
         (SubUpdate subMsg subModel)
         { maybeInitialSeed : Maybe Int
-        , report : Reporter.Report
+        , report : Report
         , processes : Int
         , runs : Int
         , paths : List String
@@ -112,7 +112,7 @@ type alias SubUpdate msg model =
 type alias RunnerOptions =
     { seed : Maybe Int
     , runs : Maybe Int
-    , reporter : Maybe String
+    , report : Report
     , paths : List String
     , processes : Int
     }
@@ -143,25 +143,12 @@ defaultRunCount =
 {-| Run the tests and render the results as a Web page.
 -}
 run : RunnerOptions -> AppOptions msg model -> Test -> Program Value (Model msg model) (Msg msg)
-run { runs, seed, reporter, paths, processes } appOpts test =
+run { runs, seed, report, paths, processes } appOpts test =
     let
         init args =
             let
                 cmd =
                     Task.perform Init Time.now
-
-                report =
-                    case reporter of
-                        Nothing ->
-                            ChalkReport
-
-                        Just someReport ->
-                            case Reporter.fromString someReport of
-                                Ok validReport ->
-                                    validReport
-
-                                Err err ->
-                                    Debug.crash err
             in
             ( Uninitialized appOpts.update
                 { maybeInitialSeed = seed
