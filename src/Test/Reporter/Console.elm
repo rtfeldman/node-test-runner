@@ -1,10 +1,15 @@
-module Test.Reporter.Chalk exposing (reportBegin, reportComplete, reportSummary)
+module Test.Reporter.Console exposing (ReportColor(..), reportBegin, reportComplete, reportSummary)
 
 import Chalk exposing (Chalk)
 import Json.Encode as Encode exposing (Value)
 import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo, TestResult, isTodo)
 import Test.Runner exposing (formatLabels)
 import Time exposing (Time)
+
+
+type ReportColor
+    = ColorReport
+    | MonochromeReport
 
 
 formatDuration : Time -> String
@@ -80,8 +85,8 @@ chalkWith chalks =
         |> Encode.list
 
 
-reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin { paths, fuzzRuns, testCount, initialSeed } =
+reportBegin : ReportColor -> { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
     let
         prefix =
             "Running "
@@ -99,8 +104,8 @@ reportBegin { paths, fuzzRuns, testCount, initialSeed } =
         |> Just
 
 
-reportComplete : Results.TestResult -> Value
-reportComplete { duration, labels, outcome } =
+reportComplete : ReportColor -> Results.TestResult -> Value
+reportComplete useColor { duration, labels, outcome } =
     case outcome of
         Passed ->
             -- No failures of any kind.
@@ -129,8 +134,8 @@ summarizeTodos todos =
             { styles = [], text = "\n\n" } :: todoChalks
 
 
-reportSummary : SummaryInfo -> Maybe String -> Value
-reportSummary { todos, passed, failed, duration } autoFail =
+reportSummary : ReportColor -> SummaryInfo -> Maybe String -> Value
+reportSummary useColor { todos, passed, failed, duration } autoFail =
     let
         headlineResult =
             case ( autoFail, failed, List.length todos ) of
