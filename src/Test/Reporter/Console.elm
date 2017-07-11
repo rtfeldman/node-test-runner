@@ -1,15 +1,10 @@
-module Test.Reporter.Console exposing (ReportColor(..), reportBegin, reportComplete, reportSummary)
+module Test.Reporter.Console exposing (reportBegin, reportComplete, reportSummary)
 
-import Chalk exposing (Chalk)
+import Console.Text as Text exposing (..)
 import Json.Encode as Encode exposing (Value)
 import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo, TestResult, isTodo)
 import Test.Runner exposing (formatLabels)
 import Time exposing (Time)
-
-
-type ReportColor
-    = ColorReport
-    | MonochromeReport
 
 
 formatDuration : Time -> String
@@ -37,55 +32,56 @@ pluralize singular plural count =
     String.join " " [ toString count, suffix ]
 
 
-todosToChalk : ( List String, String ) -> List Chalk
-todosToChalk ( labels, failure ) =
-    todoLabelsToChalk labels ++ todoToChalk failure
+todosToText : ( List String, String ) -> Text
+todosToText ( labels, failure ) =
+    Text.concat [ todoLabelsToText labels, todoToChalk failure ]
 
 
-todoLabelsToChalk : List String -> List Chalk
-todoLabelsToChalk =
-    formatLabels (Chalk.withColorChar '↓' "dim") (Chalk.withColorChar '↓' "dim")
+todoLabelsToText : List String -> Text
+todoLabelsToText =
+    formatLabels (dark << plain << withChar '↓') (dark << plain << withChar '↓') >> Text.concat
 
 
-todoToChalk : String -> List Chalk
+todoToChalk : String -> Text
 todoToChalk message =
-    [ { styles = [], text = "◦ TODO: " ++ message ++ "\n\n" } ]
+    plain ("◦ TODO: " ++ message ++ "\n\n")
 
 
-failuresToChalk : List String -> List Failure -> List Chalk
-failuresToChalk labels failures =
-    failureLabelsToChalk labels ++ List.concatMap failureToChalk failures
+failuresToText : List String -> List Failure -> Text
+failuresToText labels failures =
+    Text.concat (failureLabelsToText labels :: List.map failureToText failures)
 
 
-failureLabelsToChalk : List String -> List Chalk
-failureLabelsToChalk =
-    formatLabels (Chalk.withColorChar '↓' "dim") (Chalk.withColorChar '✗' "red")
+failureLabelsToText : List String -> Text
+failureLabelsToText =
+    formatLabels (dark << plain << withChar '↓') (red << withChar '✗') >> Text.concat
 
 
-failureToChalk : Results.Failure -> List Chalk
-failureToChalk { given, message } =
+failureToText : Results.Failure -> Text
+failureToText { given, message } =
     let
-        messageChalk =
-            { styles = [], text = "\n" ++ indent message ++ "\n\n" }
+        messageText =
+            plain ("\n" ++ indent message ++ "\n\n")
     in
     case given of
         Nothing ->
-            [ messageChalk ]
+            messageText
 
         Just givenStr ->
-            [ { styles = [ "dim" ], text = "\nGiven " ++ givenStr ++ "\n" }
-            , messageChalk
+            [ dark (plain ("\nGiven " ++ givenStr ++ "\n"))
+            , messageText
             ]
+                |> Text.concat
 
 
-chalkWith : List Chalk -> Value
-chalkWith chalks =
-    chalks
-        |> List.map Chalk.encode
-        |> Encode.list
+textToValue : UseColor -> Text -> Value
+textToValue useColor txt =
+    txt
+        |> Text.render useColor
+        |> Encode.string
 
 
-reportBegin : ReportColor -> { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin : UseColor -> { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
 reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
     let
         prefix =
@@ -96,15 +92,13 @@ reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
                 ++ " --seed "
                 ++ toString initialSeed
     in
-    [ { styles = []
-      , text = String.join " " (prefix :: paths) ++ "\n"
-      }
-    ]
-        |> chalkWith
+    (String.join " " (prefix :: paths) ++ "\n")
+        |> plain
+        |> textToValue useColor
         |> Just
 
 
-reportComplete : ReportColor -> Results.TestResult -> Value
+reportComplete : UseColor -> Results.TestResult -> Value
 reportComplete useColor { duration, labels, outcome } =
     case outcome of
         Passed ->
@@ -114,8 +108,8 @@ reportComplete useColor { duration, labels, outcome } =
         Failed failures ->
             -- We have non-TODOs still failing; report them, not the TODOs.
             failures
-                |> failuresToChalk labels
-                |> chalkWith
+                |> failuresToText labels
+                |> textToValue useColor
 
         Todo str ->
             Encode.object
@@ -124,17 +118,12 @@ reportComplete useColor { duration, labels, outcome } =
                 ]
 
 
-summarizeTodos : List ( List String, String ) -> List Chalk
-summarizeTodos todos =
-    case List.concatMap todosToChalk todos of
-        [] ->
-            []
-
-        todoChalks ->
-            { styles = [], text = "\n\n" } :: todoChalks
+summarizeTodos : List ( List String, String ) -> Text
+summarizeTodos =
+    List.map todosToText >> Text.concat
 
 
-reportSummary : ReportColor -> SummaryInfo -> Maybe String -> Value
+reportSummary : UseColor -> SummaryInfo -> Maybe String -> Value
 reportSummary useColor { todos, passed, failed, duration } autoFail =
     let
         headlineResult =
@@ -143,40 +132,41 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
                     Ok "TEST RUN PASSED"
 
                 ( Nothing, 0, 1 ) ->
-                    Err ( "yellow", "TEST RUN INCOMPLETE", " because there is 1 TODO remaining" )
+                    Err ( yellow, "TEST RUN INCOMPLETE", " because there is 1 TODO remaining" )
 
                 ( Nothing, 0, numTodos ) ->
-                    Err ( "yellow", "TEST RUN INCOMPLETE", " because there are " ++ toString numTodos ++ " TODOs remaining" )
+                    Err ( yellow, "TEST RUN INCOMPLETE", " because there are " ++ toString numTodos ++ " TODOs remaining" )
 
                 ( Just failure, 0, _ ) ->
-                    Err ( "yellow", "TEST RUN INCOMPLETE", " because " ++ failure )
+                    Err ( yellow, "TEST RUN INCOMPLETE", " because " ++ failure )
 
                 ( _, _, _ ) ->
-                    Err ( "red", "TEST RUN FAILED", "" )
+                    Err ( red, "TEST RUN FAILED", "" )
 
         headline =
             case headlineResult of
                 Ok str ->
-                    [ { styles = [ "underline", "green" ], text = "\n" ++ str ++ "\n\n" } ]
+                    underline (green ("\n" ++ str ++ "\n\n"))
 
-                Err ( color, str, suffix ) ->
-                    [ { styles = [ "underline", color ], text = "\n" ++ str }
-                    , { styles = [ color ], text = suffix ++ "\n\n" }
+                Err ( colorize, str, suffix ) ->
+                    [ underline (colorize ("\n" ++ str))
+                    , colorize (suffix ++ "\n\n")
                     ]
+                        |> Text.concat
 
         todoStats =
             -- Print stats for Todos if there are any,
             --but don't print details unless only Todos remain
             case List.length todos of
                 0 ->
-                    []
+                    plain ""
 
                 numTodos ->
                     stat "Todo:     " (toString numTodos)
 
         individualTodos =
             if failed > 0 then
-                []
+                plain ""
             else
                 summarizeTodos (List.reverse todos)
     in
@@ -187,13 +177,19 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
     , todoStats
     , individualTodos
     ]
-        |> List.concat
-        |> List.map Chalk.encode
-        |> Encode.list
+        |> Text.concat
+        |> Text.render useColor
+        |> Encode.string
 
 
-stat : String -> String -> List Chalk
+stat : String -> String -> Text
 stat label value =
-    [ { styles = [ "dim" ], text = label }
-    , { styles = [], text = value ++ "\n" }
-    ]
+    Text.concat
+        [ dark (plain label)
+        , plain (value ++ "\n")
+        ]
+
+
+withChar : Char -> String -> String
+withChar icon str =
+    String.fromChar icon ++ " " ++ str ++ "\n"

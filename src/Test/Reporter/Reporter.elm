@@ -1,14 +1,15 @@
 module Test.Reporter.Reporter exposing (..)
 
+import Console.Text exposing (UseColor)
 import Json.Encode as Encode exposing (Value)
-import Test.Reporter.Console as ConsoleReporter exposing (ReportColor)
+import Test.Reporter.Console as ConsoleReporter
 import Test.Reporter.JUnit as JUnitReporter
 import Test.Reporter.Json as JsonReporter
 import Test.Reporter.TestResults exposing (SummaryInfo, TestResult)
 
 
 type Report
-    = ConsoleReport ReportColor
+    = ConsoleReport UseColor
     | JsonReport
     | JUnitReport
 
@@ -38,11 +39,11 @@ createReporter report =
                 JsonReporter.reportComplete
                 JsonReporter.reportSummary
 
-        ConsoleReport color ->
+        ConsoleReport useColor ->
             TestReporter "CHALK"
-                (ConsoleReporter.reportBegin color)
-                (ConsoleReporter.reportComplete color)
-                (ConsoleReporter.reportSummary color)
+                (ConsoleReporter.reportBegin useColor)
+                (ConsoleReporter.reportComplete useColor)
+                (ConsoleReporter.reportSummary useColor)
 
         JUnitReport ->
             TestReporter "JUNIT"
