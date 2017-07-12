@@ -23,10 +23,15 @@ encodeOutcome outcome =
                         |> List.map formatFailure
                         |> String.join "\n\n\n"
             in
-            [ ( "failure", Encode.string message ) ]
+            [ encodeFailureTuple message ]
 
         Todo message ->
-            [ ( "failure", Encode.string ("TODO: " ++ message) ) ]
+            [ encodeFailureTuple ("TODO: " ++ message) ]
+
+
+encodeFailureTuple : String -> ( String, Value )
+encodeFailureTuple message =
+    ( "failure", Encode.string message )
 
 
 formatFailure : Failure -> String
