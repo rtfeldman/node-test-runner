@@ -241,26 +241,6 @@ sendResults isFinished testReporter results =
         |> send
 
 
-encodeExpectation : Expectation -> Value
-encodeExpectation expectation =
-    let
-        fields =
-            if Test.Runner.isTodo expectation then
-                [ ( "type", Encode.string "TODO" ) ]
-            else
-                case Test.Runner.getFailure expectation of
-                    Nothing ->
-                        [ ( "type", Encode.string "PASS" ) ]
-
-                    Just { given, message } ->
-                        [ ( "type", Encode.string "FAIL" )
-                        , ( "message", Encode.string message )
-                        , ( "given", Maybe.withDefault Encode.null (Maybe.map Encode.string given) )
-                        ]
-    in
-    Encode.object fields
-
-
 sendBegin : Model -> Cmd msg
 sendBegin model =
     let
