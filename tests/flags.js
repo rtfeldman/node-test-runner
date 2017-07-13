@@ -4,6 +4,7 @@ const assert = require("assert");
 const shell = require("shelljs");
 const fs = require("fs-extra");
 const xml2js = require("xml2js");
+const readline = require("readline");
 
 describe("flags", () => {
   describe("--add-dependencies", () => {
@@ -159,7 +160,6 @@ describe("flags", () => {
 
   describe("--compiler", () => {
     it("Should fail if the given compiler can't be executed", () => {
-
       const runResult = shell.exec(
         "elm-test --compiler=foobar tests/OnePassing.elm",
         { silent: true }
@@ -178,7 +178,7 @@ describe("flags", () => {
 
       let hasRetriggered = false;
 
-      child.stdout.on("data", line => {
+      readline.createInterface(child.stdout).on("line", line => {
         const parsedLine = JSON.parse(line);
         if (parsedLine.event === "runComplete" && !hasRetriggered) {
           shell.touch("tests/OnePassing.elm");
