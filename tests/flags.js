@@ -159,6 +159,9 @@ describe("flags", () => {
 
   describe("--compiler", () => {
     it("Should fail if the given compiler can't be executed", () => {
+      // This sometimes needs more time to run on Travis.
+      this.timeout(5000);
+
       const runResult = shell.exec(
         "elm-test --compiler=foobar tests/OnePassing.elm",
         { silent: true }
