@@ -29,13 +29,10 @@ import Time exposing (Time)
 
 
 {-| Execute the given thunk.
-
-If it throws an exception, return a failure instead of crashing.
-
 -}
 runThunk : (() -> List Expectation) -> List Expectation
-runThunk =
-    Native.RunTest.runThunk
+runThunk thunk =
+    thunk ()
 
 
 port receive : (Decode.Value -> msg) -> Sub msg
