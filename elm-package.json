@@ -3,7 +3,7 @@
   "summary": "Run elm-test suites in a Node.js CLI. Get it with npm install -g elm-test",
   "repository": "https://github.com/elm-community/elm-test.git",
   "license": "BSD-3-Clause",
-  "source-directories": ["src", "native-src"],
+  "source-directories": ["src"],
   "exposed-modules": [],
   "native-modules": true,
   "dependencies": {

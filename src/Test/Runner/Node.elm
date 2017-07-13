@@ -16,7 +16,6 @@ import Dict exposing (Dict)
 import Expect exposing (Expectation)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Native.RunTest
 import Platform
 import Task exposing (Task)
 import Test exposing (Test)
