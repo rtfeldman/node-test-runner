@@ -2,6 +2,7 @@
 
 const assert = require("assert");
 const shell = require("shelljs");
+const spawn = require("cross-spawn");
 const fs = require("fs-extra");
 const xml2js = require("xml2js");
 const readline = require("readline");
@@ -171,9 +172,10 @@ describe("flags", () => {
 
   describe("--watch", () => {
     it("Should re-run tests if a test file is touched", done => {
-      const child = shell.exec(
-        "elm-test --report=json --watch tests/OnePassing.elm",
-        { silent: true, async: true }
+      const child = spawn(
+        "elm-test",
+        ["--report=json", "--watch", "tests/OnePassing.elm"],
+        { silent: true }
       );
 
       let hasRetriggered = false;
