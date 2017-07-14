@@ -18,11 +18,7 @@
   "bin": {
     "elm-test": "bin/elm-test"
   },
-  "keywords": [
-    "elm",
-    "elm-test",
-    "cli"
-  ],
+  "keywords": ["elm", "elm-test", "cli"],
   "author": "Richard Feldman",
   "license": "BSD-3-Clause",
   "bugs": {
@@ -47,9 +43,9 @@
   },
   "devDependencies": {
     "flow-bin": "0.48.0",
-    "mocha": "^3.4.1",
+    "mocha": "3.4.1",
     "prettier": "1.5.2",
     "shelljs": "0.7.3",
-    "xml2js": "^0.4.17"
+    "xml2js": "0.4.17"
   }
 }
