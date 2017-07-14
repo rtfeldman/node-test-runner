@@ -1,4 +1,4 @@
-_elm_community$elm_test$Test_Runner_Node$runThunk = function(thunk) {
+Test_Runner_Node$runThunk = function(thunk) {
   try {
     // Attempt to run the thunk as normal.
     return thunk({ ctor: "_Tuple0" });
