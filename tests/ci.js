@@ -112,6 +112,13 @@ ls("tests/*.elm").forEach(function(testToRun) {
   } else if (/Failing\.elm$/.test(testToRun)) {
     echo("\n### Testing " + testToRun + " (expecting it to fail)\n");
     assertTestFailure(testToRun);
+  } else if (/RunTimeException.elm$/.test(testToRun)) {
+    echo(
+      "\n### Testing " +
+        testToRun +
+        " (expecting it to fail with a runtime exception)\n"
+    );
+    assertTestFailure(testToRun);
   } else {
     echo(
       "Tried to run " +
