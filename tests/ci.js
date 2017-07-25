@@ -128,7 +128,7 @@ ls("tests/*.elm").forEach(function(testToRun) {
   } else if (/Failing\.elm$/.test(testToRun)) {
     echo("\n### Testing " + testToRun + " (expecting it to fail)\n");
     assertTestFailure(testToRun);
-  } else if (/RunTimeException.elm$/.test(testToRun)) {
+  } else if (/PortRuntimeException.elm$/.test(testToRun)) {
     echo(
       "\n### Testing " +
         testToRun +
