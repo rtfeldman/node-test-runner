@@ -8,8 +8,6 @@ import Test exposing (..)
 
 testRuntimeException : Test
 testRuntimeException =
-    describe "runtime exception"
-        [ test "should catch this" <|
-            \() ->
-                Expect.pass
-        ]
+    test "This should error because the module imports two ports with the same name." <|
+        \() ->
+            Expect.pass
