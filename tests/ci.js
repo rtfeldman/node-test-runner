@@ -19,6 +19,22 @@ function run(testFile) {
   }
 }
 
+function assertTestErrored(testfile) {
+  var code = run(testfile);
+  if (code !== 1) {
+    exec(
+      "echo " +
+        filename +
+        ": error: " +
+        (testfile ? testfile + ": " : "") +
+        "expected tests to exit with ERROR exit code, not exit code" +
+        code +
+        " >&2"
+    );
+    exit(1);
+  }
+}
+
 function assertTestIncomplete(testfile) {
   var code = run(testfile);
   if (code !== 3) {
@@ -116,9 +132,9 @@ ls("tests/*.elm").forEach(function(testToRun) {
     echo(
       "\n### Testing " +
         testToRun +
-        " (expecting it to fail with a runtime exception)\n"
+        " (expecting it to error with a runtime exception)\n"
     );
-    assertTestFailure(testToRun);
+    assertTestErrored(testToRun);
   } else {
     echo(
       "Tried to run " +
