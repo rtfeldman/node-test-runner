@@ -1,7 +1,7 @@
 var path = require("path");
 var install = require(path.join(__dirname, "installer"));
 
-install().then(
+install(true).then(
   function(successMessage) {
     console.log(successMessage);
   },
