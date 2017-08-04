@@ -160,7 +160,6 @@ describe("flags", () => {
 
   describe("--compiler", () => {
     it("Should fail if the given compiler can't be executed", () => {
-
       const runResult = shell.exec(
         "elm-test --compiler=foobar tests/OnePassing.elm",
         { silent: true }
@@ -181,15 +180,19 @@ describe("flags", () => {
       let hasRetriggered = false;
 
       child.stdout.on("data", line => {
-        const parsedLine = JSON.parse(line);
-        if (parsedLine.event === "runComplete" && !hasRetriggered) {
-          shell.touch("tests/OnePassing.elm");
-          hasRetriggered = true;
-        }
+        try {
+          const parsedLine = JSON.parse(line);
+          if (parsedLine.event === "runComplete" && !hasRetriggered) {
+            shell.touch("tests/OnePassing.elm");
+            hasRetriggered = true;
+          }
 
-        if (parsedLine.event == "runComplete" && hasRetriggered) {
-          child.kill();
-          done();
+          if (parsedLine.event == "runComplete" && hasRetriggered) {
+            child.kill();
+            done();
+          }
+        } catch (e) {
+          console.warn("Unexpected non-json output: " + line);
         }
       });
     }).timeout(60000);
