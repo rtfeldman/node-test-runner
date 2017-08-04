@@ -1,4 +1,4 @@
-module.exports = function() {
+module.exports = function(verbose) {
   var binstall = require("binstall");
   var path = require("path");
   var fs = require("fs");
@@ -14,8 +14,10 @@ module.exports = function() {
   var operatingSystem = process.platform;
 
   var filename = operatingSystem + "-" + arch + ".tar.gz";
-  var url =
-    "https://dl.bintray.com/elmlang/elm-test/" + binVersion + "/" + filename;
+  var url = "https://dl.bintray.com/elmlang/elm-test/" +
+    binVersion +
+    "/" +
+    filename;
 
   var binariesDir = path.join(__dirname, "bin");
   var packageInfo = require(path.join(__dirname, "package.json"));
@@ -23,14 +25,17 @@ module.exports = function() {
   var executablePaths = [
     path.join(binariesDir, "elm-interface-to-json" + binaryExtension)
   ];
-  var errorMessage =
-    "Unfortunately, there are no elm-test " +
+  var errorMessage = "Unfortunately, there are no elm-test " +
     binVersion +
     " binaries available on your operating system and architecture.\n\nIf you would like to build Elm from source, there are instructions at https://github.com/elm-lang/elm-platform#build-from-source\n";
 
   return binstall(
     url,
     { path: binariesDir },
-    { verbose: true, verify: executablePaths, errorMessage: errorMessage }
+    {
+      verbose: verbose,
+      verify: executablePaths,
+      errorMessage: errorMessage
+    }
   );
 };
