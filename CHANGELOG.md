@@ -3,19 +3,26 @@
 Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
-This project mirrors Elm versions.
+This project mirrors major Elm versions. So version 0.18.* of this project will
+be compatible with Elm 0.18.*.
 
-## Unreleased
+## 0.18.8 - 2017-08-07
+
+### Added
+
+- Run tests in parallel (#45)
+
+### Fixed
+
+- `--watch` error reporting (#192)
+- `--watch` potential extra compile processes (#194)
 
 ### Internal
 
 - More accurate timetracking
-
-## 0.18.8-beta
-
-### Added
-
-- Parallelized test-runs! (#45)
+- Use symlinks to improve generated code performance
+- Use Elm instead of Chalk for colored console output
+- Use Prettier
 
 ## 0.18.7 - 2017-06-30
 
