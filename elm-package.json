@@ -10,7 +10,7 @@
     "exposed-modules": [],
     "native-modules": true,
     "dependencies": {
-        "elm-community/elm-test": "4.0.0 <= v < 5.0.0",
+        "elm-community/elm-test": "4.2.0 <= v < 5.0.0",
         "elm-community/json-extra": "2.0.0 <= v < 3.0.0",
         "elm-community/lazy-list": "1.0.0 <= v < 2.0.0",
         "elm-community/shrink": "2.0.0 <= v < 3.0.0",
