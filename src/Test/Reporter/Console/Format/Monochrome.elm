@@ -1,59 +1,46 @@
 module Test.Reporter.Console.Format.Monochrome exposing (equalityToString)
 
-import Diff exposing (Change(..))
-import Test.Reporter.Console.Format exposing (verticalBar)
+import Test.Reporter.Console.Format exposing (Highlight(..), highlightEqual, verticalBar)
 
 
 equalityToString : { operation : String, expected : String, actual : String } -> String
 equalityToString { operation, expected, actual } =
-    -- TODO make sure this looks reasonable for multiline strings
-    let
-        ( formattedExpected, belowFormattedExpected ) =
-            Diff.diff (String.toList expected) (String.toList actual)
-                |> List.map formatExpectedChange
-                |> List.unzip
+    case highlightEqual expected actual of
+        Nothing ->
+            verticalBar operation expected actual
 
-        ( formattedActual, belowFormattedActual ) =
-            Diff.diff (String.toList actual) (String.toList expected)
-                |> List.map formatActualChange
-                |> List.unzip
+        Just ( highlightedExpected, highlightedActual ) ->
+            let
+                ( formattedExpected, expectedIndicators ) =
+                    highlightedExpected
+                        |> List.map (fromHighlight "▼")
+                        |> List.unzip
 
-        combinedExpected =
-            String.join "\n"
-                [ String.join "" formattedExpected
-                , String.join "" belowFormattedExpected
-                ]
+                ( formattedActual, actualIndicators ) =
+                    highlightedActual
+                        |> List.map (fromHighlight "▲")
+                        |> List.unzip
 
-        combinedActual =
-            String.join "\n"
-                [ String.join "" formattedActual
-                , String.join "" belowFormattedActual
-                ]
-    in
-    verticalBar operation combinedExpected combinedActual
+                combinedExpected =
+                    String.join "\n"
+                        [ String.join "" formattedExpected
+                        , String.join "" expectedIndicators
+                        ]
+
+                combinedActual =
+                    String.join "\n"
+                        [ String.join "" actualIndicators
+                        , String.join "" formattedActual
+                        ]
+            in
+            verticalBar operation combinedExpected combinedActual
 
 
-formatExpectedChange : Change Char -> ( String, String )
-formatExpectedChange diff =
-    case diff of
-        Added char ->
-            ( "", "" )
+fromHighlight : String -> Highlight -> ( String, String )
+fromHighlight indicator highlight =
+    case highlight of
+        Highlighted char ->
+            ( String.fromChar char, indicator )
 
-        Removed char ->
-            ( String.fromChar char, "▲" )
-
-        NoChange char ->
+        Plain char ->
             ( String.fromChar char, " " )
-
-
-formatActualChange : Change Char -> ( String, String )
-formatActualChange diff =
-    case diff of
-        Added char ->
-            ( "", "" )
-
-        Removed char ->
-            ( "▼", String.fromChar char )
-
-        NoChange char ->
-            ( " ", String.fromChar char )

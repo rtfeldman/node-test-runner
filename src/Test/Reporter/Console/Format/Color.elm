@@ -1,48 +1,35 @@
 module Test.Reporter.Console.Format.Color exposing (equalityToString)
 
 import Console
-import Diff exposing (Change(..))
-import Test.Reporter.Console.Format exposing (verticalBar)
+import Test.Reporter.Console.Format exposing (Highlight(..), highlightEqual, verticalBar)
 
 
 equalityToString : { operation : String, expected : String, actual : String } -> String
 equalityToString { operation, expected, actual } =
-    -- TODO make sure this looks reasonable for multiline strings
-    let
-        formattedExpected =
-            Diff.diff (String.toList expected) (String.toList actual)
-                |> List.map formatExpectedChange
-                |> String.join ""
+    case highlightEqual expected actual of
+        Nothing ->
+            verticalBar operation expected actual
 
-        formattedActual =
-            Diff.diff (String.toList actual) (String.toList expected)
-                |> List.map formatActualChange
-                |> String.join ""
-    in
-    verticalBar operation formattedExpected formattedActual
+        Just ( highlightedExpected, highlightedActual ) ->
+            let
+                formattedExpected =
+                    highlightedExpected
+                        |> List.map fromHighlight
+                        |> String.join ""
+
+                formattedActual =
+                    highlightedActual
+                        |> List.map fromHighlight
+                        |> String.join ""
+            in
+            verticalBar operation formattedExpected formattedActual
 
 
-formatExpectedChange : Change Char -> String
-formatExpectedChange diff =
-    case diff of
-        Added char ->
-            ""
-
-        Removed char ->
+fromHighlight : Highlight -> String
+fromHighlight highlight =
+    case highlight of
+        Highlighted char ->
             Console.bgYellow (String.fromChar char)
 
-        NoChange char ->
-            String.fromChar char
-
-
-formatActualChange : Change Char -> String
-formatActualChange diff =
-    case diff of
-        Added char ->
-            ""
-
-        Removed char ->
-            Console.bgYellow (String.fromChar char)
-
-        NoChange char ->
+        Plain char ->
             String.fromChar char
