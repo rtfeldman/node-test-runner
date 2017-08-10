@@ -34,7 +34,7 @@ pluralize singular plural count =
 
 todosToText : ( List String, String ) -> Text
 todosToText ( labels, failure ) =
-    Text.concat [ todoLabelsToText labels, todoToText failure ]
+    Text.concat [ plain "\n", todoLabelsToText labels, todoToText failure ]
 
 
 todoLabelsToText : List String -> Text
@@ -44,7 +44,7 @@ todoLabelsToText =
 
 todoToText : String -> Text
 todoToText message =
-    plain ("◦ TODO: " ++ message ++ "\n\n")
+    plain ("◦ TODO: " ++ message ++ "\n")
 
 
 failuresToText : List String -> List Failure -> Text
