@@ -85,15 +85,17 @@ reportBegin : UseColor -> { paths : List String, fuzzRuns : Int, testCount : Int
 reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
     let
         prefix =
-            "Running "
-                ++ pluralize "test" "tests" testCount
-                ++ ". To reproduce these results, run: elm-test --fuzz "
-                ++ toString fuzzRuns
-                ++ " --seed "
-                ++ toString initialSeed
+            [ "Running "
+            , pluralize "test" "tests" testCount
+            , ". To reproduce these results, run: elm-test --fuzz "
+            , toString fuzzRuns
+            , " --seed "
+            , toString initialSeed
+            ]
+                |> List.map (dark << plain)
+                |> Text.concat
     in
-    (String.join " " (prefix :: paths) ++ "\n")
-        |> plain
+    Text.concat [ Text.join (plain " ") (prefix :: List.map plain paths), plain "\n\n" ]
         |> textToValue useColor
         |> Just
 

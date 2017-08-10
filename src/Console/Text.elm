@@ -14,6 +14,7 @@ module Console.Text
         , default
         , green
         , inverted
+        , join
         , magenta
         , plain
         , red
@@ -82,6 +83,11 @@ render useColor txt =
 concat : List Text -> Text
 concat =
     Texts
+
+
+join : Text -> List Text -> Text
+join txt =
+    List.intersperse txt >> Texts
 
 
 plain : String -> Text
