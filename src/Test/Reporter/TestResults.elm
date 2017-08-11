@@ -13,6 +13,7 @@ module Test.Reporter.TestResults
 import Expect exposing (Expectation)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
+import Test.Reporter.Console.Format exposing (format)
 import Test.Runner
 import Time exposing (Time)
 
@@ -108,13 +109,13 @@ outcomesFromExpectations expectations =
     case expectations of
         expectation :: [] ->
             -- Most often we'll get exactly 1 pass, so try that case first!
-            case Test.Runner.getFailure expectation of
+            case Test.Runner.getFailureReason expectation of
                 Nothing ->
                     [ Passed ]
 
                 Just failure ->
                     if Test.Runner.isTodo expectation then
-                        [ Todo failure.message ]
+                        [ Todo (format failure.description failure.reason) ]
                     else
                         [ Failed [ failure ] ]
 
@@ -149,7 +150,7 @@ type alias OutcomeBuilder =
 
 outcomesFromExpectationsHelp : Expectation -> OutcomeBuilder -> OutcomeBuilder
 outcomesFromExpectationsHelp expectation builder =
-    case Test.Runner.getFailure expectation of
+    case Test.Runner.getFailureReason expectation of
         Just failure ->
             if Test.Runner.isTodo expectation then
                 { builder | todos = failure.message :: builder.todos }
