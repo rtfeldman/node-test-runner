@@ -88,6 +88,14 @@ source-directories), your tests will get rerun.
 elm-test --watch
 ```
 
+#### `--skip-install`
+
+Skips the missing packages check.  Useful for when offline.  Just make sure all of the necessary packages have previously been installed.
+
+```
+elm-test --skip-install
+```
+
 #### `--help`
 
 Displays all the available options and commands.
