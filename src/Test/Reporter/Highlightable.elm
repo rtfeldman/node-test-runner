@@ -1,4 +1,4 @@
-module Test.Reporter.Highlightable exposing (Highlightable, fromDiff, fromLists, map, resolve)
+module Test.Reporter.Highlightable exposing (Highlightable, fromDiff, diffLists, map, resolve)
 
 import Test.Runner.Node.Vendor.Diff as Diff exposing (Change(..))
 
@@ -18,8 +18,8 @@ resolve { fromHighlighted, fromPlain } highlightable =
             fromPlain val
 
 
-fromLists : List a -> List a -> List (Highlightable a)
-fromLists expected actual =
+diffLists : List a -> List a -> List (Highlightable a)
+diffLists expected actual =
     -- TODO make sure this looks reasonable for multiline strings
     Diff.diff expected actual
         |> List.concatMap fromDiff

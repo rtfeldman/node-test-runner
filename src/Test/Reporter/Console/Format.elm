@@ -89,9 +89,9 @@ highlightEqual expected actual =
                 String.toList actual
         in
         Just
-            ( Highlightable.fromLists expectedChars actualChars
+            ( Highlightable.diffLists expectedChars actualChars
                 |> List.map (Highlightable.map String.fromChar)
-            , Highlightable.fromLists actualChars expectedChars
+            , Highlightable.diffLists actualChars expectedChars
                 |> List.map (Highlightable.map String.fromChar)
             )
 
