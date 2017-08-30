@@ -108,6 +108,7 @@ encodeReason description reason =
         Equality expected actual ->
             [ ( "expected", Encode.string expected )
             , ( "actual", Encode.string actual )
+            , ( "comparison", Encode.string description )
             ]
                 |> Encode.object
                 |> encodeReasonType "Equality"
@@ -115,6 +116,7 @@ encodeReason description reason =
         Comparison first second ->
             [ ( "first", Encode.string first )
             , ( "second", Encode.string second )
+            , ( "comparison", Encode.string description )
             ]
                 |> Encode.object
                 |> encodeReasonType "Comparison"
