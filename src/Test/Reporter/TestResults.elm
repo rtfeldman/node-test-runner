@@ -4,16 +4,14 @@ module Test.Reporter.TestResults
         , Outcome(..)
         , SummaryInfo
         , TestResult
-        , encodeFailure
         , isFailure
         , isTodo
         , outcomesFromExpectations
         )
 
 import Expect exposing (Expectation)
-import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode exposing (Value)
 import Test.Runner
+import Test.Runner.Failure exposing (Reason(..))
 import Time exposing (Time)
 
 
@@ -40,47 +38,10 @@ type alias SummaryInfo =
 
 
 type alias Failure =
-    { given : Maybe String, message : String }
-
-
-failureDecoder : Decoder Failure
-failureDecoder =
-    Decode.map2
-        Failure
-        (Decode.field "given" (Decode.nullable Decode.string))
-        (Decode.field "message" Decode.string)
-
-
-encodeOutcome : Outcome -> Value
-encodeOutcome outcome =
-    case outcome of
-        Passed ->
-            Encode.object
-                [ ( "type", Encode.string "PASS" ) ]
-
-        Failed failures ->
-            Encode.object
-                [ ( "type", Encode.string "FAIL" )
-                , ( "failures", Encode.list (List.map encodeFailure failures) )
-                ]
-
-        Todo message ->
-            Encode.object
-                [ ( "type", Encode.string "TODO" )
-                , ( "message", Encode.string message )
-                ]
-
-
-encodeFailure : Failure -> Value
-encodeFailure { given, message } =
-    Encode.object
-        [ ( "given", Maybe.withDefault Encode.null (Maybe.map Encode.string given) )
-        , ( "message", Encode.string message )
-
-        -- TODO DEPRECATED - this never should have said "actual", because it
-        -- is not in fact the "actual" value. It's deprecated but not removed yet.
-        , ( "actual", Encode.string message )
-        ]
+    { given : Maybe String
+    , description : String
+    , reason : Reason
+    }
 
 
 isTodo : Outcome -> Bool
@@ -108,13 +69,13 @@ outcomesFromExpectations expectations =
     case expectations of
         expectation :: [] ->
             -- Most often we'll get exactly 1 pass, so try that case first!
-            case Test.Runner.getFailure expectation of
+            case Test.Runner.getFailureReason expectation of
                 Nothing ->
                     [ Passed ]
 
                 Just failure ->
                     if Test.Runner.isTodo expectation then
-                        [ Todo failure.message ]
+                        [ Todo failure.description ]
                     else
                         [ Failed [ failure ] ]
 
@@ -149,10 +110,10 @@ type alias OutcomeBuilder =
 
 outcomesFromExpectationsHelp : Expectation -> OutcomeBuilder -> OutcomeBuilder
 outcomesFromExpectationsHelp expectation builder =
-    case Test.Runner.getFailure expectation of
+    case Test.Runner.getFailureReason expectation of
         Just failure ->
             if Test.Runner.isTodo expectation then
-                { builder | todos = failure.message :: builder.todos }
+                { builder | todos = failure.description :: builder.todos }
             else
                 { builder | failures = failure :: builder.failures }
 

@@ -2,6 +2,7 @@ module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
 import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo, TestResult, isFailure)
+import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 import Time exposing (Time)
 
 
@@ -35,7 +36,11 @@ encodeFailureTuple message =
 
 
 formatFailure : Failure -> String
-formatFailure { given, message } =
+formatFailure { given, description, reason } =
+    let
+        message =
+            reasonToString description reason
+    in
     case given of
         Just str ->
             "Given " ++ str ++ "\n\n" ++ message
@@ -114,3 +119,44 @@ reportSummary { testCount, duration, passed, failed, todos } autoFail =
                 ]
           )
         ]
+
+
+reasonToString : String -> Reason -> String
+reasonToString description reason =
+    case reason of
+        Custom ->
+            description
+
+        Equality expected actual ->
+            expected ++ "\n\nwas not equal to\n\n" ++ actual
+
+        Comparison first second ->
+            first ++ "\n\nfailed when compared with " ++ description ++ " on\n\n" ++ second
+
+        TODO ->
+            "TODO: " ++ description
+
+        Invalid BadDescription ->
+            let
+                explanation =
+                    if description == "" then
+                        "The empty string is not a valid test description."
+                    else
+                        "This is an invalid test description: " ++ description
+            in
+            "Invalid test: " ++ explanation
+
+        Invalid _ ->
+            "Invalid test: " ++ description
+
+        ListDiff expected actual ->
+            toString expected ++ "\n\nhad different elements than\n\n" ++ toString actual
+
+        CollectionDiff { expected, actual, extra, missing } ->
+            toString expected
+                ++ "\n\nhad different contents than\n\n"
+                ++ toString actual
+                ++ "\n\nthese were extra:\n\n"
+                ++ toString extra
+                ++ "\n\nthese were missing:\n\n"
+                ++ toString missing
