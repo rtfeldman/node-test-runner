@@ -163,9 +163,9 @@ listDiffToString index description { expected, actual } originals =
 verticalBar : String -> String -> String -> String
 verticalBar comparison expected actual =
     [ actual
-    , "╵"
-    , "│ " ++ comparison
     , "╷"
+    , "│ " ++ comparison
+    , "╵"
     , expected
     ]
         |> String.join "\n"
