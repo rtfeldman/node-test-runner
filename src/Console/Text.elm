@@ -23,7 +23,7 @@ module Console.Text
         , yellow
         )
 
-import Console
+import Test.Runner.Node.Vendor.Console as Console
 
 
 type Text

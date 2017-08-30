@@ -1,6 +1,6 @@
 module Test.Reporter.Highlightable exposing (Highlightable, fromDiff, fromLists, map, resolve)
 
-import Diff exposing (Change(..))
+import Test.Runner.Node.Vendor.Diff as Diff exposing (Change(..))
 
 
 type Highlightable a

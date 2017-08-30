@@ -1,4 +1,7 @@
-module Diff exposing (Change(..), diff, diffLines)
+module Test.Runner.Node.Vendor.Diff exposing (Change(..), diff, diffLines)
+
+{-| This describes how each line has changed and also contains its value.
+-}
 
 -- NOTE: This is copy/pasted from https://github.com/jinjor/elm-diff
 -- It's inlined to avoid having to call elm-package install on the end user's
@@ -39,11 +42,9 @@ module Diff exposing (Change(..), diff, diffLines)
 
 -}
 
-import Array.Hamt as Array exposing (Array)
+import Array exposing (Array)
 
 
-{-| This describes how each line has changed and also contains its value.
--}
 type Change a
     = Added a
     | Removed a

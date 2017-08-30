@@ -1,7 +1,7 @@
 module Test.Reporter.Console.Format.Color exposing (formatEquality)
 
-import Console
 import Test.Reporter.Highlightable as Highlightable exposing (Highlightable(..))
+import Test.Runner.Node.Vendor.Console as Console
 
 
 formatEquality : List (Highlightable String) -> List (Highlightable String) -> ( String, String )

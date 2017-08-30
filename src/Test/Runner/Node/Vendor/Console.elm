@@ -1,4 +1,4 @@
-module Console exposing (..)
+module Test.Runner.Node.Vendor.Console exposing (..)
 
 {-| -}
 
