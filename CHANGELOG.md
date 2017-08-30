@@ -101,7 +101,7 @@ failure, rather than crashing the runner. (#69)
 - Remove `tests/Main.elm`
 - Remove the dependency on `rtfeldman/node-test-runner` from
 `tests/elm-package.json`
-- Bump the dependency on `elm-community/elm-test` to `4.0.0 <= v < 5.0.0` in
+- Bump the dependency on `elm-community/elm-test` to `4.2.0 <= v < 5.0.0` in
 `tests/elm-package.json`
 - Ensure your test files expose each test you want to run, and that those values
 are of type `Test`
