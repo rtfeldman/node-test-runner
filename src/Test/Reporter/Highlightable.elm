@@ -1,4 +1,4 @@
-module Test.Reporter.Highlightable exposing (Highlightable, fromDiff, fromLists, map)
+module Test.Reporter.Highlightable exposing (Highlightable, fromDiff, fromLists, map, resolve)
 
 import Diff exposing (Change(..))
 
@@ -6,6 +6,16 @@ import Diff exposing (Change(..))
 type Highlightable a
     = Highlighted a
     | Plain a
+
+
+resolve : { fromHighlighted : a -> b, fromPlain : a -> b } -> Highlightable a -> b
+resolve { fromHighlighted, fromPlain } highlightable =
+    case highlightable of
+        Highlighted val ->
+            fromHighlighted val
+
+        Plain val ->
+            fromPlain val
 
 
 fromLists : List a -> List a -> List (Highlightable a)

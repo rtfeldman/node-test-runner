@@ -1,35 +1,28 @@
-module Test.Reporter.Console.Format.Color exposing (equalityToString)
+module Test.Reporter.Console.Format.Color exposing (formatEquality)
 
 import Console
-import Test.Reporter.Console.Format exposing (Highlight(..), highlightEqual, verticalBar)
+import Test.Reporter.Highlightable as Highlightable exposing (Highlightable(..))
 
 
-equalityToString : { operation : String, expected : String, actual : String } -> String
-equalityToString { operation, expected, actual } =
-    case highlightEqual expected actual of
-        Nothing ->
-            verticalBar operation expected actual
+formatEquality : List (Highlightable Char) -> List (Highlightable Char) -> ( String, String )
+formatEquality highlightedExpected highlightedActual =
+    let
+        formattedExpected =
+            highlightedExpected
+                |> List.map fromHighlightable
+                |> String.join ""
 
-        Just ( highlightedExpected, highlightedActual ) ->
-            let
-                formattedExpected =
-                    highlightedExpected
-                        |> List.map fromHighlight
-                        |> String.join ""
-
-                formattedActual =
-                    highlightedActual
-                        |> List.map fromHighlight
-                        |> String.join ""
-            in
-            verticalBar operation formattedExpected formattedActual
+        formattedActual =
+            highlightedActual
+                |> List.map fromHighlightable
+                |> String.join ""
+    in
+    ( formattedExpected, formattedActual )
 
 
-fromHighlight : Highlight -> String
-fromHighlight highlight =
-    case highlight of
-        Highlighted char ->
-            Console.bgYellow (String.fromChar char)
-
-        Plain char ->
-            String.fromChar char
+fromHighlightable : Highlightable Char -> String
+fromHighlightable =
+    Highlightable.resolve
+        { fromHighlighted = String.fromChar >> Console.bgYellow
+        , fromPlain = String.fromChar
+        }
