@@ -2,6 +2,9 @@ module Test.Reporter.Console exposing (reportBegin, reportComplete, reportSummar
 
 import Console.Text as Text exposing (..)
 import Json.Encode as Encode exposing (Value)
+import Test.Reporter.Console.Format exposing (format)
+import Test.Reporter.Console.Format.Color as FormatColor
+import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
 import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo, TestResult, isTodo)
 import Test.Runner exposing (formatLabels)
 import Time exposing (Time)
@@ -47,9 +50,9 @@ todoToChalk message =
     plain ("◦ TODO: " ++ message ++ "\n\n")
 
 
-failuresToText : List String -> List Failure -> Text
-failuresToText labels failures =
-    Text.concat (failureLabelsToText labels :: List.map failureToText failures)
+failuresToText : UseColor -> List String -> List Failure -> Text
+failuresToText useColor labels failures =
+    Text.concat (failureLabelsToText labels :: List.map (failureToText useColor) failures)
 
 
 failureLabelsToText : List String -> Text
@@ -57,11 +60,19 @@ failureLabelsToText =
     formatLabels (dark << plain << withChar '↓') (red << withChar '✗') >> Text.concat
 
 
-failureToText : Results.Failure -> Text
-failureToText { given, message } =
+failureToText : UseColor -> Results.Failure -> Text
+failureToText useColor { given, description, reason } =
     let
+        formatEquality =
+            case useColor of
+                Monochrome ->
+                    FormatMonochrome.formatEquality
+
+                UseColor ->
+                    FormatColor.formatEquality
+
         messageText =
-            plain ("\n" ++ indent message ++ "\n\n")
+            plain ("\n" ++ indent (format formatEquality description reason) ++ "\n\n")
     in
     case given of
         Nothing ->
@@ -108,7 +119,7 @@ reportComplete useColor { duration, labels, outcome } =
         Failed failures ->
             -- We have non-TODOs still failing; report them, not the TODOs.
             failures
-                |> failuresToText labels
+                |> failuresToText useColor labels
                 |> textToValue useColor
 
         Todo str ->

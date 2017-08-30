@@ -35,7 +35,11 @@ encodeFailureTuple message =
 
 
 formatFailure : Failure -> String
-formatFailure { given, message } =
+formatFailure { given, description, reason } =
+    let
+        message =
+            description
+    in
     case given of
         Just str ->
             "Given " ++ str ++ "\n\n" ++ message

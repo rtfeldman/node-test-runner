@@ -3,17 +3,17 @@ module Test.Reporter.Console.Format.Monochrome exposing (formatEquality)
 import Test.Reporter.Highlightable as Highlightable exposing (Highlightable(..))
 
 
-formatEquality : List (Highlightable Char) -> List (Highlightable Char) -> ( String, String )
+formatEquality : List (Highlightable String) -> List (Highlightable String) -> ( String, String )
 formatEquality highlightedExpected highlightedActual =
     let
         ( formattedExpected, expectedIndicators ) =
             highlightedExpected
-                |> List.map (fromHighlightable "▼")
+                |> List.map (fromHighlightable "▲")
                 |> List.unzip
 
         ( formattedActual, actualIndicators ) =
             highlightedActual
-                |> List.map (fromHighlightable "▲")
+                |> List.map (fromHighlightable "▼")
                 |> List.unzip
 
         combinedExpected =
@@ -31,9 +31,9 @@ formatEquality highlightedExpected highlightedActual =
     ( combinedExpected, combinedActual )
 
 
-fromHighlightable : String -> Highlightable Char -> ( String, String )
+fromHighlightable : String -> Highlightable String -> ( String, String )
 fromHighlightable indicator =
     Highlightable.resolve
-        { fromHighlighted = \char -> ( String.fromChar char, indicator )
-        , fromPlain = \char -> ( String.fromChar char, " " )
+        { fromHighlighted = \char -> ( char, indicator )
+        , fromPlain = \char -> ( char, " " )
         }

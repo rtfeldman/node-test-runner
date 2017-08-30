@@ -1,7 +1,8 @@
 module Test.Reporter.Json exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
-import Test.Reporter.TestResults as TestResults exposing (Outcome(..), SummaryInfo, encodeFailure, isFailure)
+import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo, isFailure)
+import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
 
 reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
@@ -80,3 +81,75 @@ reportSummary { duration, passed, failed, todos, testCount } autoFail =
                 |> Maybe.withDefault Encode.null
           )
         ]
+
+
+encodeFailure : Failure -> Value
+encodeFailure { given, description, reason } =
+    Encode.object
+        [ ( "given", Maybe.withDefault Encode.null (Maybe.map Encode.string given) )
+        , ( "message", Encode.string description )
+        , ( "reason", encodeReason description reason )
+        ]
+
+
+encodeReasonType : String -> Value -> Value
+encodeReasonType reasonType data =
+    Encode.object
+        [ ( "type", Encode.string "custom" ), ( "data", data ) ]
+
+
+encodeReason : String -> Reason -> Value
+encodeReason description reason =
+    case reason of
+        Custom ->
+            Encode.string description
+                |> encodeReasonType "Custom"
+
+        Equality expected actual ->
+            [ ( "expected", Encode.string expected )
+            , ( "actual", Encode.string actual )
+            ]
+                |> Encode.object
+                |> encodeReasonType "Equality"
+
+        Comparison first second ->
+            [ ( "first", Encode.string first )
+            , ( "second", Encode.string second )
+            ]
+                |> Encode.object
+                |> encodeReasonType "Comparison"
+
+        TODO ->
+            Encode.string description
+                |> encodeReasonType "TODO"
+
+        Invalid BadDescription ->
+            let
+                explanation =
+                    if description == "" then
+                        "The empty string is not a valid test description."
+                    else
+                        "This is an invalid test description: " ++ description
+            in
+            Encode.string explanation
+                |> encodeReasonType "Invalid"
+
+        Invalid _ ->
+            Encode.string description
+                |> encodeReasonType "Invalid"
+
+        ListDiff expected actual ->
+            [ ( "expected", Encode.list (List.map Encode.string expected) )
+            , ( "actual", Encode.list (List.map Encode.string actual) )
+            ]
+                |> Encode.object
+                |> encodeReasonType "ListDiff"
+
+        CollectionDiff { expected, actual, extra, missing } ->
+            [ ( "expected", Encode.string expected )
+            , ( "actual", Encode.string actual )
+            , ( "extra", Encode.list (List.map Encode.string extra) )
+            , ( "missing", Encode.list (List.map Encode.string missing) )
+            ]
+                |> Encode.object
+                |> encodeReasonType "CollectionDiff"

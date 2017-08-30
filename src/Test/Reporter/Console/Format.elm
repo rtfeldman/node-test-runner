@@ -5,7 +5,7 @@ import Test.Runner.Failure exposing (InvalidReason(BadDescription), Reason(..))
 
 
 format :
-    ({ actual : String, expected : String, operation : String } -> ( String, String ))
+    (List (Highlightable String) -> List (Highlightable String) -> ( String, String ))
     -> String
     -> Reason
     -> String
@@ -22,11 +22,7 @@ format formatEquality description reason =
                 Just ( highlightedExpected, highlightedActual ) ->
                     let
                         ( formattedExpected, formattedActual ) =
-                            formatEquality
-                                { operation = description
-                                , expected = expected
-                                , actual = actual
-                                }
+                            formatEquality highlightedExpected highlightedActual
                     in
                     verticalBar description formattedExpected formattedActual
 
