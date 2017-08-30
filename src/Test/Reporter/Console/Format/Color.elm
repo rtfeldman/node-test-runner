@@ -23,6 +23,8 @@ formatEquality highlightedExpected highlightedActual =
 fromHighlightable : Highlightable String -> String
 fromHighlightable =
     Highlightable.resolve
-        { fromHighlighted = Console.bgYellow
+        -- Cyan seems to look readable with both white and black text on top,
+        -- so it should work with both dark and light console themes
+        { fromHighlighted = Console.bgCyan
         , fromPlain = identity
         }
