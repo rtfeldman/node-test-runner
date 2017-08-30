@@ -46,6 +46,9 @@
     "supports-color": "4.2.0",
     "xmlbuilder": "^8.2.2"
   },
+  "optionalDependencies": {
+     "fsevents": "1.1.2"
+  },
   "devDependencies": {
     "flow-bin": "0.48.0",
     "mocha": "^3.4.1",
