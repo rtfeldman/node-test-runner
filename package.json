@@ -42,7 +42,7 @@
     "lodash": "4.13.1",
     "minimist": "^1.2.0",
     "murmur-hash-js": "1.0.0",
-    "node-elm-compiler": "4.3.2",
+    "node-elm-compiler": "4.3.3",
     "supports-color": "4.2.0",
     "xmlbuilder": "^8.2.2"
   },
