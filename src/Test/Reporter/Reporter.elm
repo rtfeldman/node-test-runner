@@ -1,6 +1,7 @@
 module Test.Reporter.Reporter exposing (..)
 
-import Console.Text exposing (UseColor)
+import Console.Text exposing (UseColor(..))
+import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Test.Reporter.Console as ConsoleReporter
 import Test.Reporter.JUnit as JUnitReporter
@@ -12,6 +13,31 @@ type Report
     = ConsoleReport UseColor
     | JsonReport
     | JUnitReport
+
+
+decoder : Decoder Report
+decoder =
+    Decode.string
+        |> Decode.andThen reportFromString
+
+
+reportFromString : String -> Decoder Report
+reportFromString reportType =
+    case reportType of
+        "console-color" ->
+            Decode.succeed (ConsoleReport UseColor)
+
+        "console-monochrome" ->
+            Decode.succeed (ConsoleReport Monochrome)
+
+        "json" ->
+            Decode.succeed JsonReport
+
+        "junit" ->
+            Decode.succeed JUnitReport
+
+        _ ->
+            Decode.fail ("Unrecognized report type:" ++ reportType)
 
 
 type alias TestReporter =

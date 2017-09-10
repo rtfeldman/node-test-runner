@@ -1,4 +1,4 @@
-module Test.Runner.Node.App exposing (InitArgs, Model, Msg, RunnerOptions, run)
+module Test.Runner.Node.App exposing (InitArgs, Model, Msg, run)
 
 {-| Test runner for a Node app
 
@@ -6,7 +6,7 @@ module Test.Runner.Node.App exposing (InitArgs, Model, Msg, RunnerOptions, run)
 
 -}
 
-import Json.Decode as Decode exposing (Value)
+import Json.Decode as Decode exposing (Decoder, Value)
 import Platform
 import Random.Pcg
 import Task
@@ -23,6 +23,7 @@ type Msg subMsg
 
 type alias InitArgs =
     { initialSeed : Int
+    , firstTestToRun : Int
     , processes : Int
     , paths : List String
     , fuzzRuns : Int
@@ -37,6 +38,7 @@ type Model subMsg subModel
     | Uninitialized
         (SubUpdate subMsg subModel)
         { maybeInitialSeed : Maybe Int
+        , firstTestToRun : Int
         , report : Report
         , processes : Int
         , runs : Int
@@ -58,7 +60,7 @@ timeToNumericSeed time =
 initOrUpdate : Msg subMsg -> Model subMsg subModel -> ( Model subMsg subModel, Cmd (Msg subMsg) )
 initOrUpdate msg maybeModel =
     case maybeModel of
-        Uninitialized update { maybeInitialSeed, processes, report, paths, runs, test, init } ->
+        Uninitialized update { maybeInitialSeed, firstTestToRun, processes, report, paths, runs, test, init } ->
             case msg of
                 Init time ->
                     let
@@ -79,6 +81,7 @@ initOrUpdate msg maybeModel =
                         ( subModel, subCmd ) =
                             init
                                 { initialSeed = numericSeed
+                                , firstTestToRun = firstTestToRun
                                 , processes = processes
                                 , fuzzRuns = runs
                                 , paths = paths
@@ -109,9 +112,10 @@ type alias SubUpdate msg model =
     msg -> model -> ( model, Cmd msg )
 
 
-type alias RunnerOptions =
+type alias Flags =
     { seed : Maybe Int
     , runs : Maybe Int
+    , firstTestToRun : Int
     , report : Report
     , paths : List String
     , processes : Int
@@ -140,27 +144,45 @@ defaultRunCount =
     100
 
 
+flagsDecoder : Decoder Flags
+flagsDecoder =
+    Decode.map6
+        Flags
+        (Decode.field "seed" (Decode.nullable Decode.int))
+        (Decode.field "runs" (Decode.nullable Decode.int))
+        (Decode.field "firstTestToRun" Decode.int)
+        (Decode.field "report" Reporter.decoder)
+        (Decode.field "paths" (Decode.list Decode.string))
+        (Decode.field "processes" Decode.int)
+
+
 {-| Run the tests and render the results as a Web page.
 -}
-run : RunnerOptions -> AppOptions msg model -> Test -> Program Value (Model msg model) (Msg msg)
-run { runs, seed, report, paths, processes } appOpts test =
+run : AppOptions msg model -> Test -> Program Value (Model msg model) (Msg msg)
+run appOpts test =
     let
-        init args =
-            let
-                cmd =
-                    Task.perform Init Time.now
-            in
-            ( Uninitialized appOpts.update
-                { maybeInitialSeed = seed
-                , processes = processes
-                , report = report
-                , runs = Maybe.withDefault defaultRunCount runs
-                , paths = paths
-                , test = test
-                , init = appOpts.init
-                }
-            , cmd
-            )
+        init flags =
+            case Decode.decodeValue flagsDecoder flags of
+                Ok { seed, firstTestToRun, processes, report, runs, paths } ->
+                    let
+                        cmd =
+                            Task.perform Init Time.now
+                    in
+                    ( Uninitialized appOpts.update
+                        { maybeInitialSeed = seed
+                        , firstTestToRun = firstTestToRun
+                        , processes = processes
+                        , report = report
+                        , runs = Maybe.withDefault defaultRunCount runs
+                        , paths = paths
+                        , test = test
+                        , init = appOpts.init
+                        }
+                    , cmd
+                    )
+
+                Err error ->
+                    Debug.crash ("Unable to finish starting up because: " ++ error)
     in
     Platform.programWithFlags
         { init = init

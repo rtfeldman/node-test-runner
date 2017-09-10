@@ -16,7 +16,7 @@
     "url": "git+https://github.com/rtfeldman/node-test-runner.git"
   },
   "bin": {
-    "elm-test": "bin/elm-test"
+    "elm-test": "cli/run.js"
   },
   "keywords": [
     "elm",

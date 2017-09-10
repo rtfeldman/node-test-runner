@@ -1,6 +1,7 @@
+//@flow
 var fs = require("fs-extra");
 
-function readExposing(file) {
+function readExposing(file /*: string */) {
   return new Promise(function(resolve, reject) {
     // read 60 chars at a time. roughly optimal: memory vs performance
     var stream = fs.createReadStream(file, {
@@ -30,7 +31,7 @@ function readExposing(file) {
     });
     stream.on("close", function() {
       if (parser.getIsMissingModuleName())
-        return reject(filePath + " is missing a module declaration.");
+        return reject(file + " is missing a module declaration.");
 
       resolve(parser.getExposing());
     });
@@ -39,7 +40,7 @@ function readExposing(file) {
 
 /* Remove all the comments from the line, and return whether we are still in a multiline comment or not
 */
-var stripComments = function(line, isInComment) {
+function stripComments(line /*: string */, isInComment /*: boolean */) {
   while (true || line.length > 0) {
     var startIndex = line.indexOf("{-");
     var endIndex = line.indexOf("-}");
@@ -75,7 +76,7 @@ var stripComments = function(line, isInComment) {
   }
 
   return { line: "", isInComment: isInComment };
-};
+}
 
 var splitExposedFunctions = function(exposingLine) {
   return exposingLine
@@ -118,7 +119,7 @@ function Parser() {
   // data between exposing brackets
   var data = "";
 
-  this.parseLine = function(line) {
+  this.parseLine = function(line /*: string */) {
     if (parsingDone) return;
 
     var whereWeUpTo = stripComments(line, isInComment);

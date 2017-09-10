@@ -3,7 +3,7 @@ var install = require(path.join(__dirname, "installer"));
 
 install(true).then(
   function(successMessage) {
-    console.log(successMessage);
+    process.stdout.write(successMessage + "\n");
   },
   function(errorMessage) {
     console.error(errorMessage);

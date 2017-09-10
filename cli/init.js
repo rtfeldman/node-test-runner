@@ -94,7 +94,7 @@ function copyTemplate(templateName, destName) {
   var destination = path.resolve(destName);
 
   if (fs.existsSync(destination)) {
-    console.log(destination + " already exists");
+    process.stdout.write(destination + " already exists\n");
   } else {
     fs.copySync(source, destination);
     logCreated(destination);
@@ -102,13 +102,13 @@ function copyTemplate(templateName, destName) {
 }
 
 function logCreated(destination) {
-  console.log("Created " + destination);
+  process.stdout.write("Created " + destination + "\n");
 }
 
 function ensureDirectory(dirName) {
   var destination = path.resolve(".", dirName);
   if (fs.existsSync(destination)) {
-    console.log(destination + " already exists");
+    process.stdout.write(destination + " already exists\n");
   } else {
     fs.mkdirSync(destination);
     logCreated(destination);

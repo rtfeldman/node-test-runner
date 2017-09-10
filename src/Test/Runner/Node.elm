@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (TestProgram, runWithOptions)
+port module Test.Runner.Node exposing (TestProgram, run)
 
 {-|
 
@@ -8,7 +8,7 @@ port module Test.Runner.Node exposing (TestProgram, runWithOptions)
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs run, runWithOptions, TestProgram
+@docs run, TestProgram
 
 -}
 
@@ -137,16 +137,7 @@ update msg ({ testReporter } as model) =
                     ( model, cmd )
 
                 Ok (Test index) ->
-                    let
-                        cmd =
-                            Task.perform Dispatch Time.now
-                    in
-                    if index == -1 then
-                        ( { model | nextTestToRun = index + model.processes }
-                        , Cmd.batch [ cmd, sendBegin model ]
-                        )
-                    else
-                        ( { model | nextTestToRun = index }, cmd )
+                    ( { model | nextTestToRun = index }, Task.perform Dispatch Time.now )
 
                 Err err ->
                     let
@@ -241,16 +232,16 @@ sendResults isFinished testReporter results =
         |> send
 
 
-sendBegin : Model -> Cmd msg
-sendBegin model =
+sendBegin : TestReporter -> RunInfo -> Cmd msg
+sendBegin testReporter runInfo =
     let
         baseFields =
             [ ( "type", Encode.string "BEGIN" )
-            , ( "testCount", Encode.int model.runInfo.testCount )
+            , ( "testCount", Encode.int runInfo.testCount )
             ]
 
         extraFields =
-            case model.testReporter.reportBegin model.runInfo of
+            case testReporter.reportBegin runInfo of
                 Just report ->
                     [ ( "message", report ) ]
 
@@ -263,7 +254,7 @@ sendBegin model =
 
 
 init : App.InitArgs -> ( Model, Cmd Msg )
-init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
+init { startTime, processes, firstTestToRun, paths, fuzzRuns, initialSeed, runners, report } =
     let
         { indexedRunners, autoFail } =
             case runners of
@@ -293,6 +284,9 @@ init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
         testReporter =
             createReporter report
 
+        isSendingBegin =
+            firstTestToRun == -1
+
         model =
             { available = Dict.fromList indexedRunners
             , runInfo =
@@ -302,24 +296,33 @@ init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
                 , initialSeed = initialSeed
                 }
             , processes = processes
-            , nextTestToRun = 0
+            , nextTestToRun =
+                if isSendingBegin then
+                    firstTestToRun + processes
+                else
+                    firstTestToRun
             , results = []
             , testReporter = testReporter
             , autoFail = autoFail
             }
+
+        cmd =
+            dispatch model startTime
     in
-    ( model, Cmd.none )
+    if isSendingBegin then
+        ( model, Cmd.batch [ cmd, sendBegin model.testReporter model.runInfo ] )
+    else
+        ( model, cmd )
 
 
 {-| Run the test using the provided options. If `Nothing` is provided for either
 `runs` or `seed`, it will fall back on the options used in [`run`](#run).
 -}
-runWithOptions :
-    App.RunnerOptions
-    -> Test
+run :
+    Test
     -> TestProgram
-runWithOptions options =
-    App.run options
+run =
+    App.run
         { init = init
         , update = update
         , subscriptions = \_ -> receive Receive
