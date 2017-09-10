@@ -5,7 +5,20 @@ var window = {
   removeEventListener: function() {}
 };
 
-var document = { body: {}, createTextNode: function() {} };
+var location = {
+  href: "",
+  host: "",
+  hostname: "",
+  protocol: "",
+  origin: "",
+  port: "",
+  pathname: "",
+  search: "",
+  hash: "",
+  username: "",
+  password: ""
+};
+var document = { body: {}, createTextNode: function() {}, location: location };
 
 if (typeof XMLHttpRequest === "undefined") {
   XMLHttpRequest = function() {
