@@ -1,9 +1,9 @@
 sudo: false
 
-language: node_js
-node_js:
-    - "node"
-    - "4"
+language: rust
+
+rust:
+  - nightly
 
 cache:
   directories:
@@ -17,6 +17,8 @@ os:
 env: ELM_VERSION=0.18.0
 
 before_install:
+  - nvm install 4.0
+  - nvm use 4.0
   - | # epic build time improvement - see https://github.com/elm-lang/elm-compiler/issues/1473#issuecomment-245704142
     if [ ! -d sysconfcpus/bin ];
     then
@@ -30,12 +32,13 @@ before_install:
 install:
   - node --version
   - npm --version
-  - npm install -g elm@$ELM_VERSION mocha
+  - npm install -g elm@$ELM_VERSION mocha flow-bin
   - mv $(npm config get prefix)/bin/elm-make $(npm config get prefix)/bin/elm-make-old
   - echo -e "#\!/bin/bash\\n\\necho \"Running elm-make with sysconfcpus -n 2\"\\n\\n$TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 elm-make-old \"\$@\"" > $(npm config get prefix)/bin/elm-make
   - chmod +x $(npm config get prefix)/bin/elm-make
   - npm install
 
 script:
+  - cargo run
   - flow check
   - npm test

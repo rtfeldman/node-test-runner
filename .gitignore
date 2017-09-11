@@ -30,3 +30,6 @@ bin/elm-interface-to-json
 node_modules
 elm-stuff
 tmp
+/target/
+**/*.rs.bk
+Cargo.lock
