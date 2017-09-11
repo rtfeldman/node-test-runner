@@ -15,10 +15,6 @@ if (potentialModuleNames.length !== 1) {
 }
 
 var net = require("net"),
-  pipeFilename =
-    process.platform === "win32"
-      ? "\\\\.\\pipe\\elm_test"
-      : "/tmp/elm_test.sock",
   client = net.createConnection(pipeFilename);
 
 client.on("error", function(error) {
