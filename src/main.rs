@@ -86,23 +86,15 @@ fn get_test_file_paths(values: clap::Values) -> Vec<PathBuf> {
         files::walk_globs(&root, ["test?(s)/**/*.elm"].iter().map(|&str| str))
     };
 
-    let mut results: Vec<PathBuf> = vec![];
-
     match walk {
-        Ok(walked) => for result in walked {
-            match result {
-                Ok(entry) => {
-                    results.push(entry.path().to_owned());
-                }
-                Err(err) => {
-                    panic!("ERROR: {}", err);
-                }
-            }
-        },
+        Ok(walked) => walked
+            .map(|result| match result {
+                Ok(entry) => entry.path().to_owned(),
+                Err(err) => panic!("ERROR: {}", err),
+            })
+            .collect(),
         Err(err) => panic!("ERROR: {}", err),
     }
-
-    results
 
     // TODO use is_empty() over len()
     //
