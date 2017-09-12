@@ -79,42 +79,48 @@ fn get_test_file_paths(values: clap::Values) -> Vec<PathBuf> {
     let root = files::find_nearest_elm_package_dir(std::env::current_dir().unwrap())
         .unwrap_or_else(|| panic!("Could not find elm-package.json.{}", make_sure));
 
-    let walk = if values.len() > 0 {
-        files::walk_globs(&root, values)
-    } else {
-        // TODO there must be a better way to dereference this than .map(|&str| str)
-        files::walk_globs(&root, ["test?(s)/**/*.elm"].iter().map(|&str| str))
-    };
+    if values.len() == 0 {
+        let results = walk_to_results(files::walk_globs(
+            &root,
+            // TODO there must be a better way to dereference this than .map(|&str| str) :P
+            ["test?(s)/**/*.elm"].iter().map(|&str| str),
+        ));
 
+        // TODO use is_empty instead of len() == 0
+        if results.len() == 0 {
+            panic!(
+                "No tests found for the file pattern \"{}\"\n\nMaybe try running `elm test`\
+                 with no arguments?",
+                values.map(str::to_string).collect::<Vec<_>>().join(" ")
+            )
+        } else {
+            results
+        }
+    } else {
+        let results = walk_to_results(files::walk_globs(&root, values));
+
+        // TODO use is_empty instead of len() == 0
+        if results.len() == 0 {
+            panic!(
+                "No tests found in the test/ (or tests/) directory.\n\nNOTE: {}",
+                make_sure
+            )
+        } else {
+            results
+        }
+    }
+}
+
+fn walk_to_results(walk: Result<ignore::Walk, ignore::Error>) -> Vec<PathBuf> {
     match walk {
         Ok(walked) => walked
             .map(|result| match result {
                 Ok(entry) => entry.path().to_owned(),
                 Err(err) => panic!("ERROR: {}", err),
             })
-            .collect(),
+            .collect::<Vec<PathBuf>>(),
         Err(err) => panic!("ERROR: {}", err),
     }
-
-    // TODO use is_empty() over len()
-    //
-    // if globs.len() > 0 {
-    //     globs
-    // } else {
-    //     // TODO use is_empty() over len()
-    //     panic!(if values.len() > 0 {
-    //         format!(
-    //             "No tests found in the test/ (or tests/) directory.\n\nNOTE: {}",
-    //             make_sure
-    //         )
-    //     } else {
-    //         format!(
-    //             "No tests found for the file pattern \"{}\"\n\nMaybe try running `elm test`\
-    //              with no arguments?",
-    //             values.map(str::to_string).collect::<Vec<_>>().join(" ")
-    //         )
-    //     })
-    // }
 }
 
 // Return paths to the (elm-package, elm-make) binaries
