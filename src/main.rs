@@ -25,6 +25,7 @@ fn main() {
         .arg(
             Arg::with_name("TESTFILES")
                 .help("Run TESTFILES, for example ")
+                .multiple(true)
                 .index(1),
         )
         .get_matches();
@@ -41,6 +42,13 @@ fn main() {
 
     println!("Value for seed: {}", seed.unwrap_or(9).to_string());
     println!("Value for fuzz: {}", fuzz.unwrap_or(9).to_string());
+    println!(
+        "Value for TESTFILES: {}",
+        args.values_of("TESTFILES")
+            .map(|strings| strings.collect())
+            .unwrap_or(vec![])
+            .join(", ")
+    );
 }
 
 // Turn the given Option<&str> into an Option<i32>, or else die and report the invalid argument.
