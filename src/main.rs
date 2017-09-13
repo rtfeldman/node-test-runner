@@ -1,8 +1,8 @@
 extern crate clap;
-extern crate ignore;
 
 use clap::{App, Arg};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::collections::HashSet;
 
 mod files;
 
@@ -45,10 +45,12 @@ fn main() {
     // Validate CLI arguments
     let seed: Option<i32> = parse_or_die("--seed", args.value_of("seed"));
     let fuzz: Option<i32> = parse_or_die("--fuzz", args.value_of("fuzz"));
-    let files: Vec<PathBuf> =
+    let files: HashSet<PathBuf> =
         get_test_file_paths(args.values_of("files").unwrap_or(Default::default()));
     let (path_to_elm_package, path_to_elm_make): (PathBuf, PathBuf) =
         binary_paths_from_compiler(args.value_of("compiler"));
+
+    println!("files: {:?}", files);
 
     check_node_version();
 
@@ -64,7 +66,7 @@ fn main() {
     println!("Value for fuzz: {}", fuzz.unwrap_or(9).to_string());
 }
 
-fn get_test_file_paths(values: clap::Values) -> Vec<PathBuf> {
+fn get_test_file_paths(values: clap::Values) -> HashSet<PathBuf> {
     // It's important to globify all the arguments.
     // On Bash 4.x (or zsh), if you give it a glob as its last argument, Bash
     // translates that into a list of file paths. On bash 3.x it's just a string.
@@ -80,14 +82,13 @@ fn get_test_file_paths(values: clap::Values) -> Vec<PathBuf> {
     print!("root: {:?}", root);
 
     if values.len() == 0 {
-        let results = walk_to_results(files::walk_globs(
+        let results = files::walk_globs(
             &root,
             // TODO there must be a better way to dereference this than .map(|&str| str) :P
             ["test?(s)/**/*.elm"].iter().map(|&str| str),
-        ));
+        ).unwrap_or_else(|err| panic!("Error finding tests."));
 
-        // TODO use is_empty instead of len() == 0
-        if results.len() == 0 {
+        if results.is_empty() {
             panic!(
                 "No tests found for the file pattern \"{}\"\n\nMaybe try running `elm test`\
                  with no arguments?",
@@ -97,10 +98,10 @@ fn get_test_file_paths(values: clap::Values) -> Vec<PathBuf> {
             results
         }
     } else {
-        let results = walk_to_results(files::walk_globs(&root, values));
+        let results =
+            files::walk_globs(&root, values).unwrap_or_else(|err| panic!("Error finding tests."));
 
-        // TODO use is_empty instead of len() == 0
-        if results.len() == 0 {
+        if results.is_empty() {
             panic!(
                 "No tests found in the test/ (or tests/) directory.\n\nNOTE: {}",
                 make_sure
@@ -111,17 +112,6 @@ fn get_test_file_paths(values: clap::Values) -> Vec<PathBuf> {
     }
 }
 
-fn walk_to_results(walk: Result<ignore::Walk, ignore::Error>) -> Vec<PathBuf> {
-    match walk {
-        Ok(walked) => walked
-            .map(|result| match result {
-                Ok(entry) => entry.path().to_owned(),
-                Err(err) => panic!("ERROR: {}", err),
-            })
-            .collect::<Vec<PathBuf>>(),
-        Err(err) => panic!("ERROR: {}", err),
-    }
-}
 
 // Return paths to the (elm-package, elm-make) binaries
 fn binary_paths_from_compiler(arg: Option<&str>) -> (PathBuf, PathBuf) {

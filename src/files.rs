@@ -1,11 +1,12 @@
-extern crate crossbeam;
-extern crate ignore;
+extern crate globset;
+extern crate walkdir;
 
-use std::thread;
-use std::io::{self, Write};
+use self::globset::{Glob, GlobMatcher};
+use self::walkdir::WalkDir;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use globset::{GlobBuilder, GlobMatcher};
+use std::ffi::OsStr;
+use std::collections::HashSet;
 
 pub fn find_nearest_elm_package_json(file_path: &mut PathBuf) -> Option<PathBuf> {
     let filename = "elm-package.json";
@@ -30,57 +31,70 @@ pub fn find_nearest_elm_package_json(file_path: &mut PathBuf) -> Option<PathBuf>
     }
 }
 
+fn matchers_from_patterns<'a, I: Iterator<Item = &'a str>>(
+    root: &Path,
+    patterns: I,
+) -> Result<Vec<GlobMatcher>, globset::Error> {
+    let mut matchers = vec![];
+
+    for pattern in patterns {
+        matchers.push(Glob::new(pattern)?.compile_matcher());
+    }
+
+    Ok(matchers)
+}
+
 pub fn walk_globs<'a, I: Iterator<Item = &'a str>>(
     root: &Path,
     patterns: I,
-) -> Result<Walk, ignore::Error> {
-    let queue: Arc<crossbeam::sync::MsQueue<Option<DirEntry>>> =
-        Arc::new(crossbeam::sync::MsQueue::new());
-
-    let stdout_queue = queue.clone();
-    let stdout_thread = thread::spawn(move || {
-        let mut stdout = io::BufWriter::new(io::stdout());
-        while let Some(dent) = stdout_queue.pop() {
-            write_path(&mut stdout, dent.path());
-        }
-    });
-
-    build_overrides(root, patterns).map(|overrides| {
-        WalkBuilder::new(root).build_parallel().run(|| {
-            let queue = queue.clone();
-            Box::new(move |result| {
-                use ignore::WalkState::*;
-
-                queue.push(Some(result.unwrap()));
-                Continue
-            })
-        });
-
-        queue.push(None);
-        stdout_thread.join().unwrap();
-
-        WalkBuilder::new(root).overrides(overrides).build()
+) -> Result<HashSet<PathBuf>, globset::Error> {
+    visit_dirs(root, matchers_from_patterns(root, patterns)?).or_else(|_| {
+        panic!("I/O error searching for test files.");
     })
 }
 
-fn build_overrides<'a, I: Iterator<Item = &'a str>>(
-    root: &Path,
-    patterns: I,
-) -> Result<Override, ignore::Error> {
-    let builder = &mut OverrideBuilder::new(root);
+// one possible implementation of walking a directory only visiting files
+fn visit_dirs(dir: &Path, matchers: Vec<GlobMatcher>) -> Result<HashSet<PathBuf>, walkdir::Error> {
+    let elm_file_extension = OsStr::new(".elm");
+    let elm_stuff_dir = OsStr::new("elm-stuff");
+    let mut results: HashSet<PathBuf> = HashSet::new();
 
-    // Ignore elm-stuff directories. Don't bother checking the error; we know this one can't fail.
-    builder.add("!*elm-stuff*").unwrap();
-
-    // Add all the patterns. If any are invalid globs, bail out with an error.
-    for pattern in patterns {
-        if let Err(err) = builder.add(pattern) {
-            return Err(err);
-        }
+    fn passes_matchers(path: &Path) -> bool {
+        true
     }
 
+    for path_buf in WalkDir::new(dir)
+        .into_iter()
+        .filter_map(|result| match result {
+            Ok(dir_entry) => {
+                let path = dir_entry.path();
 
-    builder.build()
+
+                match path.metadata() {
+                    Ok(metadata) => if
+                    // Ignore individual files that don't end in .elm
+                    (metadata.is_file() &&
+                        path.extension() != Some(elm_file_extension)) ||
+                        // Ignore elm-stuff directories
+                        (metadata.is_dir() && path.file_name() == Some(elm_stuff_dir)) ||
+                        // Ignore anything that doesn't match our globs
+                        !passes_matchers(path)
+                    {
+                        None
+                    } else {
+                        Some(path.to_path_buf())
+                    },
+
+                    Err(_) => None,
+                }
+            }
+
+            Err(_) => None,
+        }) {
+        results.insert(path_buf);
+    }
+
+    Ok(results.clone())
 }
 
 #[cfg(unix)]
