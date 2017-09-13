@@ -73,8 +73,11 @@ fn get_test_file_paths(values: clap::Values) -> Vec<PathBuf> {
                      where its elm-package.json lives.\n\nTo generate some initial tests \
                      to get things going, run `elm test init`.";
 
-    let root = files::find_nearest_elm_package_dir(std::env::current_dir().unwrap())
-        .unwrap_or_else(|| panic!("Could not find elm-package.json.{}", make_sure));
+    let root = files::find_nearest_elm_package_json(&mut std::env::current_dir().unwrap())
+        .unwrap_or_else(|| panic!("Could not find elm-package.json.{}", make_sure))
+        .with_file_name("");
+
+    print!("root: {:?}", root);
 
     if values.len() == 0 {
         let results = walk_to_results(files::walk_globs(

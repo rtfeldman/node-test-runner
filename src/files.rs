@@ -5,34 +5,27 @@ use std::thread;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use ignore::overrides::{Override, OverrideBuilder};
-use ignore::{DirEntry, Walk, WalkBuilder};
+use globset::{GlobBuilder, GlobMatcher};
 
+pub fn find_nearest_elm_package_json(file_path: &mut PathBuf) -> Option<PathBuf> {
+    let filename = "elm-package.json";
 
-pub fn find_nearest_elm_package_dir(file_path: PathBuf) -> Option<PathBuf> {
-    let mut current_file_path = file_path.as_path();
+    if file_path.is_dir() {
+        file_path.push(filename)
+    }
 
     // Try to find an ancestor elm-package.json, starting with the given directory.
     // As soon as we find one, return it.
     loop {
-        if current_file_path
-            .with_file_name("elm-package.json")
-            .exists()
-        {
+        if file_path.exists() {
             // We found one! Bail out of the loop and return this as a directory.
-            return Some(current_file_path.with_file_name(""));
+            return Some(file_path.clone());
         } else {
-            match current_file_path.parent() {
-                Some(parent_file_path) => {
-                    // Try the parent directory next.
-                    current_file_path = parent_file_path;
-                }
-
-                None => {
-                    // We hit the root. We're done; we didn't find one.
-                    return None;
-                }
+            if file_path.pop() {
+                return None;
             }
+
+            file_path.push(filename);
         }
     }
 }
@@ -63,7 +56,6 @@ pub fn walk_globs<'a, I: Iterator<Item = &'a str>>(
             })
         });
 
-
         queue.push(None);
         stdout_thread.join().unwrap();
 
@@ -78,7 +70,7 @@ fn build_overrides<'a, I: Iterator<Item = &'a str>>(
     let builder = &mut OverrideBuilder::new(root);
 
     // Ignore elm-stuff directories. Don't bother checking the error; we know this one can't fail.
-    builder.add("!/**/elm-stuff/**").unwrap();
+    builder.add("!*elm-stuff*").unwrap();
 
     // Add all the patterns. If any are invalid globs, bail out with an error.
     for pattern in patterns {

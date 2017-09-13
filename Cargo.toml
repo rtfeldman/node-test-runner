@@ -5,8 +5,8 @@ authors = ["Richard Feldman <richard.t.feldman@gmail.com>"]
 
 [dependencies]
 term = "*"
-ignore = "0.2.2"
 crossbeam = "0.3.0"
+globset = "0.2.0"
 
 [dependencies.clap]
 version = "~2.26.0"
