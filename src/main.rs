@@ -2,10 +2,7 @@ extern crate clap;
 extern crate ignore;
 
 use clap::{App, Arg};
-use std::path::{Path, PathBuf};
-use ignore::overrides::{Override, OverrideBuilder};
-use ignore::Walk;
-use ignore::WalkBuilder;
+use std::path::PathBuf;
 
 mod files;
 
