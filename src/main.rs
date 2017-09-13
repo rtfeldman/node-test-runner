@@ -1,9 +1,7 @@
 extern crate clap;
-extern crate glob;
 
 use clap::{App, Arg};
-use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 
 mod files;
