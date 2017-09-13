@@ -1,15 +1,24 @@
 extern crate clap;
+extern crate glob;
 
 use clap::{App, Arg};
-use std::path::{Path, PathBuf};
+use std::env;
+use std::path::PathBuf;
 use std::collections::HashSet;
 
 mod files;
 
+const VERSION: &str = "0.18.10";
+
 fn main() {
-    let version = "0.18.10";
+    let root = files::find_nearest_elm_package_json(&mut env::current_dir().unwrap())
+        .unwrap_or_else(|| panic!("Could not find an elm-package.json file in this directory or any parent directories.{}", MAKE_SURE))
+        .with_file_name("");
+
+    env::set_current_dir(root).unwrap_or_else(|_| panic!("Could not change directory."));
+
     let args = App::new("elm-test")
-        .version(version)
+        .version(VERSION)
         .arg(
             Arg::with_name("seed")
                 .short("s")
@@ -45,8 +54,30 @@ fn main() {
     // Validate CLI arguments
     let seed: Option<i32> = parse_or_die("--seed", args.value_of("seed"));
     let fuzz: Option<i32> = parse_or_die("--fuzz", args.value_of("fuzz"));
+    let globs = args.values_of("files").unwrap_or(Default::default());
+
+
+
     let files: HashSet<PathBuf> =
-        get_test_file_paths(args.values_of("files").unwrap_or(Default::default()));
+        get_test_file_paths(globs).unwrap_or_else(|err| panic!("Error reading files: {}", err));
+
+    if files.is_empty() {
+        let globs = args.values_of("files").unwrap_or(Default::default());
+
+        if globs.len() == 0 {
+            panic!(
+                "No tests found in the test/ (or tests/) directory.\n\nNOTE: {}",
+                MAKE_SURE
+            )
+        } else {
+            panic!(
+                "No tests found for the file pattern \"{}\"\n\nMaybe try running `elm test`\
+                 with no arguments?",
+                globs.map(str::to_string).collect::<Vec<_>>().join(" ")
+            )
+        }
+    }
+
     let (path_to_elm_package, path_to_elm_make): (PathBuf, PathBuf) =
         binary_paths_from_compiler(args.value_of("compiler"));
 
@@ -60,55 +91,30 @@ fn main() {
     //
     // elm-test 0.18.10
     // ----------------
-    print_headline(version);
+    print_headline(VERSION);
 
     println!("Value for seed: {}", seed.unwrap_or(9).to_string());
     println!("Value for fuzz: {}", fuzz.unwrap_or(9).to_string());
 }
 
-fn get_test_file_paths(values: clap::Values) -> HashSet<PathBuf> {
+const DEFAULT_GLOB: &str = "test?(s)/**/*.elm";
+
+const MAKE_SURE: &str = "Make sure you're running elm-test from your project's root directory, \
+                         where its elm-package.json lives.\n\nTo generate some initial tests \
+                         to get things going, run `elm test init`.";
+
+fn get_test_file_paths(values: clap::Values) -> Result<HashSet<PathBuf>, glob::PatternError> {
     // It's important to globify all the arguments.
     // On Bash 4.x (or zsh), if you give it a glob as its last argument, Bash
     // translates that into a list of file paths. On bash 3.x it's just a string.
     // Ergo, globify all the arguments we receive.
-    let make_sure = "Make sure you're running elm-test from your project's root directory, \
-                     where its elm-package.json lives.\n\nTo generate some initial tests \
-                     to get things going, run `elm test init`.";
-
-    let root = files::find_nearest_elm_package_json(&mut std::env::current_dir().unwrap())
-        .unwrap_or_else(|| panic!("Could not find elm-package.json.{}", make_sure))
-        .with_file_name("");
-
-    print!("root: {:?}", root);
-
     if values.len() == 0 {
-        let results = files::walk_globs(
-            &root,
+        files::walk_globs(
             // TODO there must be a better way to dereference this than .map(|&str| str) :P
-            ["test?(s)/**/*.elm"].iter().map(|&str| str),
-        ).unwrap_or_else(|err| panic!("Error finding tests."));
-
-        if results.is_empty() {
-            panic!(
-                "No tests found for the file pattern \"{}\"\n\nMaybe try running `elm test`\
-                 with no arguments?",
-                values.map(str::to_string).collect::<Vec<_>>().join(" ")
-            )
-        } else {
-            results
-        }
+            [DEFAULT_GLOB].iter().map(|&str| str)
+        )
     } else {
-        let results =
-            files::walk_globs(&root, values).unwrap_or_else(|err| panic!("Error finding tests."));
-
-        if results.is_empty() {
-            panic!(
-                "No tests found in the test/ (or tests/) directory.\n\nNOTE: {}",
-                make_sure
-            )
-        } else {
-            results
-        }
+        files::walk_globs(values)
     }
 }
 
