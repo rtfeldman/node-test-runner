@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["Richard Feldman <richard.t.feldman@gmail.com>"]
 
 [dependencies]
-globset = "0.2.0"
 walkdir = "1.0.7"
 
 [dependencies.clap]
