@@ -1,21 +1,19 @@
 extern crate clap;
 
-use clap::{App, Arg};
 use std::env;
 use std::io;
-use std::num;
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 
 mod files;
-
-const VERSION: &str = "0.18.10";
+mod cli;
 
 fn main() {
     run().unwrap_or_else(report_error);
 }
 
-enum Error {
+#[derive(Debug)]
+enum Abort {
     MissingElmJson,
     InvalidCwd(io::Error),
     ChDirError(io::Error),
@@ -23,31 +21,31 @@ enum Error {
     NoTestsFound(Vec<String>),
     // CLI Flag errors
     InvalidCompilerFlag(String),
-    CliArgParseError(String, String, num::ParseIntError),
+    CliArgParseError(cli::ParseError),
 }
 
 const MAKE_SURE: &str = "Make sure you're running elm-test from your project's root directory, \
                          where its elm.json file lives.\n\nTo generate some initial tests \
                          to get things going, run `elm test init`.";
 
-fn report_error(error: Error) {
+fn report_error(error: Abort) {
     let message = match error {
-        Error::MissingElmJson => format!(
+        Abort::MissingElmJson => format!(
             "elm-test could not find an elm.json file in this directory \
              or any parent directories.\n{}",
             MAKE_SURE
         ),
-        Error::InvalidCwd(_) => String::from(
+        Abort::InvalidCwd(_) => String::from(
             "elm-test was run from an invalid directory. \
              Maybe the current directory has been deleted?",
         ),
-        Error::ChDirError(_) => String::from(
+        Abort::ChDirError(_) => String::from(
             "elm-test was unable to change the current working directory.",
         ),
-        Error::ReadTestFiles(_) => {
+        Abort::ReadTestFiles(_) => {
             String::from("elm-test was unable to read the requested .elm files.")
         }
-        Error::NoTestsFound(filenames) => if filenames.len() == 0 {
+        Abort::NoTestsFound(filenames) => if filenames.len() == 0 {
             format!(
                 "No tests found in the test/ (or tests/) directory.\n\nNOTE: {}",
                 MAKE_SURE,
@@ -59,12 +57,12 @@ fn report_error(error: Error) {
                 filenames.join(" ")
             )
         },
-        Error::InvalidCompilerFlag(path_to_elm_make) => format!(
+        Abort::InvalidCompilerFlag(path_to_elm_make) => format!(
             "The --compiler flag must be given a valid path to an elm-make executable,\
              which this was not: {}",
             path_to_elm_make
         ),
-        Error::CliArgParseError(arg, flag_name, _) => format!(
+        Abort::CliArgParseError(cli::ParseError::InvalidInteger(arg, flag_name)) => format!(
             "{} is not a valid value for argument for the {} flag",
             arg,
             flag_name
@@ -75,34 +73,36 @@ fn report_error(error: Error) {
     std::process::exit(1);
 }
 
-fn run() -> Result<(), Error> {
+fn run() -> Result<(), Abort> {
     // Verify that we're using a compatible version of node.js
     check_node_version();
 
     // Find the nearest ancestor elm.json and change to that directory.
     // This way, you can run elm-test from any child directory and have it do the right thing.
-    let root = files::find_nearest_elm_json(&mut env::current_dir().map_err(Error::InvalidCwd)?)
-        .ok_or(Error::MissingElmJson)?
+    let root = files::find_nearest_elm_json(&mut env::current_dir().map_err(Abort::InvalidCwd)?)
+        .ok_or(Abort::MissingElmJson)?
         .with_file_name("");
 
-    env::set_current_dir(root).map_err(Error::ChDirError)?;
+    env::set_current_dir(root).map_err(Abort::ChDirError)?;
 
     // If there are no test-dependencies in elm.json, offer to init.
     init_if_necessary();
 
     // Parse and validate CLI arguments
-    let args = parse_cli_args();
-    let seed: Option<i32> = parse_int_arg("--seed", args.value_of("seed"))?;
-    let fuzz: Option<i32> = parse_int_arg("--fuzz", args.value_of("fuzz"))?;
+    let args = cli::parse_args();
+    let seed: Option<i32> =
+        cli::parse_int_arg("--seed", args.value_of("seed")).map_err(Abort::CliArgParseError)?;
+    let fuzz: Option<i32> =
+        cli::parse_int_arg("--fuzz", args.value_of("fuzz")).map_err(Abort::CliArgParseError)?;
     let file_paths = args.values_of("files").unwrap_or(Default::default());
-    let files: HashSet<PathBuf> = gather_test_files(file_paths).map_err(Error::ReadTestFiles)?;
+    let files: HashSet<PathBuf> = gather_test_files(file_paths).map_err(Abort::ReadTestFiles)?;
 
     // If we found no test files to run, error out.
     if files.is_empty() {
         // TODO figure out a way to avoid doing this code duplicationn
         let file_paths = args.values_of("files").unwrap_or(Default::default());
 
-        return Err(Error::NoTestsFound(
+        return Err(Abort::NoTestsFound(
             file_paths.map(str::to_string).collect::<Vec<_>>(),
         ));
     }
@@ -114,7 +114,7 @@ fn run() -> Result<(), Error> {
     //
     // elm-test 0.18.10
     // ----------------
-    print_headline(VERSION);
+    print_headline();
 
     Ok(())
 }
@@ -141,11 +141,11 @@ fn gather_test_files(values: clap::Values) -> io::Result<HashSet<PathBuf>> {
 }
 
 // Return paths to the (elm-package, elm-make) binaries
-fn binary_paths_from_compiler(compiler_flag: Option<&str>) -> Result<(PathBuf, PathBuf), Error> {
+fn binary_paths_from_compiler(compiler_flag: Option<&str>) -> Result<(PathBuf, PathBuf), Abort> {
     match compiler_flag {
         Some(str) => match PathBuf::from(str).canonicalize() {
             Ok(path_to_elm_make) => if path_to_elm_make.is_dir() {
-                Err(Error::InvalidCompilerFlag(String::from(str)))
+                Err(Abort::InvalidCompilerFlag(String::from(str)))
             } else {
                 Ok((
                     path_to_elm_make.with_file_name("elm-package"),
@@ -153,25 +153,9 @@ fn binary_paths_from_compiler(compiler_flag: Option<&str>) -> Result<(PathBuf, P
                 ))
             },
 
-            Err(_) => Err(Error::InvalidCompilerFlag(String::from(str))),
+            Err(_) => Err(Abort::InvalidCompilerFlag(String::from(str))),
         },
         None => Ok((PathBuf::from("elm-package"), PathBuf::from("elm-make"))),
-    }
-}
-
-// Turn the given Option<&str> into an Option<i32>, or else die and report the invalid argument.
-fn parse_int_arg(flag_name: &str, val: Option<&str>) -> Result<Option<i32>, Error> {
-    match val {
-        None => Ok(None),
-        Some(potential_num) => match potential_num.parse::<i32>() {
-            Ok(num) => Ok(Some(num)),
-
-            Err(err) => Err(Error::CliArgParseError(
-                String::from(flag_name),
-                String::from(potential_num),
-                err,
-            )),
-        },
     }
 }
 
@@ -179,47 +163,11 @@ fn parse_int_arg(flag_name: &str, val: Option<&str>) -> Result<Option<i32>, Erro
 //
 // elm-test 0.18.10
 // ----------------
-fn print_headline(version: &str) {
-    let headline = String::from("elm-test ") + version;
+fn print_headline() {
+    let headline = String::from("elm-test ") + cli::VERSION;
     let bar = "-".repeat(headline.len());
 
     println!("\n{}\n{}\n", headline, bar);
-}
-
-fn parse_cli_args<'a>() -> clap::ArgMatches<'a> {
-    App::new("elm-test")
-        .version(VERSION)
-        .arg(
-            Arg::with_name("seed")
-                .short("s")
-                .long("seed")
-                .value_name("SEED")
-                .help("Run with initial fuzzer seed")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("fuzz")
-                .short("f")
-                .long("fuzz")
-                .value_name("FUZZ")
-                .help("Run with each fuzz test performing this many iterations")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("compiler")
-                .short("c")
-                .long("compiler")
-                .value_name("PATH_TO_COMPILER")
-                .help("Run tests using this elm-make executable for the compiler")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("files")
-                .help("Run TESTFILES, for example ")
-                .multiple(true)
-                .index(1),
-        )
-        .get_matches()
 }
 
 fn check_node_version() {

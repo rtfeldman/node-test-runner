@@ -1,6 +1,6 @@
 [package]
-name = "node-test-runner"
-version = "0.1.0"
+name = "elm-test"
+version = "0.18.10"
 authors = ["Richard Feldman <richard.t.feldman@gmail.com>"]
 
 [dependencies]
