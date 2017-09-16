@@ -21,6 +21,7 @@ enum Abort {
     InvalidCwd(io::Error),
     ChDirError(io::Error),
     ReadTestFiles(io::Error),
+    SpawnElmMake(io::Error),
     NoTestsFound(HashSet<PathBuf>),
     // CLI Flag errors
     InvalidCompilerFlag(String),
@@ -43,6 +44,10 @@ fn report_error(error: Abort) {
         Abort::InvalidCwd(_) => String::from(
             "elm-test was run from an invalid directory. \
              Maybe the current directory has been deleted?",
+        ),
+        Abort::SpawnElmMake(_) => String::from(
+            "Unable to execute `elm make`. Try using the --compiler flag to set the location of \
+            the `elm` executable explicitly.",
         ),
         Abort::ChDirError(_) => String::from(
             "elm-test was unable to change the current working directory.",
@@ -70,11 +75,11 @@ fn report_error(error: Abort) {
                 )
             }
         }
-        Abort::InvalidCompilerFlag(path_to_elm_make) => {
+        Abort::InvalidCompilerFlag(path_to_elm_binary) => {
             format!(
-                "The --compiler flag must be given a valid path to an elm-make executable,\
+                "The --compiler flag must be given a valid path to an elm executable,\
              which this was not: {}",
-                path_to_elm_make
+                path_to_elm_binary
             )
         }
         Abort::CliArgParseError(cli::ParseError::InvalidInteger(arg, flag_name)) => {
@@ -118,8 +123,7 @@ fn run() -> Result<(), Abort> {
         }
     };
 
-    let (path_to_elm_package, path_to_elm_make): (PathBuf, PathBuf) =
-        binary_paths_from_compiler(args.compiler)?;
+    let path_to_elm_binary: PathBuf = elm_binary_path_from_compiler_flag(args.compiler)?;
 
     // Print the headline. Something like:
     //
@@ -127,10 +131,32 @@ fn run() -> Result<(), Abort> {
     // ----------------
     print_headline();
 
-    Command::new(path_to_elm_make)
+    let mut elm_make_process = Command::new(path_to_elm_binary)
+        .arg("make")
         .arg("--yes")
+        .arg("--output=/dev/null")
         .args(files)
-        .spawn();
+        .spawn()
+        .map_err(Abort::SpawnElmMake)?;
+
+    // Start `elm make` running.
+    let mut node_processes: Vec<std::process::Child> = Vec::new();
+
+    for num in 0..4 {
+        let node_process = Command::new("node")
+            .arg("-p")
+            .arg("'hi from node'")
+            .spawn()
+            .map_err(Abort::SpawnElmMake)?;
+
+        node_processes.push(node_process);
+    }
+
+    elm_make_process.wait();
+
+    for node_process in node_processes {
+        node_process.wait();
+    }
 
     Ok(())
 }
@@ -161,26 +187,23 @@ fn gather_test_files(values: &HashSet<PathBuf>) -> io::Result<Option<HashSet<Pat
     }
 }
 
-// Return paths to the (elm-package, elm-make) binaries
-fn binary_paths_from_compiler(compiler_flag: Option<String>) -> Result<(PathBuf, PathBuf), Abort> {
+// Return the path to the elm binary
+fn elm_binary_path_from_compiler_flag(compiler_flag: Option<String>) -> Result<PathBuf, Abort> {
     match compiler_flag {
         Some(string) => {
             match PathBuf::from(string.as_str()).canonicalize() {
-                Ok(path_to_elm_make) => {
-                    if path_to_elm_make.is_dir() {
+                Ok(path_to_elm_binary) => {
+                    if path_to_elm_binary.is_dir() {
                         Err(Abort::InvalidCompilerFlag(string))
                     } else {
-                        Ok((
-                            path_to_elm_make.with_file_name("elm-package"),
-                            path_to_elm_make,
-                        ))
+                        Ok(path_to_elm_binary)
                     }
                 }
 
                 Err(_) => Err(Abort::InvalidCompilerFlag(string)),
             }
         }
-        None => Ok((PathBuf::from("elm-package"), PathBuf::from("elm-make"))),
+        None => Ok(PathBuf::from("elm")),
     }
 }
 
