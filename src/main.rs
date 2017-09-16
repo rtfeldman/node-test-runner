@@ -9,6 +9,7 @@ use std::io::{Read, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Child, Stdio};
 use std::collections::HashSet;
+use json::JsonValue;
 
 mod files;
 mod cli;
@@ -234,16 +235,39 @@ fn print_json(program: &mut Child) -> io::Result<Vec<String>> {
             buf_reader.read_to_string(&mut string)?;
 
             match json::parse(&string) {
-                Ok(json_obj) => {
+                Ok(JsonValue::Array(modules)) => {
+                    let filtered_modules = modules.into_iter().filter_map(|module| {
+                        match module["types"] {
+                            JsonValue::Array(types) => {
+                                let top_level_tests =
+                                    types.into_iter().filter_map(
+                                        |typ| if typ["signature"] == "Test.Test" {
+                                            Some(typ["name"])
+                                        } else {
+                                            None
+                                        },
+                                    );
 
-                    println!("* * * received: {:?}", json_obj);
+                                // Must have at least 1 value of type Test.
+                                // Otherwise, ignore this module.
+                                if top_level_tests.count() == 0 {
+                                    None
+                                } else {
+                                    Some((module["moduleName"], top_level_tests))
+                                }
+                            }
+                            _ => None,
+                        }
+                    });
+
+                    println!("* * * received: {:?}", filtered_modules);
 
 
                     // TODO read from the json obj to filter and gather all the values of type Test
 
                     Ok(vec![])
                 }
-                Err(_) => Ok(vec![]),
+                _ => Ok(vec![]),
             }
         }
         None => Ok(vec![]),
