@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 use std::io::Write;
 use std::process::Command;
-use std::ffi::OsStr;
 
 mod files;
 mod cli;

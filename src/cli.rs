@@ -18,14 +18,6 @@ const ARG_FUZZ: &'static str = "fuzz";
 const ARG_COMPILER: &'static str = "compiler";
 const FILES_OR_DIRECTORIES: &'static str = "FILES_OR_DIRECTORIES";
 
-pub fn seed<'a>(args: &clap::ArgMatches<'a>) -> Result<Option<i32>, ParseError> {
-    parse_int_arg(ARG_SEED, args)
-}
-
-pub fn fuzz<'a>(args: &clap::ArgMatches<'a>) -> Result<Option<i32>, ParseError> {
-    parse_int_arg(ARG_FUZZ, args)
-}
-
 pub fn parse_args<'a>() -> Result<CliArgs, ParseError> {
     let matches = App::new("elm-test")
         .version(VERSION)
