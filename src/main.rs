@@ -1,10 +1,10 @@
 extern crate clap;
+extern crate num_cpus;
 
 use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
-use std::io::Write;
 use std::process::Command;
 
 mod files;
@@ -20,8 +20,14 @@ enum Abort {
     InvalidCwd(io::Error),
     ChDirError(io::Error),
     ReadTestFiles(io::Error),
-    SpawnElmMake(io::Error),
     NoTestsFound(HashSet<PathBuf>),
+    // Running elm make
+    SpawnElmMake(io::Error),
+    CompilationFailed(io::Error),
+
+    // Running node
+    SpawnNodeProcess(io::Error),
+
     // CLI Flag errors
     InvalidCompilerFlag(String),
     CliArgParseError(cli::ParseError),
@@ -48,6 +54,8 @@ fn report_error(error: Abort) {
             "Unable to execute `elm make`. Try using the --compiler flag to set the location of \
             the `elm` executable explicitly.",
         ),
+        Abort::CompilationFailed(_) => String::from("Test compilation failed."),
+        Abort::SpawnNodeProcess(_) => String::from("Unable to run `node`. Do you have nodejs installed? You can get it from https://nodejs.org"),
         Abort::ChDirError(_) => String::from(
             "elm-test was unable to change the current working directory.",
         ),
@@ -90,7 +98,8 @@ fn report_error(error: Abort) {
         }
     };
 
-    writeln!(&mut std::io::stderr(), "Error: {}", message);
+    // TODO this should be eprintln! once I upgrade the version of Rust I'm using.
+    println!("Error: {}", message);
 
     std::process::exit(1);
 }
@@ -130,7 +139,7 @@ fn run() -> Result<(), Abort> {
     // ----------------
     print_headline();
 
-    let mut elm_make_process = Command::new(path_to_elm_binary)
+    let elm_make_process = Command::new(path_to_elm_binary)
         .arg("make")
         .arg("--yes")
         .arg("--output=/dev/null")
@@ -141,7 +150,7 @@ fn run() -> Result<(), Abort> {
     // Start `elm make` running.
     let mut node_processes: Vec<std::process::Child> = Vec::new();
 
-    for num in 0..4 {
+    for _ in 0..num_cpus::get() {
         let node_process = Command::new("node")
             .arg("-p")
             .arg("'hi from node'")
@@ -151,10 +160,12 @@ fn run() -> Result<(), Abort> {
         node_processes.push(node_process);
     }
 
-    elm_make_process.wait();
+    elm_make_process.wait_with_output().map_err(
+        Abort::CompilationFailed,
+    )?;
 
     for node_process in node_processes {
-        node_process.wait();
+        node_process.wait_with_output().map_err(Abort::SpawnNodeProcess)?;
     }
 
     Ok(())
