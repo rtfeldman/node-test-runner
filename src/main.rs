@@ -8,7 +8,7 @@ use std::fs;
 use std::io::{Read, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Child, Stdio};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use json::JsonValue;
 
 mod files;
@@ -236,29 +236,39 @@ fn print_json(program: &mut Child) -> io::Result<Vec<String>> {
 
             match json::parse(&string) {
                 Ok(JsonValue::Array(modules)) => {
-                    let filtered_modules = modules.into_iter().filter_map(|module| {
-                        match module["types"] {
-                            JsonValue::Array(types) => {
-                                let top_level_tests =
-                                    types.into_iter().filter_map(
-                                        |typ| if typ["signature"] == "Test.Test" {
-                                            Some(typ["name"])
-                                        } else {
-                                            None
-                                        },
-                                    );
+                    // A map from module name to its set of exposed values of type Test.
+                    let mut filtered_modules: HashMap<String, HashSet<String>> = HashMap::new();
 
-                                // Must have at least 1 value of type Test.
-                                // Otherwise, ignore this module.
-                                if top_level_tests.count() == 0 {
-                                    None
-                                } else {
-                                    Some((module["moduleName"], top_level_tests))
+                    for module in modules {
+                        // Extract the "types" field, which should be an Array.
+                        if let &JsonValue::Array(ref types) = &module["types"] {
+                            // We'll populate this with every value we find of type Test.
+                            let mut top_level_tests: HashSet<String> = HashSet::new();
+
+                            for typ in types {
+                                if typ["signature"] == "Test.Test" {
+                                    // This value is a Test. Add it to the set!
+                                    if let &JsonValue::Object(ref obj) = typ {
+                                        if let Some(&JsonValue::Short(ref name)) = obj.get("name") {
+                                            top_level_tests.insert(String::from(name.as_str()));
+                                        }
+                                    }
                                 }
                             }
-                            _ => None,
+
+                            // Must have at least 1 value of type Test to get an entry in the map.
+                            if !top_level_tests.is_empty() {
+
+                                // Add this module to the map, along with its values.
+                                if let Some(module_name) = module["moduleName"].as_str() {
+                                    filtered_modules.insert(
+                                        module_name.to_owned(),
+                                        top_level_tests,
+                                    );
+                                }
+                            }
                         }
-                    });
+                    }
 
                     println!("* * * received: {:?}", filtered_modules);
 
