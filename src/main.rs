@@ -4,6 +4,7 @@ extern crate num_cpus;
 
 use std::env;
 use std::io;
+use std::fs;
 use std::io::{Read, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Child, Stdio};
@@ -29,6 +30,10 @@ enum Abort {
 
     // Running node
     SpawnNodeProcess(io::Error),
+
+    // Running elm-interface-to-json
+    CurrentExe,
+    SpawnElmiToJson(io::Error),
 
     // CLI Flag errors
     InvalidCompilerFlag(String),
@@ -60,6 +65,15 @@ fn report_error(error: Abort) {
         Abort::SpawnNodeProcess(_) => String::from(
             "Unable to run `node`. \
             Do you have nodejs installed? You can get it from https://nodejs.org",
+        ),
+        Abort::SpawnElmiToJson(_) => String::from(
+            "Unable to run `elm-interface-to-json`. \
+            This binary should have been installed along with elm-test. \
+            Maybe try reinstalling elm-test via npm?",
+        ),
+        Abort::CurrentExe => String::from(
+            "Unable to detect current running process for `elm-test`. \
+            Is elm-test running from a weird location, possibly involving symlinks?",
         ),
         Abort::ChDirError(_) => String::from(
             "elm-test was unable to change the current working directory.",
@@ -110,7 +124,7 @@ fn report_error(error: Abort) {
 }
 
 // TODO don't use this. Instead, do Haskell FFI to bring it in.
-const ELMI_TO_JSON_BINARY: &str = "/home/rtfeldman/code/node-test-runner/bin/elm-interface-to-json";
+const ELMI_TO_JSON_BINARY_NAME: &str = "elm-interface-to-json";
 
 fn run() -> Result<(), Abort> {
     // Verify that we're using a compatible version of node.js
@@ -179,14 +193,28 @@ fn run() -> Result<(), Abort> {
         Abort::CompilationFailed,
     )?;
 
+    read_test_interfaces(root.as_path())?;
+
+    Ok(())
+}
+
+fn read_test_interfaces(root: &Path) -> Result<Vec<String>, Abort> {
+    // Get the path to the currently executing elm-test binary. This may be a symlink.
+    let path_to_elm_test_binary: PathBuf = std::env::current_exe().or(Err(Abort::CurrentExe))?;
+
+    // If it's a symlink, follow it. Then change the executable name to elm-interface-to-json.
+    let path_to_elmi_to_json_binary: PathBuf = fs::read_link(&path_to_elm_test_binary)
+        .unwrap_or(path_to_elm_test_binary)
+        .with_file_name(ELMI_TO_JSON_BINARY_NAME);
+
     // Now that we've run `elm make` to compile the .elmi files, run elm-interface-to-json to
     // obtain the JSON of the interfaces.
-    let mut elmi_to_json_process = Command::new(ELMI_TO_JSON_BINARY)
+    let mut elmi_to_json_process = Command::new(path_to_elmi_to_json_binary)
         .arg("--path")
         .arg(root.to_str().expect(""))
         .stdout(Stdio::piped())
         .spawn()
-        .map_err(Abort::SpawnElmMake)?;
+        .map_err(Abort::SpawnElmiToJson)?;
 
     let tests = print_json(&mut elmi_to_json_process);
 
@@ -194,7 +222,7 @@ fn run() -> Result<(), Abort> {
         Abort::CompilationFailed,
     )?;
 
-    Ok(())
+    Ok(vec![])
 }
 
 fn print_json(program: &mut Child) -> io::Result<Vec<String>> {
@@ -205,13 +233,18 @@ fn print_json(program: &mut Child) -> io::Result<Vec<String>> {
 
             buf_reader.read_to_string(&mut string)?;
 
-            let json_obj = json::parse(&string);
+            match json::parse(&string) {
+                Ok(json_obj) => {
 
-            println!("* * * received: {:?}", json_obj);
+                    println!("* * * received: {:?}", json_obj);
 
-            // TODO read from the json obj to filter and gather all the values of type Test
 
-            Ok(vec![])
+                    // TODO read from the json obj to filter and gather all the values of type Test
+
+                    Ok(vec![])
+                }
+                Err(_) => Ok(vec![]),
+            }
         }
         None => Ok(vec![]),
     }
