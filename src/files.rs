@@ -41,7 +41,6 @@ pub fn gather_all<I: Iterator<Item = PathBuf>>(
     // work well. Split the given paths into components, then build a representation that only
     // traverses each directory once.
 
-
     for raw_path in paths {
         let path = raw_path.canonicalize()?;
         let metadata = path.metadata()?;

@@ -4,6 +4,9 @@ use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
+use std::io::Write;
+use std::process::Command;
+use std::ffi::OsStr;
 
 mod files;
 mod cli;
@@ -18,7 +21,7 @@ enum Abort {
     InvalidCwd(io::Error),
     ChDirError(io::Error),
     ReadTestFiles(io::Error),
-    NoTestsFound(Vec<String>),
+    NoTestsFound(HashSet<PathBuf>),
     // CLI Flag errors
     InvalidCompilerFlag(String),
     CliArgParseError(cli::ParseError),
@@ -30,11 +33,13 @@ const MAKE_SURE: &str = "Make sure you're running elm-test from your project's r
 
 fn report_error(error: Abort) {
     let message = match error {
-        Abort::MissingElmJson => format!(
-            "elm-test could not find an elm.json file in this directory \
+        Abort::MissingElmJson => {
+            format!(
+                "elm-test could not find an elm.json file in this directory \
              or any parent directories.\n{}",
-            MAKE_SURE
-        ),
+                MAKE_SURE
+            )
+        }
         Abort::InvalidCwd(_) => String::from(
             "elm-test was run from an invalid directory. \
              Maybe the current directory has been deleted?",
@@ -45,31 +50,44 @@ fn report_error(error: Abort) {
         Abort::ReadTestFiles(_) => {
             String::from("elm-test was unable to read the requested .elm files.")
         }
-        Abort::NoTestsFound(filenames) => if filenames.len() == 0 {
-            format!(
+        Abort::NoTestsFound(filenames) => {
+            if filenames.is_empty() {
+                format!(
                 "No tests found in the test/ (or tests/) directory.\n\nNOTE: {}",
                 MAKE_SURE,
             )
-        } else {
-            format!(
-                "No tests found for the file pattern \"{}\"\n\nMaybe try running `elm test`\
+            } else {
+                format!(
+                    "No tests found for the file pattern \"{}\"\n\nMaybe try running `elm test`\
                  with no arguments?",
-                filenames.join(" ")
-            )
-        },
-        Abort::InvalidCompilerFlag(path_to_elm_make) => format!(
-            "The --compiler flag must be given a valid path to an elm-make executable,\
+                    filenames
+                        .iter()
+                        .map(|path_buf: &PathBuf| {
+                            path_buf.to_str().expect("<invalid file string>").to_owned()
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                )
+            }
+        }
+        Abort::InvalidCompilerFlag(path_to_elm_make) => {
+            format!(
+                "The --compiler flag must be given a valid path to an elm-make executable,\
              which this was not: {}",
-            path_to_elm_make
-        ),
-        Abort::CliArgParseError(cli::ParseError::InvalidInteger(arg, flag_name)) => format!(
-            "{} is not a valid value for argument for the {} flag",
-            arg,
-            flag_name
-        ),
+                path_to_elm_make
+            )
+        }
+        Abort::CliArgParseError(cli::ParseError::InvalidInteger(arg, flag_name)) => {
+            format!(
+                "{} is not a valid value for argument for the {} flag",
+                arg,
+                flag_name
+            )
+        }
     };
 
-    eprintln!("Error: {}", message);
+    writeln!(&mut std::io::stderr(), "Error: {}", message);
+
     std::process::exit(1);
 }
 
@@ -89,26 +107,19 @@ fn run() -> Result<(), Abort> {
     init_if_necessary();
 
     // Parse and validate CLI arguments
-    let args = cli::parse_args();
-    let seed: Option<i32> =
-        cli::parse_int_arg("--seed", args.value_of("seed")).map_err(Abort::CliArgParseError)?;
-    let fuzz: Option<i32> =
-        cli::parse_int_arg("--fuzz", args.value_of("fuzz")).map_err(Abort::CliArgParseError)?;
-    let file_paths = args.values_of("files").unwrap_or(Default::default());
-    let files: HashSet<PathBuf> = gather_test_files(file_paths).map_err(Abort::ReadTestFiles)?;
+    let args = cli::parse_args().map_err(Abort::CliArgParseError)?;
+    let files = match gather_test_files(&args.file_paths).map_err(
+        Abort::ReadTestFiles,
+    )? {
+        Some(valid_files) => valid_files,
 
-    // If we found no test files to run, error out.
-    if files.is_empty() {
-        // TODO figure out a way to avoid doing this code duplicationn
-        let file_paths = args.values_of("files").unwrap_or(Default::default());
-
-        return Err(Abort::NoTestsFound(
-            file_paths.map(str::to_string).collect::<Vec<_>>(),
-        ));
-    }
+        None => {
+            return Err(Abort::NoTestsFound(args.file_paths));
+        }
+    };
 
     let (path_to_elm_package, path_to_elm_make): (PathBuf, PathBuf) =
-        binary_paths_from_compiler(args.value_of("compiler"))?;
+        binary_paths_from_compiler(args.compiler)?;
 
     // Print the headline. Something like:
     //
@@ -116,45 +127,59 @@ fn run() -> Result<(), Abort> {
     // ----------------
     print_headline();
 
+    Command::new(path_to_elm_make)
+        .arg("--yes")
+        .args(files)
+        .spawn();
+
     Ok(())
 }
 
 // Default to searching the tests/ directory for tests.
 const DEFAULT_TEST_FILES_ARGUMENT: &str = "tests";
 
-fn gather_test_files(values: clap::Values) -> io::Result<HashSet<PathBuf>> {
+fn gather_test_files(values: &HashSet<PathBuf>) -> io::Result<Option<HashSet<PathBuf>>> {
     let results = &mut HashSet::new();
 
     // It's okay if the user didn't specify any files to run; fall back on the default choice.
-    if values.len() == 0 {
+    if values.is_empty() {
         files::gather_all(
             results,
-            [DEFAULT_TEST_FILES_ARGUMENT]
-                .iter()
-                .map(|&str| Path::new(str).to_path_buf()),
+            [DEFAULT_TEST_FILES_ARGUMENT].iter().map(|&str| {
+                Path::new(str).to_path_buf()
+            }),
         )?;
     } else {
-        files::gather_all(results, values.map(|value| Path::new(value).to_path_buf()))?;
+        // TODO there is presumably a way to avoid this .clone() but I couldn't figure it out.
+        files::gather_all(results, values.clone().into_iter())?;
     }
 
-    Ok(results.clone())
+    if results.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(results.clone()))
+    }
 }
 
 // Return paths to the (elm-package, elm-make) binaries
-fn binary_paths_from_compiler(compiler_flag: Option<&str>) -> Result<(PathBuf, PathBuf), Abort> {
+fn binary_paths_from_compiler(compiler_flag: Option<String>) -> Result<(PathBuf, PathBuf), Abort> {
     match compiler_flag {
-        Some(str) => match PathBuf::from(str).canonicalize() {
-            Ok(path_to_elm_make) => if path_to_elm_make.is_dir() {
-                Err(Abort::InvalidCompilerFlag(String::from(str)))
-            } else {
-                Ok((
-                    path_to_elm_make.with_file_name("elm-package"),
-                    path_to_elm_make,
-                ))
-            },
+        Some(string) => {
+            match PathBuf::from(string.as_str()).canonicalize() {
+                Ok(path_to_elm_make) => {
+                    if path_to_elm_make.is_dir() {
+                        Err(Abort::InvalidCompilerFlag(string))
+                    } else {
+                        Ok((
+                            path_to_elm_make.with_file_name("elm-package"),
+                            path_to_elm_make,
+                        ))
+                    }
+                }
 
-            Err(_) => Err(Abort::InvalidCompilerFlag(String::from(str))),
-        },
+                Err(_) => Err(Abort::InvalidCompilerFlag(string)),
+            }
+        }
         None => Ok((PathBuf::from("elm-package"), PathBuf::from("elm-make"))),
     }
 }
