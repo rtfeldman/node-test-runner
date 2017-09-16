@@ -4,7 +4,7 @@ version = "0.18.10"
 authors = ["Richard Feldman <richard.t.feldman@gmail.com>"]
 
 [dependencies]
-walkdir = "1.0.7"
+json = "0.11.9"
 num_cpus = "1.6.2"
 
 [dependencies.clap]

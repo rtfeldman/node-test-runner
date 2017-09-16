@@ -1,11 +1,13 @@
 extern crate clap;
+extern crate json;
 extern crate num_cpus;
 
 use std::env;
 use std::io;
+use std::io::{Read, BufReader};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Child, Stdio};
 use std::collections::HashSet;
-use std::process::Command;
 
 mod files;
 mod cli;
@@ -55,7 +57,10 @@ fn report_error(error: Abort) {
             the `elm` executable explicitly.",
         ),
         Abort::CompilationFailed(_) => String::from("Test compilation failed."),
-        Abort::SpawnNodeProcess(_) => String::from("Unable to run `node`. Do you have nodejs installed? You can get it from https://nodejs.org"),
+        Abort::SpawnNodeProcess(_) => String::from(
+            "Unable to run `node`. \
+            Do you have nodejs installed? You can get it from https://nodejs.org",
+        ),
         Abort::ChDirError(_) => String::from(
             "elm-test was unable to change the current working directory.",
         ),
@@ -104,6 +109,9 @@ fn report_error(error: Abort) {
     std::process::exit(1);
 }
 
+// TODO don't use this. Instead, do Haskell FFI to bring it in.
+const ELMI_TO_JSON_BINARY: &str = "/home/rtfeldman/code/node-test-runner/bin/elm-interface-to-json";
+
 fn run() -> Result<(), Abort> {
     // Verify that we're using a compatible version of node.js
     check_node_version();
@@ -114,7 +122,7 @@ fn run() -> Result<(), Abort> {
         .ok_or(Abort::MissingElmJson)?
         .with_file_name("");
 
-    env::set_current_dir(root).map_err(Abort::ChDirError)?;
+    env::set_current_dir(&root).map_err(Abort::ChDirError)?;
 
     // If there are no test-dependencies in elm.json, offer to init.
     init_if_necessary();
@@ -139,6 +147,7 @@ fn run() -> Result<(), Abort> {
     // ----------------
     print_headline();
 
+    // Start `elm make` running.
     let elm_make_process = Command::new(path_to_elm_binary)
         .arg("make")
         .arg("--yes")
@@ -147,7 +156,7 @@ fn run() -> Result<(), Abort> {
         .spawn()
         .map_err(Abort::SpawnElmMake)?;
 
-    // Start `elm make` running.
+    // Spin up node processes in a separate thread.
     let mut node_processes: Vec<std::process::Child> = Vec::new();
 
     for _ in 0..num_cpus::get() {
@@ -160,15 +169,52 @@ fn run() -> Result<(), Abort> {
         node_processes.push(node_process);
     }
 
+    for node_process in node_processes {
+        node_process.wait_with_output().map_err(
+            Abort::SpawnNodeProcess,
+        )?;
+    }
+
     elm_make_process.wait_with_output().map_err(
         Abort::CompilationFailed,
     )?;
 
-    for node_process in node_processes {
-        node_process.wait_with_output().map_err(Abort::SpawnNodeProcess)?;
-    }
+    // Now that we've run `elm make` to compile the .elmi files, run elm-interface-to-json to
+    // obtain the JSON of the interfaces.
+    let mut elmi_to_json_process = Command::new(ELMI_TO_JSON_BINARY)
+        .arg("--path")
+        .arg(root.to_str().expect(""))
+        .stdout(Stdio::piped())
+        .spawn()
+        .map_err(Abort::SpawnElmMake)?;
+
+    let tests = print_json(&mut elmi_to_json_process);
+
+    elmi_to_json_process.wait().map_err(
+        Abort::CompilationFailed,
+    )?;
 
     Ok(())
+}
+
+fn print_json(program: &mut Child) -> io::Result<Vec<String>> {
+    match program.stdout.as_mut() {
+        Some(out) => {
+            let mut buf_reader = BufReader::new(out);
+            let mut string = String::new();
+
+            buf_reader.read_to_string(&mut string)?;
+
+            let json_obj = json::parse(&string);
+
+            println!("* * * received: {:?}", json_obj);
+
+            // TODO read from the json obj to filter and gather all the values of type Test
+
+            Ok(vec![])
+        }
+        None => Ok(vec![]),
+    }
 }
 
 // Default to searching the tests/ directory for tests.
