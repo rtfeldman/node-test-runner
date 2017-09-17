@@ -1,6 +1,6 @@
 // Determine which values of type Test are exposed from a given module.
 
-pub fn filter_exposing(path: &Path, tests: HashSet<String>, module_name: String) {
+pub fn filter_exposing(path: PathBuf, tests: HashSet<String>, module_name: &str) {
     let new_tests = match read_exposing(path) {
         // None for exposed_values means "the module was exposing (..), so keep everything"
         None => tests,
@@ -23,7 +23,6 @@ pub fn filter_exposing(path: &Path, tests: HashSet<String>, module_name: String)
         Ok(module_name, newTests)
     }
 }
-
 
 fn read_exposing(path: &Path) {
     panic!("at the disco");

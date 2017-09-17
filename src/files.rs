@@ -1,7 +1,8 @@
 use std::io;
 use std::fs;
-use std::path::{PathBuf, Path};
+use std::path::{PathBuf, Path, Component, Components};
 use std::ffi::OsStr;
+use std::rc::Rc;
 use std::collections::{HashSet, HashMap};
 
 const ELM_JSON_FILENAME: &str = "elm-package.json";
@@ -82,29 +83,61 @@ pub fn gather_all<I: Iterator<Item = PathBuf>>(
     Ok(())
 }
 
-pub fn possible_module_names(test_files: &HashSet<PathBuf>) -> HashSet<String> {
-    let mut possibilities: HashSet<String> = HashSet::new();
+pub fn possible_module_names(
+    test_files: &HashSet<PathBuf>,
+    source_dirs: &HashSet<PathBuf>,
+) -> HashMap<String, PathBuf> {
+    // Each module must correspond to a file path, by way of a source directory.
+    // This filters out stale modules left over from previous builds, for example
+    // what happened in https://github.com/rtfeldman/node-test-runner/issues/122
+    let mut possibilities: HashMap<String, PathBuf> = HashMap::new();
 
-    for test_file in test_files {
-        let mut current_components: Vec<String> = vec![];
+    for source_dir in source_dirs {
+        let source_dir_components = source_dir.components().collect::<Vec<Component>>();
 
-        // Drop the .elm extension and try everything else
-        for component in test_file.with_extension("").components() {
-            if let Some(component_str) = component.as_os_str().to_str() {
-                if let Some(first_char) = component_str.chars().next() {
-                    // Only uppercase filenames are valid Elm modules.
-                    if first_char.is_uppercase() {
-                        current_components.push(component_str.to_owned());
-
-                        possibilities.insert(current_components.join("."));
-                    }
-                }
+        for test_file in test_files {
+            // If we can construct a valid module name based on this source directory
+            // and filename combination, add it to the map!
+            if let Some(valid_module_name) =
+                to_module_name(&test_file.with_extension(""), &source_dir_components)
+            {
+                possibilities.insert(valid_module_name, test_file.clone());
             }
         }
     }
 
     possibilities
 }
+
+fn to_module_name(test_file: &Path, source_dir: &Vec<Component>) -> Option<String> {
+    let test_file_components: Vec<Component> = test_file.components().collect();
+    let (prefix, module_name_components) = test_file_components.split_at(source_dir.len());
+
+    // If the test file doesn't start with this source dir, return None.
+    if prefix == source_dir.as_slice() {
+        // We've got a match! Build up the module name and return it.
+        let mut results = vec![];
+
+        // Iterate in reverse order because we'll be pushing onto a stack.
+        for component in module_name_components.iter().rev() {
+            match component.as_os_str().to_str() {
+                Some(component_str) => {
+                    // We got a valid string; add it to the list of module components.
+                    results.push(component_str);
+                }
+                None => {
+                    // If we couldn't get a valid string out of this, it's not a valid module name!
+                    return None;
+                }
+            }
+        }
+
+        Some(results.join("."))
+    } else {
+        None
+    }
+}
+
 
 #[cfg(test)]
 mod possible_modules_tests {

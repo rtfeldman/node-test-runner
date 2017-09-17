@@ -194,12 +194,22 @@ fn run() -> Result<(), Abort> {
         Abort::CompilationFailed,
     )?;
 
-    read_test_interfaces(root.as_path(), &test_files)?;
+    let source_dirs = read_source_dirs(root.as_path());
+
+    read_test_interfaces(root.as_path(), &test_files, &source_dirs)?;
 
     Ok(())
 }
 
-fn read_test_interfaces(root: &Path, test_files: &HashSet<PathBuf>) -> Result<Vec<String>, Abort> {
+fn read_source_dirs(root: &Path) -> HashSet<PathBuf> {
+    panic!("TODO read source dirs from elm-package.json!")
+}
+
+fn read_test_interfaces(
+    root: &Path,
+    test_files: &HashSet<PathBuf>,
+    source_dirs: &HashSet<PathBuf>,
+) -> Result<Vec<String>, Abort> {
     // Get the path to the currently executing elm-test binary. This may be a symlink.
     let path_to_elm_test_binary: PathBuf = std::env::current_exe().or(Err(Abort::CurrentExe))?;
 
@@ -217,7 +227,7 @@ fn read_test_interfaces(root: &Path, test_files: &HashSet<PathBuf>) -> Result<Ve
         .spawn()
         .map_err(Abort::SpawnElmiToJson)?;
 
-    let tests = print_json(&mut elmi_to_json_process, test_files);
+    let tests = print_json(&mut elmi_to_json_process, test_files, source_dirs);
 
     elmi_to_json_process.wait().map_err(
         Abort::CompilationFailed,
@@ -226,8 +236,12 @@ fn read_test_interfaces(root: &Path, test_files: &HashSet<PathBuf>) -> Result<Ve
     Ok(vec![])
 }
 
-fn print_json(program: &mut Child, test_files: &HashSet<PathBuf>) -> io::Result<Vec<String>> {
-    let possible_module_names = files::possible_module_names(test_files);
+fn print_json(
+    program: &mut Child,
+    test_files: &HashSet<PathBuf>,
+    source_dirs: &HashSet<PathBuf>,
+) -> io::Result<Vec<String>> {
+    let possible_module_names = files::possible_module_names(test_files, source_dirs);
 
     match program.stdout.as_mut() {
         Some(out) => {
@@ -240,7 +254,11 @@ fn print_json(program: &mut Child, test_files: &HashSet<PathBuf>) -> io::Result<
             match json::parse(&json_output) {
                 Ok(JsonValue::Array(modules)) => {
                     // A map from module name to its set of exposed values of type Test.
-                    let mut tests_by_module: HashMap<String, HashSet<String>> = HashMap::new();
+                    let mut tests_by_module: HashMap<
+                        String,
+                        (PathBuf,
+                         HashSet<String>),
+                    > = HashMap::new();
 
                     for module in modules {
                         if let Some(module_name) = module["moduleName"].as_str() {
@@ -251,7 +269,7 @@ fn print_json(program: &mut Child, test_files: &HashSet<PathBuf>) -> io::Result<
                             // and our tests/ directory contains Homepage.elm and Sidebar.elm,
                             // only keep the module named "Homepage" because
                             // that's the only one we asked to run.
-                            if possible_module_names.contains(module_name) {
+                            if let Some(test_path) = possible_module_names.get(module_name) {
                                 // Extract the "types" field, which should be an Array.
                                 if let &JsonValue::Array(ref types) = &module["types"] {
                                     // We'll populate this with every value we find of type Test.
@@ -276,10 +294,10 @@ fn print_json(program: &mut Child, test_files: &HashSet<PathBuf>) -> io::Result<
                                     // to get an entry in the map.
                                     if !top_level_tests.is_empty() {
                                         // Add this module to the map, along with its values.
-                                        tests_by_module.insert(
-                                            module_name.to_owned(),
+                                        tests_by_module.insert(module_name.to_owned(), (
+                                            test_path.clone(),
                                             top_level_tests,
-                                        );
+                                        ));
                                     }
                                 }
                             }
@@ -287,9 +305,9 @@ fn print_json(program: &mut Child, test_files: &HashSet<PathBuf>) -> io::Result<
 
                     }
 
-                    for (module_name, tests) in tests_by_module {
+                    for (module_name, (test_path, tests)) in tests_by_module {
                         println!("* * * module: {:?} tests: {:?}", module_name, tests);
-                        // filter_exposing(path: &Path, tests: HashSet<String>, modl_name: String);
+                        // filter_exposing(path: &Path, tests, module_name);
                     }
 
 
