@@ -1,16 +1,12 @@
-use std::env;
 use std::io;
-use std::fs;
-use std::io::{Read, BufReader};
-use std::path::{Path, PathBuf};
-use std::process::{Command, Child, Stdio};
-use std::collections::{HashSet, HashMap};
+use std::path::PathBuf;
+use std::collections::HashSet;
 use read_elmi;
 use files;
 use cli;
 
 #[derive(Debug)]
-pub enum Abort {
+pub enum Problem {
     MissingElmJson,
     InvalidCwd(io::Error),
     ChDirError(io::Error),

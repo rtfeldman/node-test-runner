@@ -3,52 +3,50 @@ extern crate num_cpus;
 
 use std::env;
 use std::io;
-use std::fs;
 use std::io::{Read, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Child, Stdio};
 use std::collections::{HashSet, HashMap};
-use read_elmi::ReadElmiError;
-use abort::Abort;
+use problems::Problem;
 
 mod files;
 mod cli;
 mod read_elmi;
 mod error_messages;
-mod abort;
+mod problems;
 
 fn main() {
-    run().unwrap_or_else(report_error);
+    run().unwrap_or_else(report_problem);
 }
 
-fn report_error(error: Abort) {
+fn report_problem(problem: Problem) {
     // TODO this should be eprintln! once I upgrade the version of Rust I'm using.
-    println!("Error: {}", error_messages::report(error));
+    println!("Error: {}", error_messages::report(problem));
 
     std::process::exit(1);
 }
 
-fn run() -> Result<(), Abort> {
+fn run() -> Result<(), Problem> {
     // Find the nearest ancestor elm.json and change to that directory.
     // This way, you can run elm-test from any child directory and have it do the right thing.
-    let root = files::find_nearest_elm_json(&mut env::current_dir().map_err(Abort::InvalidCwd)?)
-        .ok_or(Abort::MissingElmJson)?
+    let root = files::find_nearest_elm_json(&mut env::current_dir().map_err(Problem::InvalidCwd)?)
+        .ok_or(Problem::MissingElmJson)?
         .with_file_name("");
 
-    env::set_current_dir(&root).map_err(Abort::ChDirError)?;
+    env::set_current_dir(&root).map_err(Problem::ChDirError)?;
 
     // If there are no test-dependencies in elm.json, offer to init.
     init_if_necessary();
 
     // Parse and validate CLI arguments
-    let args = cli::parse_args().map_err(Abort::CliArgParseError)?;
+    let args = cli::parse_args().map_err(Problem::CliArgParseError)?;
     let test_files = match gather_test_files(&args.file_paths).map_err(
-        Abort::ReadTestFiles,
+        Problem::ReadTestFiles,
     )? {
         Some(valid_files) => valid_files,
 
         None => {
-            return Err(Abort::NoTestsFound(args.file_paths));
+            return Err(Problem::NoTestsFound(args.file_paths));
         }
     };
 
@@ -67,7 +65,7 @@ fn run() -> Result<(), Abort> {
         .arg("--output=/dev/null")
         .args(&test_files)
         .spawn()
-        .map_err(Abort::SpawnElmMake)?;
+        .map_err(Problem::SpawnElmMake)?;
 
     // Spin up node processes in a separate thread.
     let mut node_processes: Vec<std::process::Child> = Vec::new();
@@ -77,29 +75,29 @@ fn run() -> Result<(), Abort> {
             .arg("-p")
             .arg("'hi from node'")
             .spawn()
-            .map_err(Abort::SpawnElmMake)?;
+            .map_err(Problem::SpawnElmMake)?;
 
         node_processes.push(node_process);
     }
 
     let source_dirs = files::read_source_dirs(root.as_path()).map_err(
-        Abort::ReadElmJson,
+        Problem::ReadElmJson,
     )?;
 
     let possible_module_names = files::possible_module_names(&test_files, &source_dirs);
 
     for node_process in node_processes {
         node_process.wait_with_output().map_err(
-            Abort::SpawnNodeProcess,
+            Problem::SpawnNodeProcess,
         )?;
     }
 
     elm_make_process.wait_with_output().map_err(
-        Abort::CompilationFailed,
+        Problem::CompilationFailed,
     )?;
 
     read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
-        .map_err(Abort::ReadElmi)?;
+        .map_err(Problem::ReadElmi)?;
 
     Ok(())
 }
@@ -131,19 +129,19 @@ fn gather_test_files(values: &HashSet<PathBuf>) -> io::Result<Option<HashSet<Pat
 }
 
 // Return the path to the elm binary
-fn elm_binary_path_from_compiler_flag(compiler_flag: Option<String>) -> Result<PathBuf, Abort> {
+fn elm_binary_path_from_compiler_flag(compiler_flag: Option<String>) -> Result<PathBuf, Problem> {
     match compiler_flag {
         Some(string) => {
             match PathBuf::from(string.as_str()).canonicalize() {
                 Ok(path_to_elm_binary) => {
                     if path_to_elm_binary.is_dir() {
-                        Err(Abort::InvalidCompilerFlag(string))
+                        Err(Problem::InvalidCompilerFlag(string))
                     } else {
                         Ok(path_to_elm_binary)
                     }
                 }
 
-                Err(_) => Err(Abort::InvalidCompilerFlag(string)),
+                Err(_) => Err(Problem::InvalidCompilerFlag(string)),
             }
         }
         None => Ok(PathBuf::from("elm")),
