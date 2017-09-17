@@ -219,6 +219,12 @@ fn run() -> Result<(), Abort> {
         node_processes.push(node_process);
     }
 
+    let source_dirs = files::read_source_dirs(root.as_path()).map_err(
+        Abort::ReadElmJson,
+    )?;
+
+    println!("source_dirs: {:?}", &source_dirs);
+
     for node_process in node_processes {
         node_process.wait_with_output().map_err(
             Abort::SpawnNodeProcess,
@@ -228,12 +234,6 @@ fn run() -> Result<(), Abort> {
     elm_make_process.wait_with_output().map_err(
         Abort::CompilationFailed,
     )?;
-
-    let source_dirs = files::read_source_dirs(root.as_path()).map_err(
-        Abort::ReadElmJson,
-    )?;
-
-    println!("source_dirs: {:?}", &source_dirs);
 
     read_test_interfaces(root.as_path(), &test_files, &source_dirs)?;
 
