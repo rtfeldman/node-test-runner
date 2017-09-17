@@ -227,52 +227,69 @@ fn read_test_interfaces(root: &Path, test_files: &HashSet<PathBuf>) -> Result<Ve
 }
 
 fn print_json(program: &mut Child, test_files: &HashSet<PathBuf>) -> io::Result<Vec<String>> {
+    let possible_module_names = files::possible_module_names(test_files);
 
     match program.stdout.as_mut() {
         Some(out) => {
             let mut buf_reader = BufReader::new(out);
-            let mut string = String::new();
+            let mut json_output = String::new();
 
-            buf_reader.read_to_string(&mut string)?;
+            // Populate json_output with the stdout coming from elm-interface-to-json
+            buf_reader.read_to_string(&mut json_output)?;
 
-
-
-            match json::parse(&string) {
+            match json::parse(&json_output) {
                 Ok(JsonValue::Array(modules)) => {
                     // A map from module name to its set of exposed values of type Test.
                     let mut tests_by_module: HashMap<String, HashSet<String>> = HashMap::new();
 
                     for module in modules {
-                        // Extract the "types" field, which should be an Array.
-                        if let &JsonValue::Array(ref types) = &module["types"] {
-                            // We'll populate this with every value we find of type Test.
-                            let mut top_level_tests: HashSet<String> = HashSet::new();
+                        if let Some(module_name) = module["moduleName"].as_str() {
+                            // Only proceed if we have a module name that fits with the files
+                            // we requested via CLI args.
+                            //
+                            // For example, if we ran elm-test tests/Homepage.elm
+                            // and our tests/ directory contains Homepage.elm and Sidebar.elm,
+                            // only keep the module named "Homepage" because
+                            // that's the only one we asked to run.
+                            if possible_module_names.contains(module_name) {
+                                // Extract the "types" field, which should be an Array.
+                                if let &JsonValue::Array(ref types) = &module["types"] {
+                                    // We'll populate this with every value we find of type Test.
+                                    let mut top_level_tests: HashSet<String> = HashSet::new();
 
-                            for typ in types {
-                                if typ["signature"] == "Test.Test" {
-                                    // This value is a Test. Add it to the set!
-                                    if let &JsonValue::Object(ref obj) = typ {
-                                        if let Some(&JsonValue::Short(ref name)) = obj.get("name") {
-                                            top_level_tests.insert(String::from(name.as_str()));
+                                    for typ in types {
+                                        if typ["signature"] == "Test.Test" {
+                                            // This value is a Test. Add it to the set!
+                                            if let &JsonValue::Object(ref obj) = typ {
+                                                if let Some(&JsonValue::Short(ref name)) =
+                                                    obj.get("name")
+                                                {
+                                                    top_level_tests.insert(
+                                                        String::from(name.as_str()),
+                                                    );
+                                                }
+                                            }
                                         }
+                                    }
+
+                                    // Must have at least 1 value of type Test
+                                    // to get an entry in the map.
+                                    if !top_level_tests.is_empty() {
+                                        // Add this module to the map, along with its values.
+                                        tests_by_module.insert(
+                                            module_name.to_owned(),
+                                            top_level_tests,
+                                        );
                                     }
                                 }
                             }
-
-                            // Must have at least 1 value of type Test to get an entry in the map.
-                            if !top_level_tests.is_empty() {
-
-                                // Add this module to the map, along with its values.
-                                if let Some(module_name) = module["moduleName"].as_str() {
-                                    tests_by_module.insert(module_name.to_owned(), top_level_tests);
-                                }
-                            }
                         }
+
                     }
 
                     for (module_name, tests) in tests_by_module {
                         println!("* * * module: {:?} tests: {:?}", module_name, tests);
-                        // filter_exposing(path: &Path, tests: HashSet<String>, module_name: String);
+                        // filter_exposing(path: &Path, tests: HashSet<String>, modl_name: String);
                     }
 
 

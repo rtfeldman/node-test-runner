@@ -82,7 +82,7 @@ pub fn gather_all<I: Iterator<Item = PathBuf>>(
     Ok(())
 }
 
-fn possible_modules(test_files: &HashSet<PathBuf>) -> HashSet<String> {
+pub fn possible_module_names(test_files: &HashSet<PathBuf>) -> HashSet<String> {
     let mut possibilities: HashSet<String> = HashSet::new();
 
     for test_file in test_files {
@@ -111,7 +111,7 @@ mod possible_modules_tests {
     use super::*;
 
     #[test]
-    fn works_for_one() {
+    fn works_for_several() {
         let test_files: HashSet<PathBuf> = [
             "tests/PassingTest.elm",
             "tests/FailingTest.elm",
@@ -125,7 +125,7 @@ mod possible_modules_tests {
         ].iter()
             .map(PathBuf::from)
             .collect();
-        let actual = possible_modules(&test_files);
+        let actual = possible_module_names(&test_files);
         let expected: HashSet<String> = [
             "PassingTest",
             "FailingTest",
