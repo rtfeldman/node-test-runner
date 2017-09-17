@@ -144,7 +144,7 @@ fn run() -> Result<(), Abort> {
 
     // Parse and validate CLI arguments
     let args = cli::parse_args().map_err(Abort::CliArgParseError)?;
-    let files = match gather_test_files(&args.file_paths).map_err(
+    let test_files = match gather_test_files(&args.file_paths).map_err(
         Abort::ReadTestFiles,
     )? {
         Some(valid_files) => valid_files,
@@ -167,7 +167,7 @@ fn run() -> Result<(), Abort> {
         .arg("make")
         .arg("--yes")
         .arg("--output=/dev/null")
-        .args(files)
+        .args(&test_files)
         .spawn()
         .map_err(Abort::SpawnElmMake)?;
 
@@ -194,12 +194,12 @@ fn run() -> Result<(), Abort> {
         Abort::CompilationFailed,
     )?;
 
-    read_test_interfaces(root.as_path())?;
+    read_test_interfaces(root.as_path(), &test_files)?;
 
     Ok(())
 }
 
-fn read_test_interfaces(root: &Path) -> Result<Vec<String>, Abort> {
+fn read_test_interfaces(root: &Path, test_files: &HashSet<PathBuf>) -> Result<Vec<String>, Abort> {
     // Get the path to the currently executing elm-test binary. This may be a symlink.
     let path_to_elm_test_binary: PathBuf = std::env::current_exe().or(Err(Abort::CurrentExe))?;
 
@@ -217,7 +217,7 @@ fn read_test_interfaces(root: &Path) -> Result<Vec<String>, Abort> {
         .spawn()
         .map_err(Abort::SpawnElmiToJson)?;
 
-    let tests = print_json(&mut elmi_to_json_process);
+    let tests = print_json(&mut elmi_to_json_process, test_files);
 
     elmi_to_json_process.wait().map_err(
         Abort::CompilationFailed,
@@ -226,7 +226,8 @@ fn read_test_interfaces(root: &Path) -> Result<Vec<String>, Abort> {
     Ok(vec![])
 }
 
-fn print_json(program: &mut Child) -> io::Result<Vec<String>> {
+fn print_json(program: &mut Child, test_files: &HashSet<PathBuf>) -> io::Result<Vec<String>> {
+
     match program.stdout.as_mut() {
         Some(out) => {
             let mut buf_reader = BufReader::new(out);
@@ -234,10 +235,12 @@ fn print_json(program: &mut Child) -> io::Result<Vec<String>> {
 
             buf_reader.read_to_string(&mut string)?;
 
+
+
             match json::parse(&string) {
                 Ok(JsonValue::Array(modules)) => {
                     // A map from module name to its set of exposed values of type Test.
-                    let mut filtered_modules: HashMap<String, HashSet<String>> = HashMap::new();
+                    let mut tests_by_module: HashMap<String, HashSet<String>> = HashMap::new();
 
                     for module in modules {
                         // Extract the "types" field, which should be an Array.
@@ -261,16 +264,16 @@ fn print_json(program: &mut Child) -> io::Result<Vec<String>> {
 
                                 // Add this module to the map, along with its values.
                                 if let Some(module_name) = module["moduleName"].as_str() {
-                                    filtered_modules.insert(
-                                        module_name.to_owned(),
-                                        top_level_tests,
-                                    );
+                                    tests_by_module.insert(module_name.to_owned(), top_level_tests);
                                 }
                             }
                         }
                     }
 
-                    println!("* * * received: {:?}", filtered_modules);
+                    for (module_name, tests) in tests_by_module {
+                        println!("* * * module: {:?} tests: {:?}", module_name, tests);
+                        // filter_exposing(path: &Path, tests: HashSet<String>, module_name: String);
+                    }
 
 
                     // TODO read from the json obj to filter and gather all the values of type Test

@@ -1,8 +1,8 @@
 use std::io;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::ffi::OsStr;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 const ELM_JSON_FILENAME: &str = "elm-package.json";
 
@@ -80,4 +80,61 @@ pub fn gather_all<I: Iterator<Item = PathBuf>>(
     }
 
     Ok(())
+}
+
+#[derive(PartialEq, Debug)]
+enum PossibleModules {
+    Entry(Box<HashMap<String, Box<PossibleModules>>>),
+}
+
+fn possible_modules(test_files: &HashSet<PathBuf>) -> PossibleModules {
+    let mut root_hash_map = HashMap::new();
+    let mut possible_modules: PossibleModules = PossibleModules::Entry(Box::new(root_hash_map));
+    let mut current_entry = possible_modules;
+
+    for test_file in test_files {
+        // Drop the .elm extension and grab everything else, in reverse order.
+        for component in test_file.with_extension("").components().rev() {
+            // Turn these into module name checks to be performed, in order.
+            // e.g. 'tests/All/Passing.elm' ===> ['Passing', 'All', 'tests']
+            // This way, if we're given 'All.Passing' as a module name, we can also
+            // flip it into ['Passing', 'All'], and see if the first N elements line up.
+            match current_entry {
+                PossibleModules::Entry(ref mut map) => {
+                    if let Some(component_str) = component.as_os_str().to_str() {
+                        let mut new_entry_map = HashMap::new();
+                        let new_entry = Box::new(PossibleModules::Entry(Box::new(new_entry_map)));
+
+                        map.insert(component_str.to_owned(), new_entry);
+
+                        // current_entry = new_entry;
+                    }
+                }
+            }
+        }
+    }
+
+    current_entry
+}
+
+#[cfg(test)]
+mod possible_modules_tests {
+    use super::*;
+
+    #[test]
+    fn works_for_one() {
+        let mut test_files = HashSet::new();
+
+        for test_file in [
+            "tests/PassingTest.elm",
+            "tests/FailingTest.elm",
+            "otherTests/Passing.elm",
+        ].into_iter()
+        {
+            test_files.insert(PathBuf::from(test_file));
+        }
+        let result = possible_modules(&test_files);
+
+        assert_eq!(result, result);
+    }
 }

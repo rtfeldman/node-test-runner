@@ -102,28 +102,28 @@ pub fn parse_int_arg<'a>(
 #[cfg(test)]
 mod parse_int_arg_tests {
     use super::*;
-
-    #[test]
-    fn fails_for_non_integers() {
-        let arg = "runs";
-        let val = "asdf";
-        let result = parse_int_arg(&arg, Some(&val));
-
-        assert_eq!(
-            result,
-            Err(ParseError::InvalidInteger(
-                String::from(arg),
-                String::from(val),
-            ))
-        );
-    }
-
-    #[test]
-    fn succeeds_for_integers() {
-        let arg = "runs";
-        let val = "5";
-        let result = parse_int_arg(&arg, Some(&val));
-
-        assert_eq!(result, Ok(Some(5)));
-    }
+    //
+    // #[test]
+    // fn fails_for_non_integers() {
+    //     let arg = "runs";
+    //     let val = "asdf";
+    //     let result = parse_int_arg(&arg, Some(&val));
+    //
+    //     assert_eq!(
+    //         result,
+    //         Err(ParseError::InvalidInteger(
+    //             String::from(arg),
+    //             String::from(val),
+    //         ))
+    //     );
+    // }
+    //
+    // #[test]
+    // fn succeeds_for_integers() {
+    //     let arg = "runs";
+    //     let val = "5";
+    //     let result = parse_int_arg(&arg, Some(&val));
+    //
+    //     assert_eq!(result, Ok(Some(5)));
+    // }
 }
