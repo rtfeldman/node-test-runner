@@ -1,5 +1,4 @@
 extern crate clap;
-extern crate json;
 extern crate num_cpus;
 
 use std::env;
@@ -9,10 +8,11 @@ use std::io::{Read, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Child, Stdio};
 use std::collections::{HashSet, HashMap};
-use json::JsonValue;
+use read_elmi::ReadElmiError;
 
 mod files;
 mod cli;
+mod read_elmi;
 
 fn main() {
     run().unwrap_or_else(report_error);
@@ -37,8 +37,7 @@ enum Abort {
     SpawnNodeProcess(io::Error),
 
     // Running elm-interface-to-json
-    CurrentExe,
-    SpawnElmiToJson(io::Error),
+    ReadElmi(read_elmi::ReadElmiError),
 
     // CLI Flag errors
     InvalidCompilerFlag(String),
@@ -71,14 +70,17 @@ fn report_error(error: Abort) {
             "Unable to run `node`. \
             Do you have nodejs installed? You can get it from https://nodejs.org",
         ),
-        Abort::SpawnElmiToJson(_) => String::from(
+        Abort::ReadElmi(ReadElmiError::SpawnElmiToJson(_)) => String::from(
             "Unable to run `elm-interface-to-json`. \
             This binary should have been installed along with elm-test. \
             Maybe try reinstalling elm-test via npm?",
         ),
-        Abort::CurrentExe => String::from(
+        Abort::ReadElmi(ReadElmiError::CurrentExe(_)) => String::from(
             "Unable to detect current running process for `elm-test`. \
             Is elm-test running from a weird location, possibly involving symlinks?",
+        ),
+        Abort::ReadElmi(ReadElmiError::CompilationFailed(_)) => String::from(
+            "Test compilation failed.",
         ),
         Abort::ChDirError(_) => String::from(
             "elm-test was unable to change the current working directory.",
@@ -159,8 +161,6 @@ fn report_error(error: Abort) {
     std::process::exit(1);
 }
 
-// TODO don't use this. Instead, do Haskell FFI to bring it in.
-const ELMI_TO_JSON_BINARY_NAME: &str = "elm-interface-to-json";
 
 fn run() -> Result<(), Abort> {
     // Verify that we're using a compatible version of node.js
@@ -225,8 +225,6 @@ fn run() -> Result<(), Abort> {
 
     let possible_module_names = files::possible_module_names(&test_files, &source_dirs);
 
-    println!("source_dirs: {:?}", &source_dirs);
-
     for node_process in node_processes {
         node_process.wait_with_output().map_err(
             Abort::SpawnNodeProcess,
@@ -237,122 +235,10 @@ fn run() -> Result<(), Abort> {
         Abort::CompilationFailed,
     )?;
 
-    read_test_interfaces(root.as_path(), &possible_module_names)?;
+    read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
+        .map_err(Abort::ReadElmi)?;
 
     Ok(())
-}
-
-fn read_test_interfaces(
-    root: &Path,
-    possible_module_names: &HashMap<String, PathBuf>,
-) -> Result<Vec<String>, Abort> {
-    // Get the path to the currently executing elm-test binary. This may be a symlink.
-    let path_to_elm_test_binary: PathBuf = std::env::current_exe().or(Err(Abort::CurrentExe))?;
-
-    // If it's a symlink, follow it. Then change the executable name to elm-interface-to-json.
-    let path_to_elmi_to_json_binary: PathBuf = fs::read_link(&path_to_elm_test_binary)
-        .unwrap_or(path_to_elm_test_binary)
-        .with_file_name(ELMI_TO_JSON_BINARY_NAME);
-
-    // Now that we've run `elm make` to compile the .elmi files, run elm-interface-to-json to
-    // obtain the JSON of the interfaces.
-    let mut elmi_to_json_process = Command::new(path_to_elmi_to_json_binary)
-        .arg("--path")
-        .arg(root.to_str().expect(""))
-        .stdout(Stdio::piped())
-        .spawn()
-        .map_err(Abort::SpawnElmiToJson)?;
-
-    let tests = print_json(&mut elmi_to_json_process, possible_module_names);
-
-    elmi_to_json_process.wait().map_err(
-        Abort::CompilationFailed,
-    )?;
-
-    Ok(vec![])
-}
-
-fn print_json(
-    program: &mut Child,
-    possible_module_names: &HashMap<String, PathBuf>,
-) -> io::Result<Vec<String>> {
-    match program.stdout.as_mut() {
-        Some(out) => {
-            let mut buf_reader = BufReader::new(out);
-            let mut json_output = String::new();
-
-            // Populate json_output with the stdout coming from elm-interface-to-json
-            buf_reader.read_to_string(&mut json_output)?;
-
-            match json::parse(&json_output) {
-                Ok(JsonValue::Array(modules)) => {
-                    // A map from module name to its set of exposed values of type Test.
-                    let mut tests_by_module: HashMap<
-                        String,
-                        (PathBuf,
-                         HashSet<String>),
-                    > = HashMap::new();
-
-                    for module in modules {
-                        if let Some(module_name) = module["moduleName"].as_str() {
-                            // Only proceed if we have a module name that fits with the files
-                            // we requested via CLI args.
-                            //
-                            // For example, if we ran elm-test tests/Homepage.elm
-                            // and our tests/ directory contains Homepage.elm and Sidebar.elm,
-                            // only keep the module named "Homepage" because
-                            // that's the only one we asked to run.
-                            if let Some(test_path) = possible_module_names.get(module_name) {
-                                // Extract the "types" field, which should be an Array.
-                                if let &JsonValue::Array(ref types) = &module["types"] {
-                                    // We'll populate this with every value we find of type Test.
-                                    let mut top_level_tests: HashSet<String> = HashSet::new();
-
-                                    for typ in types {
-                                        if typ["signature"] == "Test.Test" {
-                                            // This value is a Test. Add it to the set!
-                                            if let &JsonValue::Object(ref obj) = typ {
-                                                if let Some(&JsonValue::Short(ref name)) =
-                                                    obj.get("name")
-                                                {
-                                                    top_level_tests.insert(
-                                                        String::from(name.as_str()),
-                                                    );
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Must have at least 1 value of type Test
-                                    // to get an entry in the map.
-                                    if !top_level_tests.is_empty() {
-                                        // Add this module to the map, along with its values.
-                                        tests_by_module.insert(module_name.to_owned(), (
-                                            test_path.clone(),
-                                            top_level_tests,
-                                        ));
-                                    }
-                                }
-                            }
-                        }
-
-                    }
-
-                    for (module_name, (test_path, tests)) in tests_by_module {
-                        println!("* * * module: {:?} tests: {:?}", module_name, tests);
-                        // filter_exposing(path: &Path, tests, module_name);
-                    }
-
-
-                    // TODO read from the json obj to filter and gather all the values of type Test
-
-                    Ok(vec![])
-                }
-                _ => Ok(vec![]),
-            }
-        }
-        None => Ok(vec![]),
-    }
 }
 
 // Default to searching the tests/ directory for tests.

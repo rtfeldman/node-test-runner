@@ -2,13 +2,13 @@ extern crate json;
 
 use std::io;
 use std::io::Read;
+
 use std::fs;
 use std::fs::File;
-use std::path::{PathBuf, Path, Component, Components};
+use std::path::{PathBuf, Path, Component};
 use std::ffi::OsStr;
-use std::rc::Rc;
 use std::collections::{HashSet, HashMap};
-use json::JsonValue;
+use std::process::{Child, Stdio};
 
 const ELM_JSON_FILENAME: &str = "elm-package.json";
 
@@ -208,12 +208,12 @@ pub fn read_source_dirs(root: &Path) -> Result<HashSet<PathBuf>, ElmJsonError> {
         ElmJsonError::ReadElmJson,
     )?;
 
-    let elm_json: JsonValue = json::parse(&file_contents).map_err(
+    let elm_json: json::JsonValue = json::parse(&file_contents).map_err(
         ElmJsonError::ParseElmJson,
     )?;
 
     match elm_json["source-directories"] {
-        JsonValue::Array(ref source_dirs) => {
+        json::JsonValue::Array(ref source_dirs) => {
             let mut paths: HashSet<PathBuf> = HashSet::new();
 
             for source_dir in source_dirs {
