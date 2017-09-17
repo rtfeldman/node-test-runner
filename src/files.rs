@@ -8,7 +8,6 @@ use std::fs::File;
 use std::path::{PathBuf, Path, Component};
 use std::ffi::OsStr;
 use std::collections::{HashSet, HashMap};
-use std::process::{Child, Stdio};
 
 const ELM_JSON_FILENAME: &str = "elm-package.json";
 

@@ -67,7 +67,20 @@ fn run() -> Result<(), Problem> {
         .spawn()
         .map_err(Problem::SpawnElmMake)?;
 
-    // Spin up node processes in a separate thread.
+    // While waiting for the spawned Elm process to run, determine what our valid module names are.
+    let source_dirs = files::read_source_dirs(root.as_path()).map_err(
+        Problem::ReadElmJson,
+    )?;
+    let possible_module_names = files::possible_module_names(&test_files, &source_dirs);
+
+    elm_make_process.wait_with_output().map_err(
+        Problem::CompilationFailed,
+    )?;
+
+    read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
+        .map_err(Problem::ReadElmi)?;
+
+    // Spin up node processes.
     let mut node_processes: Vec<std::process::Child> = Vec::new();
 
     for _ in 0..num_cpus::get() {
@@ -80,24 +93,12 @@ fn run() -> Result<(), Problem> {
         node_processes.push(node_process);
     }
 
-    let source_dirs = files::read_source_dirs(root.as_path()).map_err(
-        Problem::ReadElmJson,
-    )?;
-
-    let possible_module_names = files::possible_module_names(&test_files, &source_dirs);
-
     for node_process in node_processes {
         node_process.wait_with_output().map_err(
             Problem::SpawnNodeProcess,
         )?;
     }
 
-    elm_make_process.wait_with_output().map_err(
-        Problem::CompilationFailed,
-    )?;
-
-    read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
-        .map_err(Problem::ReadElmi)?;
 
     Ok(())
 }
