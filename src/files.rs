@@ -87,34 +87,26 @@ enum PossibleModules {
     Entry(Box<HashMap<String, Box<PossibleModules>>>),
 }
 
-fn possible_modules(test_files: &HashSet<PathBuf>) -> PossibleModules {
-    let mut root_hash_map = HashMap::new();
-    let mut possible_modules: PossibleModules = PossibleModules::Entry(Box::new(root_hash_map));
-    let mut current_entry = possible_modules;
+fn possible_modules(test_files: &HashSet<PathBuf>) -> Vec<Vec<String>> {
+    let mut results: Vec<Vec<String>> = vec![];
 
     for test_file in test_files {
+        let mut current_components: Vec<String> = vec![];
         // Drop the .elm extension and grab everything else, in reverse order.
         for component in test_file.with_extension("").components().rev() {
             // Turn these into module name checks to be performed, in order.
             // e.g. 'tests/All/Passing.elm' ===> ['Passing', 'All', 'tests']
             // This way, if we're given 'All.Passing' as a module name, we can also
             // flip it into ['Passing', 'All'], and see if the first N elements line up.
-            match current_entry {
-                PossibleModules::Entry(ref mut map) => {
-                    if let Some(component_str) = component.as_os_str().to_str() {
-                        let mut new_entry_map = HashMap::new();
-                        let new_entry = Box::new(PossibleModules::Entry(Box::new(new_entry_map)));
-
-                        map.insert(component_str.to_owned(), new_entry);
-
-                        // current_entry = new_entry;
-                    }
-                }
+            if let Some(component_str) = component.as_os_str().to_str() {
+                current_components.push(component_str.to_owned());
             }
         }
+
+        results.push(current_components);
     }
 
-    current_entry
+    results
 }
 
 #[cfg(test)]
