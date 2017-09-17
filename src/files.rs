@@ -82,31 +82,28 @@ pub fn gather_all<I: Iterator<Item = PathBuf>>(
     Ok(())
 }
 
-#[derive(PartialEq, Debug)]
-enum PossibleModules {
-    Entry(Box<HashMap<String, Box<PossibleModules>>>),
-}
-
-fn possible_modules(test_files: &HashSet<PathBuf>) -> Vec<Vec<String>> {
-    let mut results: Vec<Vec<String>> = vec![];
+fn possible_modules(test_files: &HashSet<PathBuf>) -> HashSet<String> {
+    let mut possibilities: HashSet<String> = HashSet::new();
 
     for test_file in test_files {
         let mut current_components: Vec<String> = vec![];
-        // Drop the .elm extension and grab everything else, in reverse order.
-        for component in test_file.with_extension("").components().rev() {
-            // Turn these into module name checks to be performed, in order.
-            // e.g. 'tests/All/Passing.elm' ===> ['Passing', 'All', 'tests']
-            // This way, if we're given 'All.Passing' as a module name, we can also
-            // flip it into ['Passing', 'All'], and see if the first N elements line up.
+
+        // Drop the .elm extension and try everything else
+        for component in test_file.with_extension("").components() {
             if let Some(component_str) = component.as_os_str().to_str() {
-                current_components.push(component_str.to_owned());
+                if let Some(first_char) = component_str.chars().next() {
+                    // Only uppercase filenames are valid Elm modules.
+                    if first_char.is_uppercase() {
+                        current_components.push(component_str.to_owned());
+
+                        possibilities.insert(current_components.join("."));
+                    }
+                }
             }
         }
-
-        results.push(current_components);
     }
 
-    results
+    possibilities
 }
 
 #[cfg(test)]
@@ -115,18 +112,40 @@ mod possible_modules_tests {
 
     #[test]
     fn works_for_one() {
-        let mut test_files = HashSet::new();
-
-        for test_file in [
+        let test_files: HashSet<PathBuf> = [
             "tests/PassingTest.elm",
             "tests/FailingTest.elm",
             "otherTests/Passing.elm",
-        ].into_iter()
-        {
-            test_files.insert(PathBuf::from(test_file));
-        }
-        let result = possible_modules(&test_files);
-
-        assert_eq!(result, result);
+            "/etc/otherTests/Passing.elm",
+            "blah/stuff/Sponge.elm",
+            "blah/stuff/whee/Stuff.elm",
+            "blah/stuff/whee/Stuff/Things.elm",
+            "otherTests/SweetTest/What.elm",
+            "blah/stuff/One/More/Time.elm",
+        ].iter()
+            .map(PathBuf::from)
+            .collect();
+        let actual = possible_modules(&test_files);
+        let expected: HashSet<String> = [
+            "PassingTest",
+            "FailingTest",
+            "Passing",
+            "Sponge",
+            "Stuff",
+            "Stuff.Things",
+            "SweetTest.What",
+            "One.More.Time",
+            // Arguably, these shouldn't be in there. However, they could be in source-directories.
+            // We could do a fancier check for source-directories, but it doesn't seem worth it.
+            // You'd have to give your source-directories some pretty crazy names for this to
+            // cause a problem, and long-term the goal is to scrap this code in favor of tighter
+            // Elm compiler integration anyway, at which point this whole check will go away.
+            "One.More",
+            "One",
+            "SweetTest",
+        ].iter()
+            .map(|&string| String::from(string))
+            .collect();
+        assert_eq!(expected, actual);
     }
 }
