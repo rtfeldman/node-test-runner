@@ -223,6 +223,8 @@ fn run() -> Result<(), Abort> {
         Abort::ReadElmJson,
     )?;
 
+    let possible_module_names = files::possible_module_names(&test_files, &source_dirs);
+
     println!("source_dirs: {:?}", &source_dirs);
 
     for node_process in node_processes {
@@ -235,15 +237,14 @@ fn run() -> Result<(), Abort> {
         Abort::CompilationFailed,
     )?;
 
-    read_test_interfaces(root.as_path(), &test_files, &source_dirs)?;
+    read_test_interfaces(root.as_path(), &possible_module_names)?;
 
     Ok(())
 }
 
 fn read_test_interfaces(
     root: &Path,
-    test_files: &HashSet<PathBuf>,
-    source_dirs: &HashSet<PathBuf>,
+    possible_module_names: &HashMap<String, PathBuf>,
 ) -> Result<Vec<String>, Abort> {
     // Get the path to the currently executing elm-test binary. This may be a symlink.
     let path_to_elm_test_binary: PathBuf = std::env::current_exe().or(Err(Abort::CurrentExe))?;
@@ -262,7 +263,7 @@ fn read_test_interfaces(
         .spawn()
         .map_err(Abort::SpawnElmiToJson)?;
 
-    let tests = print_json(&mut elmi_to_json_process, test_files, source_dirs);
+    let tests = print_json(&mut elmi_to_json_process, possible_module_names);
 
     elmi_to_json_process.wait().map_err(
         Abort::CompilationFailed,
@@ -273,11 +274,8 @@ fn read_test_interfaces(
 
 fn print_json(
     program: &mut Child,
-    test_files: &HashSet<PathBuf>,
-    source_dirs: &HashSet<PathBuf>,
+    possible_module_names: &HashMap<String, PathBuf>,
 ) -> io::Result<Vec<String>> {
-    let possible_module_names = files::possible_module_names(test_files, source_dirs);
-
     match program.stdout.as_mut() {
         Some(out) => {
             let mut buf_reader = BufReader::new(out);
