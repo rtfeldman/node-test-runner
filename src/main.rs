@@ -29,9 +29,6 @@ fn report_error(error: Abort) {
 }
 
 fn run() -> Result<(), Abort> {
-    // Verify that we're using a compatible version of node.js
-    check_node_version();
-
     // Find the nearest ancestor elm.json and change to that directory.
     // This way, you can run elm-test from any child directory and have it do the right thing.
     let root = files::find_nearest_elm_json(&mut env::current_dir().map_err(Abort::InvalidCwd)?)
@@ -162,10 +159,6 @@ fn print_headline() {
     let bar = "-".repeat(headline.len());
 
     println!("\n{}\n{}\n", headline, bar);
-}
-
-fn check_node_version() {
-    // TODO
 }
 
 fn init_if_necessary() {
