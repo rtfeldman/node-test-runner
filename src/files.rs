@@ -162,27 +162,29 @@ mod possible_modules_tests {
         ].iter()
             .map(PathBuf::from)
             .collect();
-        let actual = possible_module_names(&test_files);
-        let expected: HashSet<String> = [
-            "PassingTest",
-            "FailingTest",
-            "Passing",
-            "Sponge",
-            "Stuff",
-            "Stuff.Things",
-            "SweetTest.What",
-            "One.More.Time",
-            // Arguably, these shouldn't be in there. However, they could be in source-directories.
-            // We could do a fancier check for source-directories, but it doesn't seem worth it.
-            // You'd have to give your source-directories some pretty crazy names for this to
-            // cause a problem, and long-term the goal is to scrap this code in favor of tighter
-            // Elm compiler integration anyway, at which point this whole check will go away.
-            "One.More",
-            "One",
-            "SweetTest",
+        let source_dirs: HashSet<PathBuf> = [
+            "tests",
+            "otherTests",
+            "/etc/otherTests",
+            "blah/stuff",
+            "blah/stuff/whee/",
         ].iter()
-            .map(|&string| String::from(string))
+            .map(PathBuf::from)
             .collect();
+        let actual = possible_module_names(&test_files, &source_dirs);
+        let expected: HashMap<String, PathBuf> =
+            [
+                (String::from("PassingTest"), PathBuf::from("tests")),
+                (String::from("FailingTest"), PathBuf::from("tests")),
+                (String::from("Passing"), PathBuf::from("tests")),
+                (String::from("Sponge"), PathBuf::from("tests")),
+                (String::from("Stuff"), PathBuf::from("tests")),
+                (String::from("Stuff.Things"), PathBuf::from("tests")),
+                (String::from("SweetTest.What"), PathBuf::from("tests")),
+                (String::from("One.More.Time"), PathBuf::from("tests")),
+            ].iter()
+                .cloned()
+                .collect();
         assert_eq!(expected, actual);
     }
 }
