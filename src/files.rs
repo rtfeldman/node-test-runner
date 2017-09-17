@@ -1,9 +1,14 @@
+extern crate json;
+
 use std::io;
+use std::io::Read;
 use std::fs;
+use std::fs::File;
 use std::path::{PathBuf, Path, Component, Components};
 use std::ffi::OsStr;
 use std::rc::Rc;
 use std::collections::{HashSet, HashMap};
+use json::JsonValue;
 
 const ELM_JSON_FILENAME: &str = "elm-package.json";
 
@@ -180,5 +185,53 @@ mod possible_modules_tests {
             .map(|&string| String::from(string))
             .collect();
         assert_eq!(expected, actual);
+    }
+}
+
+#[derive(Debug)]
+pub enum ElmJsonError {
+    OpenElmJson(io::Error),
+    ReadElmJson(io::Error),
+    ParseElmJson(json::Error),
+    InvalidSourceDirectory(String),
+    InvalidSourceDirectories,
+}
+
+pub fn read_source_dirs(root: &Path) -> Result<HashSet<PathBuf>, ElmJsonError> {
+    let mut file = File::open(root
+        // TODO don't join with tests/ - this is a hack for 0.18!
+        .join(PathBuf::from("tests"))
+        .join(PathBuf::from(ELM_JSON_FILENAME))).map_err(ElmJsonError::OpenElmJson)?;
+    let mut file_contents = String::new();
+
+    file.read_to_string(&mut file_contents).map_err(
+        ElmJsonError::ReadElmJson,
+    )?;
+
+    let elm_json: JsonValue = json::parse(&file_contents).map_err(
+        ElmJsonError::ParseElmJson,
+    )?;
+
+    match elm_json["source-directories"] {
+        JsonValue::Array(ref source_dirs) => {
+            let mut paths: HashSet<PathBuf> = HashSet::new();
+
+            for source_dir in source_dirs {
+                // TODO don't join with tests/ - this is a hack for 0.18!
+                match PathBuf::from("tests")
+                    .join(source_dir.to_string())
+                    .canonicalize() {
+                    Ok(path) => {
+                        paths.insert(path);
+                    }
+                    Err(_) => {
+                        return Err(ElmJsonError::InvalidSourceDirectory(source_dir.to_string()));
+                    }
+                }
+            }
+
+            Ok(paths)
+        }
+        _ => Err(ElmJsonError::InvalidSourceDirectories),
     }
 }

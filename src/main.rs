@@ -25,6 +25,10 @@ enum Abort {
     ChDirError(io::Error),
     ReadTestFiles(io::Error),
     NoTestsFound(HashSet<PathBuf>),
+
+    // Reading elm.json
+    ReadElmJson(files::ElmJsonError),
+
     // Running elm make
     SpawnElmMake(io::Error),
     CompilationFailed(io::Error),
@@ -107,6 +111,37 @@ fn report_error(error: Abort) {
                 "The --compiler flag must be given a valid path to an elm executable,\
              which this was not: {}",
                 path_to_elm_binary
+            )
+        }
+        Abort::ReadElmJson(files::ElmJsonError::OpenElmJson(_)) => {
+            String::from(
+                "Unable to open your project's elm.json file for reading. \
+                Please make sure it exists and has the right permissions!",
+            )
+        }
+        Abort::ReadElmJson(files::ElmJsonError::ReadElmJson(_)) => {
+            String::from(
+                "Unable to read your project's elm.json file. \
+                Try opening it in a text editor to see if something's wrong with it, and \
+                maybe consider trying to recreate it.",
+            )
+        }
+        Abort::ReadElmJson(files::ElmJsonError::ParseElmJson(_)) => {
+            String::from(
+                "Your project's elm.json file appears to contain invalid JSON. \
+                Try running it through a JSON validator and fixing any syntax errors you find!",
+            )
+        }
+        Abort::ReadElmJson(files::ElmJsonError::InvalidSourceDirectories) => {
+            String::from(
+                "Your project's elm.json file does not have a valid source-directories array. \
+                Make sure the `source-directories` field is presesnt, and is an array of strings!",
+            )
+        }
+        Abort::ReadElmJson(files::ElmJsonError::InvalidSourceDirectory(source_dir)) => {
+            format!(
+                "Your project's elm.json file contains an invalid source-directory: {}",
+                source_dir
             )
         }
         Abort::CliArgParseError(cli::ParseError::InvalidInteger(arg, flag_name)) => {
@@ -194,15 +229,15 @@ fn run() -> Result<(), Abort> {
         Abort::CompilationFailed,
     )?;
 
-    let source_dirs = read_source_dirs(root.as_path());
+    let source_dirs = files::read_source_dirs(root.as_path()).map_err(
+        Abort::ReadElmJson,
+    )?;
+
+    println!("source_dirs: {:?}", &source_dirs);
 
     read_test_interfaces(root.as_path(), &test_files, &source_dirs)?;
 
     Ok(())
-}
-
-fn read_source_dirs(root: &Path) -> HashSet<PathBuf> {
-    panic!("TODO read source dirs from elm-package.json!")
 }
 
 fn read_test_interfaces(
