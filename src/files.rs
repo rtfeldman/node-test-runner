@@ -150,7 +150,7 @@ fn to_module_name(test_file: &Path, source_dir: &Vec<Component>) -> Option<Strin
 
 
 #[cfg(test)]
-mod possible_modules_tests {
+mod possible_module_names_tests {
     use super::*;
 
     #[test]
@@ -158,11 +158,10 @@ mod possible_modules_tests {
         let test_files: HashSet<PathBuf> = [
             "tests/PassingTest.elm",
             "tests/FailingTest.elm",
-            "otherTests/Passing.elm",
             "/etc/otherTests/Passing.elm",
-            "blah/stuff/Sponge.elm",
-            "blah/stuff/whee/Stuff.elm",
-            "blah/stuff/whee/Stuff/Things.elm",
+            "blah/things/Sponge.elm",
+            "one/two/three/Stuff.elm",
+            "one/two/three/Stuff/Things.elm",
             "otherTests/SweetTest/What.elm",
             "blah/stuff/One/More/Time.elm",
         ].iter()
@@ -172,25 +171,44 @@ mod possible_modules_tests {
             "tests",
             "otherTests",
             "/etc/otherTests",
+            "one/two/three",
             "blah/stuff",
-            "blah/stuff/whee/",
         ].iter()
             .map(PathBuf::from)
             .collect();
         let actual = possible_module_names(&test_files, &source_dirs);
-        let expected: HashMap<String, PathBuf> =
-            [
-                (String::from("PassingTest"), PathBuf::from("tests")),
-                (String::from("FailingTest"), PathBuf::from("tests")),
-                (String::from("Passing"), PathBuf::from("tests")),
-                (String::from("Sponge"), PathBuf::from("tests")),
-                (String::from("Stuff"), PathBuf::from("tests")),
-                (String::from("Stuff.Things"), PathBuf::from("tests")),
-                (String::from("SweetTest.What"), PathBuf::from("tests")),
-                (String::from("One.More.Time"), PathBuf::from("tests")),
-            ].iter()
-                .cloned()
-                .collect();
+        let expected: HashMap<String, PathBuf> = [
+            (
+                String::from("PassingTest"),
+                PathBuf::from("tests/PassingTest.elm"),
+            ),
+            (
+                String::from("FailingTest"),
+                PathBuf::from("tests/FailingTest.elm"),
+            ),
+            (
+                String::from("Passing"),
+                PathBuf::from("/etc/otherTests/Passing.elm"),
+            ),
+            (
+                String::from("Stuff"),
+                PathBuf::from("one/two/three/Stuff.elm"),
+            ),
+            (
+                String::from("Stuff.Things"),
+                PathBuf::from("one/two/three/Stuff/Things.elm"),
+            ),
+            (
+                String::from("SweetTest.What"),
+                PathBuf::from("otherTests/SweetTest/What.elm"),
+            ),
+            (
+                String::from("One.More.Time"),
+                PathBuf::from("blah/stuff/One/More/Time.elm"),
+            ),
+        ].iter()
+            .cloned()
+            .collect();
         assert_eq!(expected, actual);
     }
 }
@@ -219,26 +237,34 @@ pub fn read_source_dirs(root: &Path) -> Result<HashSet<PathBuf>, ElmJsonError> {
         ElmJsonError::ParseElmJson,
     )?;
 
-    match elm_json["source-directories"] {
-        json::JsonValue::Array(ref source_dirs) => {
-            let mut paths: HashSet<PathBuf> = HashSet::new();
+    match elm_json {
+        json::JsonValue::Object(obj) => {
+            match obj.get("source-directories") {
+                Some(&json::JsonValue::Array(ref source_dirs)) => {
+                    let mut paths: HashSet<PathBuf> = HashSet::new();
 
-            for source_dir in source_dirs {
-                // TODO don't join with tests/ - this is a hack for 0.18!
-                match PathBuf::from("tests")
-                    .join(source_dir.to_string())
-                    .canonicalize() {
-                    Ok(path) => {
-                        paths.insert(path);
+                    for source_dir in source_dirs {
+                        // TODO don't join with tests/ - this is a hack for 0.18!
+                        match PathBuf::from("tests")
+                            .join(source_dir.to_string())
+                            .canonicalize() {
+                            Ok(path) => {
+                                paths.insert(path);
+                            }
+                            Err(_) => {
+                                return Err(
+                                    ElmJsonError::InvalidSourceDirectory(source_dir.to_string()),
+                                );
+                            }
+                        }
                     }
-                    Err(_) => {
-                        return Err(ElmJsonError::InvalidSourceDirectory(source_dir.to_string()));
-                    }
+
+                    Ok(paths)
                 }
+                _ => Err(ElmJsonError::InvalidSourceDirectories),
             }
-
-            Ok(paths)
         }
+
         _ => Err(ElmJsonError::InvalidSourceDirectories),
     }
 }
