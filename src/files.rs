@@ -115,6 +115,13 @@ pub fn possible_module_names(
 
 fn to_module_name(test_file: &Path, source_dir: &Vec<Component>) -> Option<String> {
     let test_file_components: Vec<Component> = test_file.components().collect();
+
+    // There's no chance of this passing if test file is no longer than the source dir!
+    if source_dir.len() >= test_file_components.len() {
+        // This is not just a performance optimization; split_at() panics if the split fails. D: D:
+        return None;
+    }
+
     let (prefix, module_name_components) = test_file_components.split_at(source_dir.len());
 
     // If the test file doesn't start with this source dir, return None.
