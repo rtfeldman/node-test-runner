@@ -51,11 +51,10 @@ enum ParsedLineResult {
 }
 
 fn read_exposing(path: &Path) -> Result<Option<HashSet<String>>, Problem> {
-    let mut file = File::open(path).map_err(|err| {
+    let file = File::open(path).map_err(|err| {
         Problem::OpenFileToReadExports(path.to_path_buf(), err)
     })?;
     let mut reader = BufReader::new(file);
-    let mut buffer = String::new();
     let mut line = String::new();
     let mut exposing: HashSet<String> = HashSet::new();
 
@@ -91,43 +90,78 @@ fn parse_line(line: &str) -> Result<ParsedLineResult, ()> {
 /* Remove all the comments from the line,
    and return whether we are still in a multiline comment or not
 */
-// var stripComments = function(line, isInComment) {
-//   while (true || line.length > 0) {
-//     var startIndex = line.indexOf("{-");
-//     var endIndex = line.indexOf("-}");
-//     var singleLineComment = line.indexOf("--");
-//
-//     // when we have a single line comment
-//     if (singleLineComment > -1 && !isInComment) {
-//       line = line.substr(0, singleLineComment);
-//       continue;
-//     }
-//
-//     // when there's no comment chars
-//     if (startIndex === -1 && endIndex === -1) {
-//       return {
-//         line: isInComment ? "" : line,
-//         isInComment: isInComment
-//       };
-//     }
-//
-//     // when there's a start and end
-//     if (startIndex > -1 && endIndex > -1) {
-//       line = line.substr(0, startIndex) + line.substr(endIndex + 2);
-//       continue;
-//     }
-//
-//     // when there's a start, but no end
-//     if (startIndex > -1)
-//       return { line: line.substr(0, startIndex), isInComment: true };
-//
-//     // when there's an end, but no start
-//     if (endIndex > -1 && isInComment)
-//       return { line: line.substr(endIndex + 2), isInComment: false };
-//   }
-//
-//   return { line: "", isInComment: isInComment };
-// };
+fn strip_comments(line: &mut str, is_in_comment: bool) -> bool {
+    loop {
+        // when we have a single line comment
+        if let Some(single_line_comment_index) = line.find("--") {
+            if !is_in_comment {
+                unsafe {
+                    line.slice_mut_unchecked(0, single_line_comment_index);
+                }
+                continue;
+            }
+        }
+
+        let block_comment_start = line.find("{-");
+        let block_comment_end = line.find("-}");
+
+        match (block_comment_start, block_comment_end) {
+            // when there's a start and end
+            (Some(start_index), Some(end_index)) => {
+                // We know these indices will be okay because we got them from find()
+                unsafe {
+                    line.slice_mut_unchecked(0, start_index);
+                }
+
+                // Subtract start_index because the line just got shorter by that much.
+                let dest_index = (end_index + 2) - start_index;
+                let line_length = line.len();
+
+                // We know these indices will be okay because we got them from find()
+                unsafe {
+                    line.slice_mut_unchecked(dest_index, line_length - dest_index);
+                }
+            }
+
+            // when there's a start, but no end
+            (Some(start_index), None) => {
+                // We know these indices will be okay because we got them from find()
+                unsafe {
+                    line.slice_mut_unchecked(0, start_index);
+                }
+
+                return true;
+            }
+
+            // when there's an end, but no start
+            (None, Some(end_index)) => {
+                if is_in_comment {
+                    let dest_index = end_index + 2;
+                    let line_length = line.len();
+
+                    // We know these indices will be okay because we got them from find()
+                    unsafe {
+                        line.slice_mut_unchecked(dest_index, line_length - dest_index);
+                    }
+                }
+
+                return false;
+            }
+
+            // when there are no block comment chars
+            (None, None) => {
+                if is_in_comment {
+                    // We know these indices will be okay because they're both 0.
+                    unsafe {
+                        line.slice_mut_unchecked(0, 0);
+                    }
+                }
+
+                return is_in_comment;
+            }
+        }
+    }
+}
 //
 // var splitExposedFunctions = function(exposingLine) {
 //   return exposingLine
