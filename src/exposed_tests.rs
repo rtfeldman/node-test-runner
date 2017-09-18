@@ -162,131 +162,173 @@ fn strip_comments(line: &mut str, is_in_comment: bool) -> bool {
         }
     }
 }
-//
-// var splitExposedFunctions = function(exposingLine) {
-//   return exposingLine
-//     .substr(0, exposingLine.lastIndexOf(")"))
-//     .split(",")
-//     .map(str => str.trim())
-//     .filter(str => str[0].toLowerCase() === str[0]);
-// };
-//
-// var isAModuleLine = function(line) {
-//   return (
-//     line.startsWith("module") ||
-//     line.startsWith("port module") ||
-//     line.startsWith("effect module")
-//   );
-// };
-//
-// function Parser() {
+
+// Returns whether it found and removed a module declaration
+fn remove_module_declaration(line: &str) -> &str {
+    if line.starts_with("module") {
+        let start_index = 6;
+        let end_index = line.len();
+        unsafe { line.slice_unchecked(start_index, end_index) }
+    } else if line.starts_with("port module") {
+        let start_index = 11;
+        let end_index = line.len();
+        unsafe { line.slice_unchecked(start_index, end_index) }
+    } else if line.starts_with("effect module") {
+        let start_index = 13;
+        let end_index = line.len();
+        unsafe { line.slice_unchecked(start_index, end_index) }
+    } else {
+        line
+    }
+}
+
+#[cfg(test)]
+mod test_remove_module_declaration {
+    use super::*;
+
+    #[test]
+    fn removes_module() {
+        let line = "module Foo exposing (blah)".to_owned();
+
+        assert_eq!(" Foo exposing (blah)", remove_module_declaration(&line));
+    }
+
+    #[test]
+    fn removes_port_module() {
+        let line = "port module Bar exposing (blah)".to_owned();
+
+        assert_eq!(" Bar exposing (blah)", remove_module_declaration(&line));
+    }
+
+    #[test]
+    fn removes_effect_module() {
+        let line = "effect module Baz exposing (blah)".to_owned();
+
+        assert_eq!(" Baz exposing (blah)", remove_module_declaration(&line));
+    }
+
+    #[test]
+    fn does_nothing_if_no_module() {
+        let line = "blah blah whatever".to_owned();
+
+        assert_eq!("blah blah whatever", remove_module_declaration(&line));
+    }
+}
+
+// fn split_exposing(line: &str) -> HashSet<String> {
+//     line.substr(0, exposingLine.lastIndexOf(")"))
+//         .split(",")
+//         .map(str::trim)
+//         .collect<HashSet<String>>()
+// }
+
+
+// fn parse(reader: &mut BufReader) {
 //   // if we're currently in a comment
-//   var isInComment = false;
+//   let mut is_in_comment = false;
 //
 //   // if the file does not have a module line
-//   var isMissingModuleName = false;
+//   let mut is_missing_module_name = false;
 //
 //   // if we're done parsing
-//   var parsingDone = false;
+//   let mut parsing_done = false;
 //
 //   // if the module line has been read
-//   var hasModuleLineBeenRead = false;
+//   let mut has_module_line_been_read = false;
 //
-//   var isReadingModuleName = false;
-//   var isReadingExports = false;
-//   var isBetweenBrackets = false;
+//   let mut is_reading_module_name = false;
+//   let mut is_reading_exports = false;
+//   let mut is_between_parens = false;
 //
-//   // functions that have been exposed
-//   var exposedFunctions = [];
-//   // number of open/closed brackets seen so far
-//   var openBracketsSeen = 0;
-//   var closedBracketsSeen = 0;
+//   // values that have been exposed
+//   let mut exposed_values = vec![];
+//
+//   // number of open/closed parens seen so far
+//   let mut open_parens_seen = 0;
+//   let mut closed_parens_seen = 0;
+//
 //   // data between exposing brackets
-//   var data = "";
+//   let mut data = "";
 //
-//   this.parseLine = function(line) {
-//     if (parsingDone) return;
+//   fn parse_line(line: &mut str) {
+//     if parsing_done { return; }
 //
-//     var whereWeUpTo = stripComments(line, isInComment);
-//     isInComment = whereWeUpTo.isInComment;
-//     line = whereWeUpTo.line.trim();
+//     is_in_comment = stripComments(line, isInComment);
+//     line = line.trim();
 //
-//     if (line.length == 0) return;
+//     if line.is_empty() { return; }
 //
 //     // if we haven't started reading the first line
-//     if (!hasModuleLineBeenRead && isAModuleLine(line)) {
-//       hasModuleLineBeenRead = true;
-//       // drop module from the line
-//       line = line.substr(line.indexOf("module") + 7);
-//       isReadingModuleName = true;
+//     if !has_module_line_been_read {
+//         let new_line = remove_module_declaration(line);
+//         if new_line == line {
+//         // We did not find a module to remove, meaning we found content before the module
+//         // declaration. Error!
+//           is_missing_module_name = true;
+//           parsing_done = true;
 //
-//       if (line.length === 0) return;
-//     }
+//           return;
+//         }
+//       } else {
+//             // We found and successfully removed the module declaration.
+//           has_module_line_been_read = true;
+//           is_reading_module_name = true;
 //
-//     // if we manage to find content before the module line,
-//     // something is wrong - so exit
-//     if (!hasModuleLineBeenRead) {
-//       isMissingModuleName = true;
-//       parsingDone = true;
-//       return;
+//           if line.is_empty() {return;}
 //     }
 //
 //     // if we are still reading the module line
-//     if (isReadingModuleName) {
-//       var exposingIndex = line.indexOf("exposing");
+//     if is_reading_module_name {
+//       match line.find("exposing") {
+//           Some(exposing_index) => {
+//             let line_length = line.len();
+//               let dest_index = exposing_index + 8;
+//                 unsafe {
+//                     line.slice_mut_unchecked(dest_index, line_length - dest_index);
+//                 }
+//               is_reading_module_name = false;
+//               is_reading_exports = true;
 //
-//       // if we haven't found exposing yet
-//       if (exposingIndex === -1) {
-//         return;
+//               if line.is_empty() {return;}
+//           },
+//           None => { return; }
 //       }
-//
-//       line = line.substr(exposingIndex + 8);
-//       isReadingModuleName = false;
-//       isReadingExports = true;
-//
-//       if (line.length === 0) return;
 //     }
 //
 //     // if we are actually reading the exports
-//     if (isReadingExports) {
-//       var firstBracket = line.indexOf("(");
-//       if (firstBracket === -1) return;
+//     if is_reading_exports {
+//         match line.find("(") {
+//             Some(first_paren_index) => {
+//               open_parens_seen += 1;
+//               is_reading_exports = false;
+//               is_between_parens = true;
 //
-//       openBracketsSeen += 1;
-//       isReadingExports = false;
-//       isBetweenBrackets = true;
-//       line = line.substr(firstBracket + 1);
+//                 let line_length = line.len();
+//                   let dest_index = first_paren_index + 1;
+//
+//
+//                 unsafe {
+//                     line.slice_mut_unchecked(dest_index, line_length - dest_index);
+//                 }
+//             }
+//             None => { return; }
+//         }
 //     }
 //
 //     // if we're before the final bracket
-//     if (isBetweenBrackets) {
-//       var newOpenBracketsSeen = line.split("(").length;
-//       var newCloseBracketsSeen = line.split(")").length;
+//     if is_between_parens {
+//       let new_open_parens_seen = line.split("(").len();
+//       let new_closed_parens_seen = line.split(")").len();
 //
-//       closedBracketsSeen += newCloseBracketsSeen;
-//       openBracketsSeen += newOpenBracketsSeen;
+//       closed_parens_seen += new_closed_parens_seen;
+//       open_parens_seen += new_open_parens_seen;
 //
 //       data += line;
 //
-//       if (closedBracketsSeen === openBracketsSeen) {
-//         exposedFunctions = splitExposedFunctions(data);
-//         parsingDone = true;
+//       if closedBracketsSeen == openBracketsSeen {
+//         exposed_values = split_exposing(data);
+//         parsing_done = true;
 //       }
 //     }
-//   };
-//
-//   this.isDoneReading = function() {
-//     return parsingDone;
-//   };
-//
-//   this.getExposing = function() {
-//     return exposedFunctions;
-//   };
-//
-//   this.getIsMissingModuleName = function() {
-//     return isMissingModuleName;
-//   };
-//
-//   return this;
-// }
+//   }
 // }
