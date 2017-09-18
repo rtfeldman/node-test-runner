@@ -39,7 +39,7 @@ fn run() -> Result<(), Problem> {
     init_if_necessary();
 
     // Parse and validate CLI arguments
-    let args = cli::parse_args().map_err(Problem::CliArgParseError)?;
+    let args = cli::parse_args().map_err(Problem::Cli)?;
     let test_files = match gather_test_files(&args.file_paths).map_err(
         Problem::ReadTestFiles,
     )? {
@@ -50,7 +50,8 @@ fn run() -> Result<(), Problem> {
         }
     };
 
-    let path_to_elm_binary: PathBuf = elm_binary_path_from_compiler_flag(args.compiler)?;
+    let path_to_elm_binary: PathBuf = cli::elm_binary_path_from_compiler_flag(args.compiler)
+        .map_err(Problem::Cli)?;
 
     // Print the headline. Something like:
     //
@@ -128,25 +129,6 @@ fn gather_test_files(values: &HashSet<PathBuf>) -> io::Result<Option<HashSet<Pat
     }
 }
 
-// Return the path to the elm binary
-fn elm_binary_path_from_compiler_flag(compiler_flag: Option<String>) -> Result<PathBuf, Problem> {
-    match compiler_flag {
-        Some(string) => {
-            match PathBuf::from(string.as_str()).canonicalize() {
-                Ok(path_to_elm_binary) => {
-                    if path_to_elm_binary.is_dir() {
-                        Err(Problem::InvalidCompilerFlag(string))
-                    } else {
-                        Ok(path_to_elm_binary)
-                    }
-                }
-
-                Err(_) => Err(Problem::InvalidCompilerFlag(string)),
-            }
-        }
-        None => Ok(PathBuf::from("elm")),
-    }
-}
 
 // prints something like this:
 //

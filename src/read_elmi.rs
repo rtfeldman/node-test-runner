@@ -11,7 +11,7 @@ use std::process::{Command, Child, Stdio};
 use exposed_tests;
 
 #[derive(Debug)]
-pub enum ReadElmiError {
+pub enum Problem {
     CurrentExe(io::Error),
     SpawnElmiToJson(io::Error),
     CompilationFailed(io::Error),
@@ -23,10 +23,9 @@ const ELMI_TO_JSON_BINARY_NAME: &str = "elm-interface-to-json";
 pub fn read_test_interfaces(
     root: &Path,
     possible_module_names: &HashMap<String, PathBuf>,
-) -> Result<Vec<String>, ReadElmiError> {
+) -> Result<Vec<String>, Problem> {
     // Get the path to the currently executing elm-test binary. This may be a symlink.
-    let path_to_elm_test_binary: PathBuf =
-        std::env::current_exe().map_err(ReadElmiError::CurrentExe)?;
+    let path_to_elm_test_binary: PathBuf = std::env::current_exe().map_err(Problem::CurrentExe)?;
 
     // If it's a symlink, follow it. Then change the executable name to elm-interface-to-json.
     let path_to_elmi_to_json_binary: PathBuf = fs::read_link(&path_to_elm_test_binary)
@@ -40,12 +39,12 @@ pub fn read_test_interfaces(
         .arg(root.to_str().expect(""))
         .stdout(Stdio::piped())
         .spawn()
-        .map_err(ReadElmiError::SpawnElmiToJson)?;
+        .map_err(Problem::SpawnElmiToJson)?;
 
     let tests = print_json(&mut elmi_to_json_process, possible_module_names);
 
     elmi_to_json_process.wait().map_err(
-        ReadElmiError::CompilationFailed,
+        Problem::CompilationFailed,
     )?;
 
     Ok(vec![])

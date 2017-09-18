@@ -1,9 +1,9 @@
 
 use std::path::PathBuf;
 use problems::Problem;
-use read_elmi::ReadElmiError;
+use read_elmi;
 use files::ElmJsonError;
-use cli::ParseError;
+use cli;
 use exposed_tests;
 
 pub fn report(problem: Problem) -> String {
@@ -28,16 +28,16 @@ pub fn report(problem: Problem) -> String {
             "Unable to run `node`. \
             Do you have nodejs installed? You can get it from https://nodejs.org",
         ),
-        Problem::ReadElmi(ReadElmiError::SpawnElmiToJson(_)) => String::from(
+        Problem::ReadElmi(read_elmi::Problem::SpawnElmiToJson(_)) => String::from(
             "Unable to run `elm-interface-to-json`. \
             This binary should have been installed along with elm-test. \
             Maybe try reinstalling elm-test via npm?",
         ),
-        Problem::ReadElmi(ReadElmiError::CurrentExe(_)) => String::from(
+        Problem::ReadElmi(read_elmi::Problem::CurrentExe(_)) => String::from(
             "Unable to detect current running process for `elm-test`. \
             Is elm-test running from a weird location, possibly involving symlinks?",
         ),
-        Problem::ReadElmi(ReadElmiError::CompilationFailed(_)) => String::from(
+        Problem::ReadElmi(read_elmi::Problem::CompilationFailed(_)) => String::from(
             "Test compilation failed.",
         ),
         Problem::ChDirError(_) => String::from(
@@ -66,7 +66,14 @@ pub fn report(problem: Problem) -> String {
                 )
             }
         }
-        Problem::InvalidCompilerFlag(path_to_elm_binary) => {
+        Problem::Cli(cli::Problem::InvalidInteger(arg, flag_name)) => {
+            format!(
+                "{} is not a valid value for argument for the {} flag",
+                arg,
+                flag_name
+            )
+        }
+        Problem::Cli(cli::Problem::InvalidCompilerFlag(path_to_elm_binary)) => {
             format!(
                 "The --compiler flag must be given a valid path to an elm executable,\
              which this was not: {}",
@@ -102,13 +109,6 @@ pub fn report(problem: Problem) -> String {
             format!(
                 "Your project's elm.json file contains an invalid source-directory: {}",
                 source_dir
-            )
-        }
-        Problem::CliArgParseError(ParseError::InvalidInteger(arg, flag_name)) => {
-            format!(
-                "{} is not a valid value for argument for the {} flag",
-                arg,
-                flag_name
             )
         }
         Problem::ExposedTest(exposed_tests::Problem::UnexposedTests(module_name, bad_tests)) => {

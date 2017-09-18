@@ -24,13 +24,8 @@ pub enum Problem {
     // Running node
     SpawnNodeProcess(io::Error),
 
-    // Running elm-interface-to-json
-    ReadElmi(read_elmi::ReadElmiError),
-
-    // CLI Flag errors
-    InvalidCompilerFlag(String),
-    CliArgParseError(cli::ParseError),
-
-    // Exposed test problems
+    // Problems from other modules
+    ReadElmi(read_elmi::Problem),
+    Cli(cli::Problem),
     ExposedTest(exposed_tests::Problem),
 }

@@ -9,8 +9,9 @@ use std::iter::FromIterator;
 pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 #[derive(PartialEq, Debug)]
-pub enum ParseError {
+pub enum Problem {
     InvalidInteger(String, String),
+    InvalidCompilerFlag(String),
 }
 
 const ARG_SEED: &'static str = "seed";
@@ -18,7 +19,7 @@ const ARG_FUZZ: &'static str = "fuzz";
 const ARG_COMPILER: &'static str = "compiler";
 const FILES_OR_DIRECTORIES: &'static str = "FILES_OR_DIRECTORIES";
 
-pub fn parse_args<'a>() -> Result<CliArgs, ParseError> {
+pub fn parse_args<'a>() -> Result<CliArgs, Problem> {
     let matches = App::new("elm-test")
         .version(VERSION)
         .arg(
@@ -78,23 +79,44 @@ pub struct CliArgs {
     pub file_paths: HashSet<PathBuf>,
 }
 
-
 // Turn the given Option<&str> into an Option<i32>, or else die and report the invalid argument.
 pub fn parse_int_arg<'a>(
     flag_name: &str,
     args: &clap::ArgMatches<'a>,
-) -> Result<Option<i32>, ParseError> {
+) -> Result<Option<i32>, Problem> {
     match args.value_of("--".to_owned() + flag_name) {
         None => Ok(None),
         Some(potential_num) => {
             match potential_num.parse::<i32>() {
                 Ok(num) => Ok(Some(num)),
 
-                Err(_) => Err(ParseError::InvalidInteger(
+                Err(_) => Err(Problem::InvalidInteger(
                     String::from(flag_name),
                     String::from(potential_num),
                 )),
             }
         }
+    }
+}
+
+// Return the path to the elm binary
+pub fn elm_binary_path_from_compiler_flag(
+    compiler_flag: Option<String>,
+) -> Result<PathBuf, Problem> {
+    match compiler_flag {
+        Some(string) => {
+            match PathBuf::from(string.as_str()).canonicalize() {
+                Ok(path_to_elm_binary) => {
+                    if path_to_elm_binary.is_dir() {
+                        Err(Problem::InvalidCompilerFlag(string))
+                    } else {
+                        Ok(path_to_elm_binary)
+                    }
+                }
+
+                Err(_) => Err(Problem::InvalidCompilerFlag(string)),
+            }
+        }
+        None => Ok(PathBuf::from("elm")),
     }
 }
