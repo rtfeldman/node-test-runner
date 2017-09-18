@@ -117,7 +117,6 @@ fn gather_test_files(values: &HashSet<PathBuf>) -> io::Result<Option<HashSet<Pat
             }),
         )?;
     } else {
-        // TODO there is presumably a way to avoid this .clone() but I couldn't figure it out.
         files::gather_all(results, values.clone().into_iter())?;
     }
 
