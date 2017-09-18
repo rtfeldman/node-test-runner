@@ -4,7 +4,6 @@
 
 use std::path::Path;
 use std::collections::HashSet;
-use std::process::Stdio;
 
 #[derive(Debug)]
 pub enum Problem {
