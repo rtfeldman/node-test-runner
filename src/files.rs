@@ -129,8 +129,7 @@ fn to_module_name(test_file: &Path, source_dir: &Vec<Component>) -> Option<Strin
         // We've got a match! Build up the module name and return it.
         let mut results = vec![];
 
-        // Iterate in reverse order because we'll be pushing onto a stack.
-        for component in module_name_components.iter().rev() {
+        for component in module_name_components.iter() {
             match component.as_os_str().to_str() {
                 Some(component_str) => {
                     // We got a valid string; add it to the list of module components.
