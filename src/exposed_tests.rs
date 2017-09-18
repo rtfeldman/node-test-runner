@@ -1,13 +1,18 @@
 // Determine which values of type Test are exposed from a given module.
 
-
-
-use std::path::Path;
+use std::fs::File;
+use std::io::{BufReader, BufRead};
+use io;
+use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 
 #[derive(Debug)]
 pub enum Problem {
     UnexposedTests(String, HashSet<String>),
+    MissingModuleDeclaration(PathBuf),
+    OpenFileToReadExports(PathBuf, io::Error),
+    ReadingFileForExports(PathBuf, io::Error),
+    ParseError(PathBuf),
 }
 
 pub fn filter_exposing(
@@ -15,7 +20,7 @@ pub fn filter_exposing(
     tests: &HashSet<String>,
     module_name: &str,
 ) -> Result<(String, HashSet<String>), Problem> {
-    let new_tests: HashSet<String> = match read_exposing(path) {
+    let new_tests: HashSet<String> = match read_exposing(path)? {
         // None for exposed_values means "the module was exposing (..), so keep everything"
         None => tests.clone(),
         // Only keep the tests that were exposed.
@@ -40,49 +45,52 @@ pub fn filter_exposing(
     }
 }
 
-fn read_exposing(path: &Path) -> Option<HashSet<String>> {
-    // TODO all the things
-    return None;
+enum ParsedLineResult {
+    AllExposed,
+    Exposing(HashSet<String>, bool),
 }
-//   return new Promise(function(resolve, reject) {
-//     // read 60 chars at a time. roughly optimal: memory vs performance
-//     var stream = fs.createReadStream(file, {
-//       encoding: "utf8",
-//       highWaterMark: 8 * 60
-//     });
-//     var buffer = "";
-//     var parser = new Parser();
-//
-//     stream.on("error", reject);
-//
-//     stream.on("data", function(chunk) {
-//       buffer += chunk;
-//       // when the chunk has a newline, process each line
-//       if (chunk.indexOf("\n") > -1) {
-//         var lines = buffer.split("\n");
-//
-//         lines.slice(0, lines.length - 1).forEach(parser.parseLine.bind(parser));
-//         buffer = lines[lines.length - 1];
-//
-//         // end the stream early if we're past the exports
-//         // to save on memory
-//         if (parser.isDoneReading()) {
-//           stream.destroy();
-//         }
-//       }
-//     });
-//     stream.on("close", function() {
-//       if (parser.getIsMissingModuleName())
-//         return reject(filePath + " is missing a module declaration.");
-//
-//       resolve(parser.getExposing());
-//     });
-//   });
-// }
-//
-// /* Remove all the comments from the line,
-//    and return whether we are still in a multiline comment or not
-// */
+
+fn read_exposing(path: &Path) -> Result<Option<HashSet<String>>, Problem> {
+    let mut file = File::open(path).map_err(|err| {
+        Problem::OpenFileToReadExports(path.to_path_buf(), err)
+    })?;
+    let mut reader = BufReader::new(file);
+    let mut buffer = String::new();
+    let mut line = String::new();
+    let mut exposing: HashSet<String> = HashSet::new();
+
+    loop {
+        reader.read_line(&mut line).map_err(|err| {
+            Problem::OpenFileToReadExports(path.to_path_buf(), err)
+        })?;
+
+        match parse_line(&line) {
+            Ok(ParsedLineResult::AllExposed) => {
+                return Ok(None);
+            }
+            Ok(ParsedLineResult::Exposing(new_exposing, is_done)) => {
+                for val in new_exposing {
+                    exposing.insert(val);
+                }
+
+                if is_done {
+                    return Ok(Some(exposing));
+                }
+            }
+            Err(_) => {
+                return Err(Problem::ParseError(path.to_path_buf()));
+            }
+        }
+    }
+}
+
+fn parse_line(line: &str) -> Result<ParsedLineResult, ()> {
+    return Err(());
+}
+
+/* Remove all the comments from the line,
+   and return whether we are still in a multiline comment or not
+*/
 // var stripComments = function(line, isInComment) {
 //   while (true || line.length > 0) {
 //     var startIndex = line.indexOf("{-");
@@ -247,9 +255,4 @@ fn read_exposing(path: &Path) -> Option<HashSet<String>> {
 //
 //   return this;
 // }
-//
-// module.exports = {
-//   readExposing: readExposing,
-//   stripComments: stripComments,
-//   Parser: Parser
-// };
+// }

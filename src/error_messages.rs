@@ -121,7 +121,7 @@ pub fn report(problem: Problem) -> String {
             sorted_tests.sort();
 
             format!(
-                "\n`{}` \
+                "`{}` \
                 is a module with top-level Test values which it does not expose:\n\n{}\n\n
                 These tests will not get run. \
                   Please either expose them or move them out of the top level.",
@@ -130,6 +130,33 @@ pub fn report(problem: Problem) -> String {
             )
         }
 
+        Problem::ExposedTest(exposed_tests::Problem::MissingModuleDeclaration(path)) => {
+            format!(
+                "File \"{}\" needs a `module` declaration on the first line.",
+                path.as_os_str().to_str().unwrap_or(""),
+            )
+        }
+        Problem::ExposedTest(exposed_tests::Problem::OpenFileToReadExports(path, _)) => {
+            format!(
+                "Could not open \"{}\" when attempting to validate its exports.",
+                path.as_os_str().to_str().unwrap_or(""),
+            )
+        }
+        Problem::ExposedTest(exposed_tests::Problem::ReadingFileForExports(path, _)) => {
+            format!(
+                "Could not read \"{}\" when attempting to validate its exports.",
+                path.as_os_str().to_str().unwrap_or(""),
+            )
+        }
+        Problem::ExposedTest(exposed_tests::Problem::ParseError(path)) => {
+            format!(
+                "File \"{}\" appears to  invalid module declaration. Please double-check it!\n\
+                If the file compiles successfully with `elm make`, then this is a problem with
+                elm-test, so please file it at https://github.com/rtfeldman/node-test-runner/issues
+                and show the module declaration (including exports!) that resulted in this message.",
+                path.as_os_str().to_str().unwrap_or(""),
+            )
+        }
     }
 }
 
