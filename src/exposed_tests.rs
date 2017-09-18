@@ -1,31 +1,49 @@
 // Determine which values of type Test are exposed from a given module.
 
-pub fn filter_exposing(path: PathBuf, tests: HashSet<String>, module_name: &str) {
-    let new_tests = match read_exposing(path) {
+
+
+use std::path::Path;
+use std::collections::HashSet;
+use std::process::Stdio;
+
+#[derive(Debug)]
+pub enum Problem {
+    UnexposedTests(String, HashSet<String>),
+}
+
+pub fn filter_exposing(
+    path: &Path,
+    tests: &HashSet<String>,
+    module_name: &str,
+) -> Result<(String, HashSet<String>), Problem> {
+    let new_tests: HashSet<String> = match read_exposing(path) {
         // None for exposed_values means "the module was exposing (..), so keep everything"
-        None => tests,
+        None => tests.clone(),
         // Only keep the tests that were exposed.
-        Some(exposed_values) => exposed_values.intersection(tests),
+        Some(exposed_values) => {
+            exposed_values
+                .intersection(&tests)
+                .cloned()
+                .collect::<HashSet<String>>()
+        }
     };
 
-    if new_tests.count() < tests.count() {
-        Err(
-            "\n`" + module_name +
-                "` is a module with top-level Test values which it does not expose:\n\n" +
-                tests
-                    .difference(newTests)
-                    .map(|test| test + ": Test")
-                    .join("\n") +
-                "\n\nThese tests will not get run. \
-          Please either expose them or move them out of the top level.",
-        )
+    if new_tests.len() < tests.len() {
+        Err(Problem::UnexposedTests(
+            module_name.to_owned(),
+            tests
+                .difference(&new_tests)
+                .cloned()
+                .collect::<HashSet<String>>(),
+        ))
     } else {
-        Ok(module_name, newTests)
+        Ok((module_name.to_owned(), new_tests))
     }
 }
 
-fn read_exposing(path: &Path) {
-    panic!("at the disco");
+fn read_exposing(path: &Path) -> Option<HashSet<String>> {
+    // TODO all the things
+    return None;
 }
 //   return new Promise(function(resolve, reject) {
 //     // read 60 chars at a time. roughly optimal: memory vs performance

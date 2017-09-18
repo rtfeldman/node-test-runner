@@ -8,6 +8,7 @@ use std::io::{Read, BufReader};
 use std::path::{PathBuf, Path};
 use std::collections::{HashSet, HashMap};
 use std::process::{Command, Child, Stdio};
+use exposed_tests;
 
 #[derive(Debug)]
 pub enum ReadElmiError {
@@ -119,7 +120,7 @@ fn print_json(
 
                     for (module_name, (test_path, tests)) in tests_by_module {
                         println!("* * * module: {:?} tests: {:?}", module_name, tests);
-                        // filter_exposing(path: &Path, tests, module_name);
+                        exposed_tests::filter_exposing(&test_path, &tests, &module_name);
                     }
 
 

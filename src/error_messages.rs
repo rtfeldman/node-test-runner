@@ -4,6 +4,7 @@ use problems::Problem;
 use read_elmi::ReadElmiError;
 use files::ElmJsonError;
 use cli::ParseError;
+use exposed_tests;
 
 pub fn report(problem: Problem) -> String {
     match problem {
@@ -110,6 +111,25 @@ pub fn report(problem: Problem) -> String {
                 flag_name
             )
         }
+        Problem::ExposedTest(exposed_tests::Problem::UnexposedTests(module_name, bad_tests)) => {
+            let mut sorted_tests = bad_tests
+                .clone()
+                .into_iter()
+                .map(|test| format!("{}: Test", test))
+                .collect::<Vec<String>>();
+
+            sorted_tests.sort();
+
+            format!(
+                "\n`{}` \
+                is a module with top-level Test values which it does not expose:\n\n{}\n\n
+                These tests will not get run. \
+                  Please either expose them or move them out of the top level.",
+                module_name,
+                sorted_tests.join("\n")
+            )
+        }
+
     }
 }
 

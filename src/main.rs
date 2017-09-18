@@ -13,6 +13,7 @@ mod cli;
 mod read_elmi;
 mod error_messages;
 mod problems;
+mod exposed_tests;
 
 fn main() {
     run().unwrap_or_else(report_problem);

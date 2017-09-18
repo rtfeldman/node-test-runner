@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use read_elmi;
 use files;
 use cli;
+use exposed_tests;
 
 #[derive(Debug)]
 pub enum Problem {
@@ -29,4 +30,7 @@ pub enum Problem {
     // CLI Flag errors
     InvalidCompilerFlag(String),
     CliArgParseError(cli::ParseError),
+
+    // Exposed test problems
+    ExposedTest(exposed_tests::Problem),
 }
