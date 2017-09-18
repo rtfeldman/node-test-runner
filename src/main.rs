@@ -3,10 +3,9 @@ extern crate num_cpus;
 
 use std::env;
 use std::io;
-use std::io::{Read, BufReader};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Child, Stdio};
-use std::collections::{HashSet, HashMap};
+use std::process::Command;
+use std::collections::HashSet;
 use problems::Problem;
 
 mod files;
