@@ -81,6 +81,11 @@ fn run() -> Result<(), Problem> {
     read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
         .map_err(Problem::ReadElmi)?;
 
+    panic!(
+        "TODO: build a HashMap of all the exposed values per file right now. \
+        This way, once everything is done compiling, we can instantly check them."
+    );
+
     // Spin up node processes.
     let mut node_processes: Vec<std::process::Child> = Vec::new();
 
@@ -99,7 +104,6 @@ fn run() -> Result<(), Problem> {
             Problem::SpawnNodeProcess,
         )?;
     }
-
 
     Ok(())
 }

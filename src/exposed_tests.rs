@@ -87,17 +87,24 @@ fn parse_line(line: &str) -> Result<ParsedLineResult, ()> {
     return Err(());
 }
 
+
 /* Remove all the comments from the line,
-   and return whether we are still in a multiline comment or not
+   and also return whether we are still in a comment block.
 */
-fn strip_comments(line: &mut str, is_in_comment: bool) -> bool {
+fn strip_comments<'a>(original_line: &'a str, original_block_comment_depth: u32) -> (&'a str, u32) {
+    let mut line = original_line;
+    let mut block_comment_depth = original_block_comment_depth;
+
     loop {
-        // when we have a single line comment
-        if let Some(single_line_comment_index) = line.find("--") {
-            if !is_in_comment {
+        // Don't bother checking for "--" if we're inside a block comment; it means nothing there.
+        if block_comment_depth == 0 {
+            // We have a single line comment
+            if let Some(single_line_comment_index) = line.find("--") {
+                // We know these indices will be okay because we got them from find()
                 unsafe {
-                    line.slice_mut_unchecked(0, single_line_comment_index);
+                    line = line.slice_unchecked(0, single_line_comment_index);
                 }
+
                 continue;
             }
         }
@@ -108,18 +115,26 @@ fn strip_comments(line: &mut str, is_in_comment: bool) -> bool {
         match (block_comment_start, block_comment_end) {
             // when there's a start and end
             (Some(start_index), Some(end_index)) => {
+                let (first_index, second_index) = if end_index > start_index {
+                    // this is the {- ... -} case
+                    (start_index, end_index)
+                } else {
+                    // this is the -} ... {- case
+                    (end_index, start_index)
+                };
+
                 // We know these indices will be okay because we got them from find()
                 unsafe {
-                    line.slice_mut_unchecked(0, start_index);
+                    line = line.slice_unchecked(0, first_index);
                 }
 
                 // Subtract start_index because the line just got shorter by that much.
-                let dest_index = (end_index + 2) - start_index;
+                let dest_index = (second_index + 2) - first_index;
                 let line_length = line.len();
 
                 // We know these indices will be okay because we got them from find()
                 unsafe {
-                    line.slice_mut_unchecked(dest_index, line_length - dest_index);
+                    line = line.slice_unchecked(dest_index, line_length - dest_index);
                 }
             }
 
@@ -127,41 +142,92 @@ fn strip_comments(line: &mut str, is_in_comment: bool) -> bool {
             (Some(start_index), None) => {
                 // We know these indices will be okay because we got them from find()
                 unsafe {
-                    line.slice_mut_unchecked(0, start_index);
+                    line = line.slice_unchecked(0, start_index);
                 }
 
-                return true;
+                block_comment_depth += 1;
             }
 
             // when there's an end, but no start
             (None, Some(end_index)) => {
-                if is_in_comment {
-                    let dest_index = end_index + 2;
-                    let line_length = line.len();
+                let line_length = line.len();
 
-                    // We know these indices will be okay because we got them from find()
-                    unsafe {
-                        line.slice_mut_unchecked(dest_index, line_length - dest_index);
-                    }
+                // We know these indices will be okay because we got them from find()
+                unsafe {
+                    line = line.slice_unchecked(end_index + 2, line_length);
                 }
 
-                return false;
+                block_comment_depth -= 1;
             }
 
             // when there are no block comment chars
             (None, None) => {
-                if is_in_comment {
-                    // We know these indices will be okay because they're both 0.
-                    unsafe {
-                        line.slice_mut_unchecked(0, 0);
-                    }
+                if block_comment_depth > 0 {
+                    // All of this is a comment, so throw it all out.
+                    return ("", block_comment_depth);
+                } else {
+                    // None of this is a comment, so keep it all.
+                    return (line, block_comment_depth);
                 }
-
-                return is_in_comment;
             }
         }
     }
 }
+
+
+#[cfg(test)]
+mod test_strip_comments {
+    use super::*;
+
+    #[test]
+    fn strips_inline_comments() {
+        assert_eq!(
+            ("module Foo ", 0),
+            strip_comments("module Foo -- blah blah whatever ", 0)
+        );
+    }
+
+    #[test]
+    fn single_line_comment_inside_block_comment() {
+        for depth in 1..3 {
+            assert_eq!(
+                ("", depth),
+                strip_comments(" Foo -- single line comment inside block comment", depth)
+            );
+        }
+    }
+
+    #[test]
+    fn nested_block_comment() {
+        for depth in 1..3 {
+            assert_eq!(
+                ("", depth + 1),
+                strip_comments(" Bar {- start of nested block comment", depth)
+            );
+        }
+    }
+
+    #[test]
+    fn inside_block_comment() {
+        for depth in 1..3 {
+            assert_eq!(
+                ("", depth),
+                strip_comments("stuff inside block comment", depth)
+            );
+        }
+    }
+
+    #[test]
+    fn end_of_block_comment() {
+        for depth in 1..3 {
+            assert_eq!(
+                (" bar baz", depth - 1),
+                strip_comments("end of block comment -} bar baz", depth)
+            );
+        }
+    }
+}
+
 
 // Returns whether it found and removed a module declaration
 fn remove_module_declaration(line: &str) -> &str {
