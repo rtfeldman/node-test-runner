@@ -6,6 +6,7 @@ authors = ["Richard Feldman <richard.t.feldman@gmail.com>"]
 [dependencies]
 json = "0.11.9"
 num_cpus = "1.6.2"
+lazy_static = "0.2.8"
 
 [dependencies.clap]
 version = "~2.26.0"
