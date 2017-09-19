@@ -91,7 +91,7 @@ fn parse_line(line: &str) -> Result<ParsedLineResult, ()> {
 /* Remove all the comments from the line,
    and also return whether we are still in a comment block.
 */
-fn strip_comments<'a>(original_line: &'a str, original_block_comment_depth: u32) -> (&'a str, u32) {
+fn strip_comments(original_line: &str, original_block_comment_depth: u32) -> (&str, u32) {
     let mut line = original_line;
     let mut block_comment_depth = original_block_comment_depth;
 
@@ -290,12 +290,61 @@ mod test_remove_module_declaration {
     }
 }
 
-// fn split_exposing(line: &str) -> HashSet<String> {
-//     line.substr(0, exposingLine.lastIndexOf(")"))
-//         .split(",")
-//         .map(str::trim)
-//         .collect<HashSet<String>>()
-// }
+fn split_exposing(line: &str) -> HashSet<&str> {
+    match line.rfind(")") {
+        Some(close_paren_index) => {
+            // We know these indices will be okay because we got them from find()
+            unsafe {
+                line.slice_unchecked(0, close_paren_index)
+                    .split(",")
+                    .map(str::trim)
+                    .collect::<HashSet<&str>>()
+            }
+        }
+        None => HashSet::new(),
+    }
+}
+
+#[cfg(test)]
+mod test_split_exposing {
+    use super::*;
+
+    #[test]
+    fn none() {
+        assert_eq!(
+            [""].iter().cloned().collect::<HashSet<&str>>(),
+            split_exposing("   )  ")
+        );
+    }
+
+    #[test]
+    fn one() {
+        assert_eq!(
+            ["one"].iter().cloned().collect::<HashSet<&str>>(),
+            split_exposing("one ) ")
+        );
+    }
+
+    #[test]
+    fn two() {
+        assert_eq!(
+            ["one", "two"].iter().cloned().collect::<HashSet<&str>>(),
+            split_exposing(" one , two ) ")
+        );
+    }
+
+    #[test]
+    fn three() {
+        assert_eq!(
+            ["one", "two", "three"]
+                .iter()
+                .cloned()
+                .collect::<HashSet<&str>>(),
+            split_exposing(" one , two ,    three ) ")
+        );
+    }
+}
+
 
 
 // fn parse(reader: &mut BufReader) {
