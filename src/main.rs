@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
 extern crate clap;
 extern crate num_cpus;
 
@@ -16,25 +14,6 @@ mod read_elmi;
 mod error_messages;
 mod problems;
 mod exposed_tests;
-mod elm_compiler {
-    pub mod ast {
-        pub mod module;
-    }
-
-    pub mod parse {
-        pub mod primitives;
-        pub mod module;
-    }
-
-    pub mod reporting {
-        pub mod region;
-        pub mod annotations;
-
-        pub mod error {
-            pub mod syntax;
-        }
-    }
-}
 
 fn main() {
     run().unwrap_or_else(report_problem);
