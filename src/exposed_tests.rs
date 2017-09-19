@@ -219,9 +219,18 @@ mod test_strip_comments {
 
     #[test]
     fn end_of_block_comment() {
-        for depth in 1..3 {
+        let depth = 1;
+        assert_eq!(
+            (" bar baz", depth - 1),
+            strip_comments("end of block comment -} bar baz", depth)
+        );
+    }
+
+    #[test]
+    fn end_of_nested_block_comment() {
+        for depth in 2..3 {
             assert_eq!(
-                (" bar baz", depth - 1),
+                ("", depth - 1),
                 strip_comments("end of block comment -} bar baz", depth)
             );
         }
