@@ -3,6 +3,9 @@ name = "elm-test"
 version = "0.18.10"
 authors = ["Richard Feldman <richard.t.feldman@gmail.com>"]
 
+[dev-dependencies]
+tempfile = "2.1.6"
+
 [dependencies]
 json = "0.11.9"
 num_cpus = "1.6.2"

@@ -11,7 +11,7 @@ pub enum Problem {
     UnexposedTests(String, HashSet<String>),
     MissingModuleDeclaration(PathBuf),
     OpenFileToReadExports(PathBuf, io::Error),
-    ReadingFileForExports(PathBuf, io::Error),
+    ReadingFileForExports(io::Error),
     ParseError(PathBuf),
 }
 
@@ -20,7 +20,10 @@ pub fn filter_exposing(
     tests: &HashSet<String>,
     module_name: &str,
 ) -> Result<(String, HashSet<String>), Problem> {
-    let exposing = read_exposing(path)?;
+    let file = File::open(path).map_err(|err| {
+        Problem::OpenFileToReadExports(path.to_path_buf(), err)
+    })?;
+    let exposing = read_exposing(file)?;
     let new_tests: HashSet<String> = if exposing.contains("..") && exposing.len() == 1 {
         // the module was exposing (..), so keep everything
         tests.clone()
@@ -46,10 +49,7 @@ pub fn filter_exposing(
 }
 
 
-fn read_exposing(path: &Path) -> Result<HashSet<String>, Problem> {
-    let file = File::open(path).map_err(|err| {
-        Problem::OpenFileToReadExports(path.to_path_buf(), err)
-    })?;
+pub fn read_exposing(file: File) -> Result<HashSet<String>, Problem> {
     let mut reader = BufReader::new(file);
     let mut line = String::new();
 
@@ -72,7 +72,7 @@ fn read_exposing(path: &Path) -> Result<HashSet<String>, Problem> {
 
     loop {
         reader.read_line(&mut line).map_err(|err| {
-            Problem::OpenFileToReadExports(path.to_path_buf(), err)
+            Problem::ReadingFileForExports(err)
         })?;
 
         let (line_without_comments, new_block_comment_depth) =
@@ -157,6 +157,21 @@ fn read_exposing(path: &Path) -> Result<HashSet<String>, Problem> {
     }
 }
 
+#[cfg(test)]
+mod read_exposing_tests {
+    extern crate tempfile;
+
+    use super::*;
+
+    #[test]
+    fn test_name() {
+        let file = tempfile::tempfile().unwrap();
+
+        read_exposing(file.path()) -> Result<HashSet<String>, Problem> {
+
+        unimplemented!()
+    }
+}
 
 // remove everything before the open paren
 fn remove_before_open_paren(line: &str) -> Option<String> {
