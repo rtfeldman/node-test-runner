@@ -52,13 +52,9 @@ fn read_exposing(path: &Path) -> Result<HashSet<String>, Problem> {
     })?;
     let mut reader = BufReader::new(file);
     let mut line = String::new();
-    let mut exposing: HashSet<String> = HashSet::new();
 
     // how many levels deep in block comments we are.
     let mut block_comment_depth = 0;
-
-    // if the file does not have a module line
-    let mut is_missing_module_name = false;
 
     // if the module line has been read
     let mut has_module_line_been_read = false;
