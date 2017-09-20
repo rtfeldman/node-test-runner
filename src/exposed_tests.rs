@@ -3,7 +3,7 @@
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 use io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -154,6 +154,36 @@ fn read_exposing(file: &File) -> Result<HashSet<String>, Problem> {
     }
 }
 
+#[cfg(test)]
+mod test_read_exposing {
+    extern crate tempfile;
+
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn works() {
+        let mut file: File = tempfile::tempfile().unwrap();
+
+        file.write_all(b"module Foo exposing (bar, baz)").unwrap();
+
+        match read_exposing(&file) {
+            Ok(actual) => {
+                let expected = vec!["bar", "baz"]
+                    .iter()
+                    .cloned()
+                    .map(String::from)
+                    .collect::<HashSet<String>>();
+
+                assert_eq!(expected, actual);
+            }
+            Err(err) => {
+                // TODO there has to be a more idiomatic way to fail a test on purpose!
+                assert!(false);
+            }
+        }
+    }
+}
 
 // remove everything before the open paren
 fn remove_before_open_paren(line: &str) -> Option<String> {
@@ -167,7 +197,6 @@ fn remove_before_open_paren(line: &str) -> Option<String> {
         None => None,
     }
 }
-
 
 #[cfg(test)]
 mod test_remove_open_paren {
