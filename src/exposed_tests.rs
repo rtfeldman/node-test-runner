@@ -1,7 +1,6 @@
 // Determine which values of type Test are exposed from a given module.
 
 use std::fs::File;
-use std::iter::FromIterator;
 use std::io::{BufReader, BufRead};
 use io;
 use std::path::{Path, PathBuf};
