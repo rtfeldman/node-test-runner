@@ -111,7 +111,8 @@ pub fn report(problem: Problem) -> String {
                 source_dir
             )
         }
-        Problem::ExposedTest(exposed_tests::Problem::UnexposedTests(module_name, bad_tests)) => {
+        Problem::ExposedTest(path,
+                             exposed_tests::Problem::UnexposedTests(module_name, bad_tests)) => {
             let mut sorted_tests = bad_tests
                 .clone()
                 .into_iter()
@@ -130,30 +131,21 @@ pub fn report(problem: Problem) -> String {
             )
         }
 
-        Problem::ExposedTest(exposed_tests::Problem::MissingModuleDeclaration(path)) => {
+        Problem::ExposedTest(path, exposed_tests::Problem::MissingModuleDeclaration) => {
             format!(
                 "File \"{}\" needs a `module` declaration on the first line.",
                 path.as_os_str().to_str().unwrap_or(""),
             )
         }
-        Problem::ExposedTest(exposed_tests::Problem::OpenFileToReadExports(path, _)) => {
+        Problem::ExposedTest(path, exposed_tests::Problem::OpenFileToReadExports(_)) => {
             format!(
                 "Could not open \"{}\" when attempting to validate its exports.",
                 path.as_os_str().to_str().unwrap_or(""),
             )
         }
-        Problem::ExposedTest(exposed_tests::Problem::ReadingFileForExports(path, _)) => {
+        Problem::ExposedTest(path, exposed_tests::Problem::ReadingFileForExports(_)) => {
             format!(
                 "Could not read \"{}\" when attempting to validate its exports.",
-                path.as_os_str().to_str().unwrap_or(""),
-            )
-        }
-        Problem::ExposedTest(exposed_tests::Problem::ParseError(path)) => {
-            format!(
-                "File \"{}\" appears to  invalid module declaration. Please double-check it!\n\
-                If the file compiles successfully with `elm make`, then this is a problem with
-                elm-test, so please file it at https://github.com/rtfeldman/node-test-runner/issues
-                and show the module declaration (including exports!) that resulted in this message.",
                 path.as_os_str().to_str().unwrap_or(""),
             )
         }

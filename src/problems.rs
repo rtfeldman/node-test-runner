@@ -27,5 +27,5 @@ pub enum Problem {
     // Problems from other modules
     ReadElmi(read_elmi::Problem),
     Cli(cli::Problem),
-    ExposedTest(exposed_tests::Problem),
+    ExposedTest(PathBuf, exposed_tests::Problem),
 }

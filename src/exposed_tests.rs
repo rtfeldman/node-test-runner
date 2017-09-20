@@ -9,10 +9,9 @@ use std::collections::HashSet;
 #[derive(Debug)]
 pub enum Problem {
     UnexposedTests(String, HashSet<String>),
-    MissingModuleDeclaration(PathBuf),
-    OpenFileToReadExports(PathBuf, io::Error),
-    ReadingFileForExports(PathBuf, io::Error),
-    ParseError(PathBuf),
+    MissingModuleDeclaration,
+    OpenFileToReadExports(io::Error),
+    ReadingFileForExports(io::Error),
 }
 
 pub fn filter_exposing(
@@ -20,7 +19,8 @@ pub fn filter_exposing(
     tests: &HashSet<String>,
     module_name: &str,
 ) -> Result<(String, HashSet<String>), Problem> {
-    let exposing = read_exposing(path)?;
+    let file = File::open(path).map_err(Problem::OpenFileToReadExports)?;
+    let exposing = read_exposing(&file)?;
     let new_tests: HashSet<String> = if exposing.contains("..") && exposing.len() == 1 {
         // the module was exposing (..), so keep everything
         tests.clone()
@@ -46,10 +46,7 @@ pub fn filter_exposing(
 }
 
 
-fn read_exposing(path: &Path) -> Result<HashSet<String>, Problem> {
-    let file = File::open(path).map_err(|err| {
-        Problem::OpenFileToReadExports(path.to_path_buf(), err)
-    })?;
+fn read_exposing(file: &File) -> Result<HashSet<String>, Problem> {
     let mut reader = BufReader::new(file);
     let mut line = String::new();
 
@@ -72,7 +69,7 @@ fn read_exposing(path: &Path) -> Result<HashSet<String>, Problem> {
 
     loop {
         reader.read_line(&mut line).map_err(|err| {
-            Problem::OpenFileToReadExports(path.to_path_buf(), err)
+            Problem::ReadingFileForExports(err)
         })?;
 
         let (line_without_comments, new_block_comment_depth) =
@@ -91,7 +88,7 @@ fn read_exposing(path: &Path) -> Result<HashSet<String>, Problem> {
             if new_line == line {
                 // We did not find a module to remove, meaning we found content before the module
                 // declaration. Error!
-                return Err(Problem::MissingModuleDeclaration(path.to_path_buf()));
+                return Err(Problem::MissingModuleDeclaration);
             }
         } else {
             // We found and successfully removed the module declaration.
