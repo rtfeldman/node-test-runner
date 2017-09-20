@@ -45,10 +45,6 @@ pub fn filter_exposing(
     }
 }
 
-enum ParsedLineResult {
-    AllExposed,
-    Exposing(HashSet<String>, bool),
-}
 
 fn read_exposing(path: &Path) -> Result<HashSet<String>, Problem> {
     let file = File::open(path).map_err(|err| {
