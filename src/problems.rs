@@ -13,6 +13,7 @@ pub enum Problem {
     ChDirError(io::Error),
     ReadTestFiles(io::Error),
     NoTestsFound(HashSet<PathBuf>),
+    UnexposedTests(String, HashSet<String>),
 
     // Reading elm.json
     ReadElmJson(files::ElmJsonError),

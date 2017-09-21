@@ -126,8 +126,7 @@ pub fn report(problem: Problem) -> String {
                 source_dir
             )
         }
-        Problem::ExposedTest(_,
-                             exposed_tests::Problem::UnexposedTests(module_name, bad_tests)) => {
+        Problem::UnexposedTests(module_name, bad_tests) => {
             let mut sorted_tests = bad_tests
                 .clone()
                 .into_iter()

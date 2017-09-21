@@ -8,7 +8,6 @@ use std::collections::HashSet;
 
 #[derive(Debug)]
 pub enum Problem {
-    UnexposedTests(String, HashSet<String>),
     MissingModuleDeclaration,
     OpenFileToReadExports(io::Error),
     ReadingFileForExports(io::Error),
