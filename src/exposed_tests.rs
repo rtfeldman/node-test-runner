@@ -12,43 +12,25 @@ pub enum Problem {
     MissingModuleDeclaration,
     OpenFileToReadExports(io::Error),
     ReadingFileForExports(io::Error),
+    ParseError,
 }
 
-pub fn filter_exposing(
-    path: &Path,
-    tests: &HashSet<String>,
-    module_name: &str,
-) -> Result<(String, HashSet<String>), Problem> {
+pub fn read_exposed_values(path: &Path) -> Result<Option<HashSet<String>>, Problem> {
     let file = File::open(path).map_err(Problem::OpenFileToReadExports)?;
     let exposing = read_exposing(&file)?;
-    let new_tests: HashSet<String> = if exposing.contains("..") && exposing.len() == 1 {
-        // the module was exposing (..), so keep everything
-        tests.clone()
-    } else {
-        // Only keep the tests that were exposed.
-        exposing
-            .intersection(&tests)
-            .cloned()
-            .collect::<HashSet<String>>()
-    };
 
-    if new_tests.len() < tests.len() {
-        Err(Problem::UnexposedTests(
-            module_name.to_owned(),
-            tests
-                .difference(&new_tests)
-                .cloned()
-                .collect::<HashSet<String>>(),
-        ))
+    if exposing.contains("..") && exposing.len() == 1 {
+        // If we got `exposing (..)` then return None
+        Ok(None)
     } else {
-        Ok((module_name.to_owned(), new_tests))
+        // Otherwise, return the set of exposed values.
+        Ok(Some(exposing))
     }
 }
 
 
 fn read_exposing(file: &File) -> Result<HashSet<String>, Problem> {
     let mut reader = BufReader::new(file);
-    let mut line = String::new();
 
     // how many levels deep in block comments we are.
     let mut block_comment_depth = 0;
@@ -68,9 +50,14 @@ fn read_exposing(file: &File) -> Result<HashSet<String>, Problem> {
     let mut data = String::new();
 
     loop {
+        let mut line = String::new();
         reader.read_line(&mut line).map_err(|err| {
             Problem::ReadingFileForExports(err)
         })?;
+
+        if line.is_empty() {
+            return Err(Problem::ParseError);
+        }
 
         let (line_without_comments, new_block_comment_depth) =
             strip_comments(&line, block_comment_depth);
@@ -85,16 +72,19 @@ fn read_exposing(file: &File) -> Result<HashSet<String>, Problem> {
         // if we haven't started reading the first line
         if !has_module_line_been_read {
             let new_line = remove_module_declaration(&line);
+
+            println!("without module declaration: {:?}", new_line);
+
             if new_line == line {
                 // We did not find a module to remove, meaning we found content before the module
                 // declaration. Error!
                 return Err(Problem::MissingModuleDeclaration);
+            } else {
+                // We found and successfully removed the module declaration.
+                has_module_line_been_read = true;
+                is_reading_module_name = true;
             }
         } else {
-            // We found and successfully removed the module declaration.
-            has_module_line_been_read = true;
-            is_reading_module_name = true;
-
             if line.is_empty() {
                 continue;
             }

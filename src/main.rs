@@ -5,7 +5,7 @@ use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use problems::Problem;
 
 mod files;
@@ -68,7 +68,23 @@ fn run() -> Result<(), Problem> {
         .spawn()
         .map_err(Problem::SpawnElmMake)?;
 
-    // While waiting for the spawned Elm process to run, determine what our valid module names are.
+    // TODO we can do these next two things in parallel!
+
+    // TODO [Thread 1] Determine what values each module exposes.
+    let mut exposed_values_by_file: HashMap<PathBuf, Option<HashSet<String>>> = HashMap::new();
+
+    for test_file in test_files.clone() {
+        match exposed_tests::read_exposed_values(&test_file) {
+            Ok(exposed_values) => {
+                exposed_values_by_file.insert(test_file, exposed_values);
+            }
+            Err(err) => {
+                return Err(Problem::ExposedTest(test_file, err));
+            }
+        }
+    }
+
+    // TODO [Thread 2] Determine what our valid module names are.
     let source_dirs = files::read_source_dirs(root.as_path()).map_err(
         Problem::ReadElmJson,
     )?;
@@ -78,13 +94,23 @@ fn run() -> Result<(), Problem> {
         Problem::CompilationFailed,
     )?;
 
-    read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
+    let tests_by_module = read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
         .map_err(Problem::ReadElmi)?;
 
-    panic!(
-        "TODO: build a HashMap of all the exposed values per file right now. \
-        This way, once everything is done compiling, we can instantly check them."
+    // TODO [Thread 1 + Thread 2] Join threads; we now have the info we need to do elm make round 2.
+
+
+    println!("exposed_values_by_file: {:?}", exposed_values_by_file);
+    println!("tests_by_module: {:?}", tests_by_module);
+
+    println!(
+        "TODO: cross-reference tests_by_module (which contains file path) and
+        exposed_values_by_file in order to figure out if there are any tess_by_module \
+        which are not exposed in that module."
     );
+    // for (module_name, (test_path, tests)) in tests_by_module {
+    //     println!("* * * module: {:?} tests: {:?}", module_name, tests);
+    // }
 
     // Spin up node processes.
     let mut node_processes: Vec<std::process::Child> = Vec::new();

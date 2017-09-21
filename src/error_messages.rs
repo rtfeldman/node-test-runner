@@ -33,12 +33,28 @@ pub fn report(problem: Problem) -> String {
             This binary should have been installed along with elm-test. \
             Maybe try reinstalling elm-test via npm?",
         ),
+        Problem::ReadElmi(read_elmi::Problem::NoElmiToJsonOutput) => String::from(
+            format!("`elm-interface-to-json` did not produce any output. \
+            Please file a bug at {}", WHERE_TO_FILE_BUGS,)
+        ),
         Problem::ReadElmi(read_elmi::Problem::CurrentExe(_)) => String::from(
             "Unable to detect current running process for `elm-test`. \
             Is elm-test running from a weird location, possibly involving symlinks?",
         ),
         Problem::ReadElmi(read_elmi::Problem::CompilationFailed(_)) => String::from(
             "Test compilation failed.",
+        ),
+        Problem::ReadElmi(read_elmi::Problem::MalformedJson) => String::from(
+            format!(
+            "Malformed JSON when reading from elm-interface-to-json. Please file a bug at {}",
+            WHERE_TO_FILE_BUGS
+        )
+        ),
+        Problem::ReadElmi(read_elmi::Problem::ReadElmiToJson(_)) => String::from(
+            format!(
+            "Unable to read stdout from elm-interface-to-json. Please file a bug at {}",
+            WHERE_TO_FILE_BUGS
+        )
         ),
         Problem::ChDirError(_) => String::from(
             "elm-test was unable to change the current working directory.",
@@ -58,8 +74,8 @@ pub fn report(problem: Problem) -> String {
                  with no arguments?",
                     filenames
                         .iter()
-                        .map(|path_buf: &PathBuf| {
-                            path_buf.to_str().expect("<invalid file string>").to_owned()
+                        .map(|path_buf| {
+                            path_buf.to_path_buf().to_str().expect("<invalid file string>").to_owned()
                         })
                         .collect::<Vec<_>>()
                         .join(" ")
@@ -111,7 +127,7 @@ pub fn report(problem: Problem) -> String {
                 source_dir
             )
         }
-        Problem::ExposedTest(path,
+        Problem::ExposedTest(_,
                              exposed_tests::Problem::UnexposedTests(module_name, bad_tests)) => {
             let mut sorted_tests = bad_tests
                 .clone()
@@ -130,7 +146,16 @@ pub fn report(problem: Problem) -> String {
                 sorted_tests.join("\n")
             )
         }
-
+        Problem::ExposedTest(path, exposed_tests::Problem::ParseError) => {
+            format!(
+                "File \"{}\" appears to  invalid module declaration. Please double-check it!\n\
+                If the file compiles successfully with `elm make`, then this is a problem with
+                elm-test, so please file it at {}
+                and show the module declaration (including exports!) that resulted in this message.",
+                path.as_os_str().to_str().unwrap_or(""),
+                WHERE_TO_FILE_BUGS
+            )
+        }
         Problem::ExposedTest(path, exposed_tests::Problem::MissingModuleDeclaration) => {
             format!(
                 "File \"{}\" needs a `module` declaration on the first line.",
@@ -155,3 +180,5 @@ pub fn report(problem: Problem) -> String {
 const MAKE_SURE: &str = "Make sure you're running elm-test from your project's root directory, \
                          where its elm.json file lives.\n\nTo generate some initial tests \
                          to get things going, run `elm test init`.";
+
+const WHERE_TO_FILE_BUGS: &str = "https://github.com/rtfeldman/node-test-runner/issues";
