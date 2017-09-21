@@ -148,29 +148,55 @@ mod test_read_exposing {
     extern crate tempfile;
 
     use super::*;
-    use std::io::Write;
+    use std::io::{Write, Seek, SeekFrom};
 
-    #[test]
-    fn works() {
+    fn read_with(contents: &str) -> Result<HashSet<String>, Problem> {
         let mut file: File = tempfile::tempfile().unwrap();
 
-        file.write_all(b"module Foo exposing (bar, baz)").unwrap();
+        file.write(contents.as_bytes()).unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
 
-        match read_exposing(&file) {
-            Ok(actual) => {
-                let expected = vec!["bar", "baz"]
-                    .iter()
-                    .cloned()
-                    .map(String::from)
-                    .collect::<HashSet<String>>();
+        read_exposing(&file)
+    }
 
-                assert_eq!(expected, actual);
-            }
-            Err(err) => {
-                // TODO there has to be a more idiomatic way to fail a test on purpose!
-                assert!(false);
-            }
-        }
+    fn hash_set(vec: Vec<&str>) -> HashSet<String> {
+        vec.iter()
+            .cloned()
+            .map(String::from)
+            .collect::<HashSet<String>>()
+    }
+
+    #[test]
+    fn exposing_all() {
+        assert_eq!(
+            read_with("module Foo exposing (..)").unwrap(),
+            hash_set(vec![".."])
+        );
+
+    }
+
+    #[test]
+    fn exposing_one() {
+        assert_eq!(
+            read_with("module Foo exposing (blah)").unwrap(),
+            hash_set(vec!["blah"])
+        );
+    }
+
+    #[test]
+    fn exposing_two() {
+        assert_eq!(
+            read_with("module Foo exposing (bar, baz)").unwrap(),
+            hash_set(vec!["bar", "baz"])
+        );
+    }
+
+    #[test]
+    fn exposing_three() {
+        assert_eq!(
+            read_with("module Foo exposing (foo, bar, baz)").unwrap(),
+            hash_set(vec!["foo", "bar", "baz"])
+        );
     }
 }
 
