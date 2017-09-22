@@ -1,12 +1,12 @@
 extern crate murmur3;
 
-use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::collections::{HashSet, HashMap};
-use problems::Problem;
 use cli::Report;
+use std::io::Write;
+use std::fs::File;
+use std::fs;
 
 
 fn sanitize(string: String) -> String {
@@ -31,7 +31,6 @@ fn get_report_code(report: &Report, supports_color: bool) -> String {
 }
 
 pub fn generate(
-    generated_src: &Path,
     tests_by_module: &HashMap<String, HashSet<String>>,
     supports_color: bool,
     processes: usize,
@@ -39,7 +38,7 @@ pub fn generate(
     fuzz_opt: &Option<u64>,
     seed_opt: &Option<u64>,
     file_path_opts: &Vec<PathBuf>,
-) -> String {
+) -> (String, String) {
     // Building things like:
     //
     // import MyTests
@@ -109,7 +108,8 @@ pub fn generate(
         \n    [ {}\
         \n    ]\
         \n        |> Test.concat\
-        \n        |> Test.Runner.Node.runWithOptions {}",
+        \n        |> Test.Runner.Node.runWithOptions {}\
+        \n",
         imports_list.join("\n"),
         test_list.join("\n    , "),
         ("{".to_owned() + opts_code.as_str() + "}")
@@ -125,15 +125,27 @@ pub fn generate(
     murmur3::murmur3_32(&mut salt, MURMUR3_SEED);
 
     let module_name = format!("Main{}", String::from_utf8_lossy(salt));
-    let main_path = generated_src.to_path_buf().join("Test").join("Generated");
-    let main_file = main_path.join(module_name.clone() + ".elm");
 
     // We'll be putting the generated Main in something like this:
     //
     // my-project/elm-stuff/generated-code/elm-community/elm-test/src/Test/Generated/Main123456.elm
-    format!(
-        "module Test.Generated.{} exposing (main)\n\n{}",
-        module_name,
-        test_file_body
+    (
+        module_name.clone(),
+        format!(
+            "module Test.Generated.{} exposing (main)\n\n{}",
+            module_name,
+            test_file_body
+        ),
     )
+}
+
+pub fn write(generated_src: &Path, module_name: &str, contents: &str) -> io::Result<usize> {
+    let main_dir = generated_src.to_path_buf().join("Test").join("Generated");
+
+    fs::create_dir_all(&main_dir)?;
+
+    let main_file_path = main_dir.join(module_name.to_owned() + ".elm");
+    let mut file: File = File::create(main_file_path)?;
+
+    file.write(contents.as_bytes())
 }

@@ -1,4 +1,4 @@
-module TestsPassing exposing (testEqual, testFalse, testTrue)
+module TestsPassing exposing (..)
 
 import Example
 import Expect

@@ -133,8 +133,7 @@ fn run() -> Result<(), Problem> {
         .join("elm-test");
     let generated_src = generated_code.join("src");
 
-    let generated_elm_code = generate_elm::generate(
-        &generated_src,
+    let (module_name, generated_elm_code) = generate_elm::generate(
         &tests_by_module,
         supports_color,
         num_processes,
@@ -144,8 +143,7 @@ fn run() -> Result<(), Problem> {
         &args.file_paths,
     );
 
-
-    println!("Generated:\n\n{}\n\n", generated_elm_code);
+    generate_elm::write(&generated_src, &module_name, &generated_elm_code);
 
     // Spin up node processes.
     // let mut node_processes: Vec<std::process::Child> = Vec::new();
