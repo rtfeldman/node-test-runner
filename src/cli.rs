@@ -57,37 +57,48 @@ pub fn parse_args<'a>() -> Result<CliArgs, Problem> {
     let seed = parse_int_arg(ARG_SEED, &matches)?;
     let fuzz = parse_int_arg(ARG_FUZZ, &matches)?;
     let compiler = matches.value_of(ARG_COMPILER).map(String::from);
-    let file_paths: HashSet<PathBuf> = HashSet::from_iter(
+    let file_paths: Vec<PathBuf> = Vec::from_iter(
         matches
             .values_of(FILES_OR_DIRECTORIES)
             .unwrap_or(Default::default())
             .map(|value| (Path::new(value).to_path_buf())),
     );
 
+    // TODO parse --report for this
+    let report = Report::Console;
+
     Ok(CliArgs {
         seed: seed,
         fuzz: fuzz,
         compiler: compiler,
         file_paths: file_paths,
+        report: report,
     })
 }
 
-pub struct CliArgs {
-    pub seed: Option<i32>,
-    pub fuzz: Option<i32>,
-    pub compiler: Option<String>,
-    pub file_paths: HashSet<PathBuf>,
+pub enum Report {
+    Console,
+    JUnit,
+    Json,
 }
 
-// Turn the given Option<&str> into an Option<i32>, or else die and report the invalid argument.
+pub struct CliArgs {
+    pub seed: Option<u64>,
+    pub fuzz: Option<u64>,
+    pub compiler: Option<String>,
+    pub file_paths: Vec<PathBuf>,
+    pub report: Report,
+}
+
+// Turn the given Option<&str> into an Option<u64>, or else die and report the invalid argument.
 pub fn parse_int_arg<'a>(
     flag_name: &str,
     args: &clap::ArgMatches<'a>,
-) -> Result<Option<i32>, Problem> {
+) -> Result<Option<u64>, Problem> {
     match args.value_of("--".to_owned() + flag_name) {
         None => Ok(None),
         Some(potential_num) => {
-            match potential_num.parse::<i32>() {
+            match potential_num.parse::<u64>() {
                 Ok(num) => Ok(Some(num)),
 
                 Err(_) => Err(Problem::InvalidInteger(

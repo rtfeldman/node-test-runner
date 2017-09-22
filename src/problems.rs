@@ -1,6 +1,6 @@
 use std::io;
 use std::path::PathBuf;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use read_elmi;
 use files;
 use cli;
@@ -12,8 +12,9 @@ pub enum Problem {
     InvalidCwd(io::Error),
     ChDirError(io::Error),
     ReadTestFiles(io::Error),
-    NoTestsFound(HashSet<PathBuf>),
-    UnexposedTests(String, HashSet<String>),
+    NoTestsFound(Vec<PathBuf>),
+    UnexposedTests(HashMap<String, HashSet<String>>),
+    NoExposedTests(bool),
 
     // Reading elm.json
     ReadElmJson(files::ElmJsonError),

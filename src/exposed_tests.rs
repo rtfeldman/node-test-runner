@@ -3,8 +3,8 @@
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 use io;
-use std::path::Path;
-use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+use std::collections::{HashSet, HashMap};
 
 #[derive(Debug)]
 pub enum Problem {
@@ -71,8 +71,6 @@ fn read_exposing(file: &File) -> Result<HashSet<String>, Problem> {
         // if we haven't started reading the first line
         if !has_module_line_been_read {
             let new_line = remove_module_declaration(&line);
-
-            println!("without module declaration: {:?}", new_line);
 
             if new_line == line {
                 // We did not find a module to remove, meaning we found content before the module
@@ -512,6 +510,43 @@ fn split_exposing(line: &str) -> HashSet<String> {
         }
         None => HashSet::new(),
     }
+}
+
+pub fn get_unexposed_tests(
+    tests_by_module: HashMap<String, (PathBuf, HashSet<String>)>,
+    exposed_values_by_file: HashMap<PathBuf, Option<HashSet<String>>>,
+) -> HashMap<String, HashSet<String>> {
+    let mut unexposed_tests_by_module: HashMap<String, HashSet<String>> = HashMap::new();
+
+    for (module_name, (file_path, tests)) in tests_by_module {
+        let mut unexposed_tests: HashSet<String> = HashSet::new();
+
+        match exposed_values_by_file.get(&file_path) {
+            Some(&None) => {
+                // Everything was exposed. We're all set!
+            }
+            Some(&Some(ref exposed_values)) => {
+                // Only some values were exposed. Validate them!
+                for test in tests {
+                    if !exposed_values.contains(&test) {
+                        unexposed_tests.insert(test);
+                    }
+                }
+            }
+            None => {
+                // This module exposes nothing, so all of the tests in it are unexposed!
+                for test in tests {
+                    unexposed_tests.insert(test);
+                }
+            }
+        }
+
+        if !unexposed_tests.is_empty() {
+            unexposed_tests_by_module.insert(module_name.clone(), unexposed_tests);
+        }
+    }
+
+    unexposed_tests_by_module
 }
 
 #[cfg(test)]

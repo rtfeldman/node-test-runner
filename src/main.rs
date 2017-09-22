@@ -6,6 +6,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::collections::{HashSet, HashMap};
+use std::iter::FromIterator;
 use problems::Problem;
 
 mod files;
@@ -14,6 +15,7 @@ mod read_elmi;
 mod error_messages;
 mod problems;
 mod exposed_tests;
+mod generate_elm;
 
 fn main() {
     run().unwrap_or_else(report_problem);
@@ -21,7 +23,8 @@ fn main() {
 
 fn report_problem(problem: Problem) {
     // TODO this should be eprintln! once I upgrade the version of Rust I'm using.
-    println!("Error: {}", error_messages::report(problem));
+    // TODO color "Error:" in red.
+    println!("\nError: {}", error_messages::report(problem));
 
     std::process::exit(1);
 }
@@ -40,7 +43,11 @@ fn run() -> Result<(), Problem> {
 
     // Parse and validate CLI arguments
     let args = cli::parse_args().map_err(Problem::Cli)?;
-    let test_files = match gather_test_files(&args.file_paths).map_err(
+    let unique_file_paths: HashSet<PathBuf> =
+        HashSet::from_iter(args.file_paths.iter().map(
+            |file_path| file_path.to_path_buf(),
+        ));
+    let test_files = match gather_test_files(&unique_file_paths).map_err(
         Problem::ReadTestFiles,
     )? {
         Some(valid_files) => valid_files,
@@ -94,42 +101,70 @@ fn run() -> Result<(), Problem> {
         Problem::CompilationFailed,
     )?;
 
-    let tests_by_module = read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
-        .map_err(Problem::ReadElmi)?;
+    let test_paths_by_module: HashMap<String, (PathBuf, HashSet<String>)> =
+        read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
+            .map_err(Problem::ReadElmi)?;
+
+    if test_paths_by_module.is_empty() {
+        return Err(Problem::NoExposedTests(args.file_paths.is_empty()));
+    }
 
     // TODO [Thread 1 + Thread 2] Join threads; we now have the info we need to do elm make round 2.
+    let tests_by_module: HashMap<String, HashSet<String>> =
+        HashMap::from_iter(test_paths_by_module.clone().iter().map(|(module_name,
+          &(_, ref tests))| {
+            (module_name.clone(), tests.clone())
+        }));
 
+    let unexposed_tests =
+        exposed_tests::get_unexposed_tests(test_paths_by_module, exposed_values_by_file);
 
-    println!("exposed_values_by_file: {:?}", exposed_values_by_file);
-    println!("tests_by_module: {:?}", tests_by_module);
+    if !unexposed_tests.is_empty() {
+        return Err(Problem::UnexposedTests(unexposed_tests));
+    }
 
-    println!(
-        "TODO: cross-reference tests_by_module (which contains file path) and
-        exposed_values_by_file in order to figure out if there are any tess_by_module \
-        which are not exposed in that module."
+    // Generate Main.elm
+
+    let supports_color = true; // TODO auto-detect this.
+    let num_processes: usize = num_cpus::get();
+    let generated_code = root.join("elm-stuff")
+        .join("generated-code")
+        .join("elm-community")
+        .join("elm-test");
+    let generated_src = generated_code.join("src");
+
+    let generated_elm_code = generate_elm::generate(
+        &generated_src,
+        &tests_by_module,
+        supports_color,
+        num_processes,
+        &args.report,
+        &args.fuzz,
+        &args.seed,
+        &args.file_paths,
     );
-    // for (module_name, (test_path, tests)) in tests_by_module {
-    //     println!("* * * module: {:?} tests: {:?}", module_name, tests);
-    // }
+
+
+    println!("Generated:\n\n{}\n\n", generated_elm_code);
 
     // Spin up node processes.
-    let mut node_processes: Vec<std::process::Child> = Vec::new();
-
-    for _ in 0..num_cpus::get() {
-        let node_process = Command::new("node")
-            .arg("-p")
-            .arg("'hi from node'")
-            .spawn()
-            .map_err(Problem::SpawnElmMake)?;
-
-        node_processes.push(node_process);
-    }
-
-    for node_process in node_processes {
-        node_process.wait_with_output().map_err(
-            Problem::SpawnNodeProcess,
-        )?;
-    }
+    // let mut node_processes: Vec<std::process::Child> = Vec::new();
+    //
+    // for _ in 0..num_cpus::get() {
+    //     let node_process = Command::new("node")
+    //         .arg("-p")
+    //         .arg("'hi from node'")
+    //         .spawn()
+    //         .map_err(Problem::SpawnElmMake)?;
+    //
+    //     node_processes.push(node_process);
+    // }
+    //
+    // for node_process in node_processes {
+    //     node_process.wait_with_output().map_err(
+    //         Problem::SpawnNodeProcess,
+    //     )?;
+    // }
 
     Ok(())
 }

@@ -34,7 +34,7 @@ pub fn report(problem: Problem) -> String {
         ),
         Problem::ReadElmi(read_elmi::Problem::NoElmiToJsonOutput) => String::from(
             format!("`elm-interface-to-json` did not produce any output. \
-            Please file a bug at {}", WHERE_TO_FILE_BUGS,)
+            Please file a bug at {}", WHERE_TO_FILE_BUGS,),
         ),
         Problem::ReadElmi(read_elmi::Problem::CurrentExe(_)) => String::from(
             "Unable to detect current running process for `elm-test`. \
@@ -43,18 +43,14 @@ pub fn report(problem: Problem) -> String {
         Problem::ReadElmi(read_elmi::Problem::CompilationFailed(_)) => String::from(
             "Test compilation failed.",
         ),
-        Problem::ReadElmi(read_elmi::Problem::MalformedJson) => String::from(
-            format!(
+        Problem::ReadElmi(read_elmi::Problem::MalformedJson) => String::from(format!(
             "Malformed JSON when reading from elm-interface-to-json. Please file a bug at {}",
             WHERE_TO_FILE_BUGS
-        )
-        ),
-        Problem::ReadElmi(read_elmi::Problem::ReadElmiToJson(_)) => String::from(
-            format!(
+        )),
+        Problem::ReadElmi(read_elmi::Problem::ReadElmiToJson(_)) => String::from(format!(
             "Unable to read stdout from elm-interface-to-json. Please file a bug at {}",
             WHERE_TO_FILE_BUGS
-        )
-        ),
+        )),
         Problem::ChDirError(_) => String::from(
             "elm-test was unable to change the current working directory.",
         ),
@@ -74,7 +70,11 @@ pub fn report(problem: Problem) -> String {
                     filenames
                         .iter()
                         .map(|path_buf| {
-                            path_buf.to_path_buf().to_str().expect("<invalid file string>").to_owned()
+                            path_buf
+                                .to_path_buf()
+                                .to_str()
+                                .expect("<invalid file string>")
+                                .to_owned()
                         })
                         .collect::<Vec<_>>()
                         .join(" ")
@@ -126,30 +126,37 @@ pub fn report(problem: Problem) -> String {
                 source_dir
             )
         }
-        Problem::UnexposedTests(module_name, bad_tests) => {
-            let mut sorted_tests = bad_tests
-                .clone()
+        Problem::UnexposedTests(bad_tests_by_module) => {
+            let result_strings = bad_tests_by_module
                 .into_iter()
-                .map(|test| format!("{}: Test", test))
+                .map(|(module_name, bad_tests)| {
+                    let mut sorted_tests = bad_tests
+                        .clone()
+                        .into_iter()
+                        .map(|test| format!("{} : Test", test))
+                        .collect::<Vec<String>>();
+
+                    sorted_tests.sort();
+
+                    format!(
+                        "`{}` \
+                    is a module with top-level Test values which it does not expose:\n\n{}
+                    \n\nThese tests will not get run. \
+                      Please either expose them or move them out of the top level.",
+                        module_name,
+                        sorted_tests.join("\n")
+                    )
+                })
                 .collect::<Vec<String>>();
 
-            sorted_tests.sort();
-
-            format!(
-                "`{}` \
-                is a module with top-level Test values which it does not expose:\n\n{}\n\n
-                These tests will not get run. \
-                  Please either expose them or move them out of the top level.",
-                module_name,
-                sorted_tests.join("\n")
-            )
+            result_strings.join("\n\n\n")
         }
         Problem::ExposedTest(path, exposed_tests::Problem::ParseError) => {
             format!(
                 "File \"{}\" appears to  invalid module declaration. Please double-check it!\n\
-                If the file compiles successfully with `elm make`, then this is a problem with
-                elm-test, so please file it at {}
-                and show the module declaration (including exports!) that resulted in this message.",
+                If the file compiles successfully with `elm make`, then this is a problem with \
+                elm-test, so please file it at {} and show \
+                the module declaration (including exports!) that resulted in this message.",
                 path.as_os_str().to_str().unwrap_or(""),
                 WHERE_TO_FILE_BUGS
             )
@@ -171,6 +178,20 @@ pub fn report(problem: Problem) -> String {
                 "Could not read \"{}\" when attempting to validate its exports.",
                 path.as_os_str().to_str().unwrap_or(""),
             )
+        }
+        Problem::NoExposedTests(any_args) => {
+            if any_args {
+                String::from(
+                    "I couldn't find any exposed values of type Test in the requested files.\
+              \n\nMaybe try running elm-test with no arguments?",
+                )
+            } else {
+                String::from(
+                    "I couldn't find any exposed values of type Test in any *.elm files in \
+                     the tests/ directory of your project's root directory.\n\nTo generate \
+                     some initial tests to get things going, run elm-test init",
+                )
+            }
         }
     }
 }
