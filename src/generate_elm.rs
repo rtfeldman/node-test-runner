@@ -1,4 +1,5 @@
 extern crate murmur3;
+extern crate json;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -138,6 +139,61 @@ pub fn generate(
         ),
     )
 }
+
+pub enum Problem {
+    JsonError(json::Error),
+    GetElmTestPath(io::Error),
+    MalformedElmJson,
+}
+
+pub fn generate_elm_json(generated_src: &Path, current_elm_json: &str) -> Result<String, Problem> {
+    // TODO turn current_elm_json into json
+
+    let mut elm_json: json::JsonValue = json::parse(&current_elm_json).map_err(Problem::JsonError)?;
+
+    match elm_json.clone() {
+        json::JsonValue::Object(elm_json_obj) => {
+            // TODO remove this match once random-pcg has become core's new Random!
+            match elm_json_obj.get("dependencies") {
+                Some(&json::JsonValue::Object(ref obj)) => {
+                    if obj.get("mgold/elm-random-pcg").is_some() {
+                        // Test.Runner.Node.App needs this to create a Seed from current timestamp
+                        elm_json["dependencies"]["mgold/elm-random-pcg"] =
+                            json::JsonValue::String("4.0.2 <= v < 6.0.0".to_owned());
+                    }
+                }
+                _ => {
+                    return Err(Problem::MalformedElmJson);
+                }
+            }
+
+            let source_dirs = match elm_json_obj.get("source-directories") {
+                Some(json::JsonValue::Array(dirs)) => {
+                    dirs.iter().map(|src| PathBuf::from(src).canonicalize())
+                }
+                _ => {
+                    return Err(Problem::MalformedElmJson);
+                }
+            };
+
+            elm_json["source-directories"] = [
+                // Include elm-stuff/generated-sources - since we'll be generating sources in there.
+                generated_src,
+
+                // Include node-test-runner's src directory, to allow access to the Runner code.
+                elm_test_path::get()
+                    .map_err(Problem::GetElmTestPath)?
+                    .join("src"),
+            ].concat(sourceDirs);
+
+
+            Ok(json::stringify_pretty(elm_json, 4))
+        }
+
+        _ => Err(Problem::MalformedElmJson),
+    }
+}
+
 
 pub fn write(generated_src: &Path, module_name: &str, contents: &str) -> io::Result<usize> {
     let main_dir = generated_src.to_path_buf().join("Test").join("Generated");

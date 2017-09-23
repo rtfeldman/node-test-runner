@@ -15,6 +15,7 @@ mod read_elmi;
 mod error_messages;
 mod problems;
 mod exposed_tests;
+mod elm_test_path;
 mod generate_elm;
 
 fn main() {

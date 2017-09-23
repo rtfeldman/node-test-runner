@@ -1,4 +1,3 @@
-
 extern crate json;
 
 use std;
@@ -8,6 +7,7 @@ use std::io::{Read, BufReader};
 use std::path::{PathBuf, Path};
 use std::collections::{HashSet, HashMap};
 use std::process::{Command, Child, Stdio};
+use elm_test_path;
 
 #[derive(Debug)]
 pub enum Problem {
@@ -26,12 +26,9 @@ pub fn read_test_interfaces(
     root: &Path,
     possible_module_names: &HashMap<String, PathBuf>,
 ) -> Result<HashMap<String, (PathBuf, HashSet<String>)>, Problem> {
-    // Get the path to the currently executing elm-test binary. This may be a symlink.
-    let path_to_elm_test_binary: PathBuf = std::env::current_exe().map_err(Problem::CurrentExe)?;
-
-    // If it's a symlink, follow it. Then change the executable name to elm-interface-to-json.
-    let path_to_elmi_to_json_binary: PathBuf = fs::read_link(&path_to_elm_test_binary)
-        .unwrap_or(path_to_elm_test_binary)
+    // Get the path to elm-test. Then change the executable name to elm-interface-to-json.
+    let path_to_elmi_to_json_binary: PathBuf = elm_test_path::get()
+        .map_err(Problem::CurrentExe)?
         .with_file_name(ELMI_TO_JSON_BINARY_NAME);
 
     // Now that we've run `elm make` to compile the .elmi files, run elm-interface-to-json to
