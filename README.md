@@ -17,6 +17,8 @@ elm-test         # Runs all exposed Test values in *.elm files in the test/ and 
 elm-test Foo.elm # Runs all exposed Test values in Foo.elm
 ```
 
+Running `elm-test` will also ensure that any dependencies in `elm-package.json` and `tests/elm-package.json` are installed before it runs the tests.
+
 ### Configuration
 
 #### `init`
