@@ -92,8 +92,12 @@ fn run() -> Result<(), Problem> {
         }
     }
 
+    let elm_json = files::read_test_elm_json(root.as_path()).map_err(
+        Problem::ReadElmJson,
+    )?;
+
     // TODO [Thread 2] Determine what our valid module names are.
-    let source_dirs = files::read_source_dirs(root.as_path()).map_err(
+    let source_dirs = files::read_source_dirs(&elm_json).map_err(
         Problem::ReadElmJson,
     )?;
     let possible_module_names = files::possible_module_names(&test_files, &source_dirs);
@@ -144,7 +148,10 @@ fn run() -> Result<(), Problem> {
         &args.file_paths,
     );
 
-    generate_elm::write(&generated_src, &module_name, &generated_elm_code);
+    generate_elm::write(&generated_src, &module_name, &generated_elm_code)
+        .map_err(Problem::GenerateElm)?;
+
+    let generated_elm_json = generate_elm::generate_elm_json(&generated_src, &elm_json);
 
     // Spin up node processes.
     // let mut node_processes: Vec<std::process::Child> = Vec::new();

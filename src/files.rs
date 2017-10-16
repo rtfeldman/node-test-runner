@@ -9,7 +9,7 @@ use std::path::{PathBuf, Path, Component};
 use std::ffi::OsStr;
 use std::collections::{HashSet, HashMap};
 
-const ELM_JSON_FILENAME: &str = "elm-package.json";
+pub const ELM_JSON_FILENAME: &str = "elm-package.json";
 
 pub fn find_nearest_elm_json(file_path: &mut PathBuf) -> Option<PathBuf> {
     if file_path.is_dir() {
@@ -222,7 +222,7 @@ pub enum ElmJsonError {
     InvalidSourceDirectories,
 }
 
-pub fn read_source_dirs(root: &Path) -> Result<HashSet<PathBuf>, ElmJsonError> {
+pub fn read_test_elm_json(root: &Path) -> Result<json::JsonValue, ElmJsonError> {
     let mut file = File::open(root
         // TODO don't join with tests/ - this is a hack for 0.18!
         .join(PathBuf::from("tests"))
@@ -233,12 +233,12 @@ pub fn read_source_dirs(root: &Path) -> Result<HashSet<PathBuf>, ElmJsonError> {
         ElmJsonError::ReadElmJson,
     )?;
 
-    let elm_json: json::JsonValue = json::parse(&file_contents).map_err(
-        ElmJsonError::ParseElmJson,
-    )?;
+    json::parse(&file_contents).map_err(ElmJsonError::ParseElmJson)
+}
 
+pub fn read_source_dirs(elm_json: &json::JsonValue) -> Result<HashSet<PathBuf>, ElmJsonError> {
     match elm_json {
-        json::JsonValue::Object(obj) => {
+        &json::JsonValue::Object(ref obj) => {
             match obj.get("source-directories") {
                 Some(&json::JsonValue::Array(ref source_dirs)) => {
                     let mut paths: HashSet<PathBuf> = HashSet::new();

@@ -5,6 +5,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::collections::{HashSet, HashMap};
 use cli::Report;
+use elm_test_path;
 use std::io::Write;
 use std::fs::File;
 use std::fs;
@@ -140,25 +141,28 @@ pub fn generate(
     )
 }
 
+#[derive(Debug)]
 pub enum Problem {
-    JsonError(json::Error),
     GetElmTestPath(io::Error),
+    CanonicalizeError(String),
+    Write(PathBuf),
     MalformedElmJson,
 }
 
-pub fn generate_elm_json(generated_src: &Path, current_elm_json: &str) -> Result<String, Problem> {
-    // TODO turn current_elm_json into json
+pub fn generate_elm_json(
+    generated_src: &Path,
+    elm_json: &json::JsonValue,
+) -> Result<String, Problem> {
+    match elm_json {
+        &json::JsonValue::Object(ref elm_json_obj) => {
+            let mut new_elm_json = elm_json_obj.clone();
 
-    let mut elm_json: json::JsonValue = json::parse(&current_elm_json).map_err(Problem::JsonError)?;
-
-    match elm_json.clone() {
-        json::JsonValue::Object(elm_json_obj) => {
             // TODO remove this match once random-pcg has become core's new Random!
             match elm_json_obj.get("dependencies") {
                 Some(&json::JsonValue::Object(ref obj)) => {
                     if obj.get("mgold/elm-random-pcg").is_some() {
                         // Test.Runner.Node.App needs this to create a Seed from current timestamp
-                        elm_json["dependencies"]["mgold/elm-random-pcg"] =
+                        new_elm_json["dependencies"]["mgold/elm-random-pcg"] =
                             json::JsonValue::String("4.0.2 <= v < 6.0.0".to_owned());
                     }
                 }
@@ -167,27 +171,49 @@ pub fn generate_elm_json(generated_src: &Path, current_elm_json: &str) -> Result
                 }
             }
 
-            let source_dirs = match elm_json_obj.get("source-directories") {
-                Some(json::JsonValue::Array(dirs)) => {
-                    dirs.iter().map(|src| PathBuf::from(src).canonicalize())
+            let mut source_dirs = json::JsonValue::new_array();
+
+            match elm_json_obj.get("source-directories") {
+                Some(&json::JsonValue::Array(ref dirs)) => {
+                    for dir in dirs {
+                        match dir {
+                            &json::JsonValue::String(ref src) => {
+                                source_dirs.push(
+                                    PathBuf::from(src)
+                                        .canonicalize()
+                                        .map_err(|_| Problem::CanonicalizeError(src.to_owned()))?
+                                        .as_os_str()
+                                        .to_str()
+                                        .unwrap(),
+                                );
+                            }
+                            _ => {
+                                return Err(Problem::MalformedElmJson);
+                            }
+                        }
+                    }
                 }
                 _ => {
                     return Err(Problem::MalformedElmJson);
                 }
             };
 
-            elm_json["source-directories"] = [
-                // Include elm-stuff/generated-sources - since we'll be generating sources in there.
-                generated_src,
+            // Include elm-stuff/generated-sources - since we'll be generating sources in there.
+            source_dirs.push(generated_src.as_os_str().to_str().unwrap());
 
-                // Include node-test-runner's src directory, to allow access to the Runner code.
+            // Include node-test-runner's src directory, to allow access to the Runner code.
+            source_dirs.push(
                 elm_test_path::get()
                     .map_err(Problem::GetElmTestPath)?
-                    .join("src"),
-            ].concat(sourceDirs);
+                    .join("src")
+                    .as_os_str()
+                    .to_str()
+                    .unwrap(),
+            );
 
+            new_elm_json["source-directories"] = source_dirs;
 
-            Ok(json::stringify_pretty(elm_json, 4))
+            Ok(json::stringify_pretty(new_elm_json, 4))
         }
 
         _ => Err(Problem::MalformedElmJson),
@@ -195,13 +221,19 @@ pub fn generate_elm_json(generated_src: &Path, current_elm_json: &str) -> Result
 }
 
 
-pub fn write(generated_src: &Path, module_name: &str, contents: &str) -> io::Result<usize> {
+pub fn write(generated_src: &Path, module_name: &str, contents: &str) -> Result<usize, Problem> {
     let main_dir = generated_src.to_path_buf().join("Test").join("Generated");
 
-    fs::create_dir_all(&main_dir)?;
+    fs::create_dir_all(&main_dir).map_err(|_| {
+        Problem::Write(generated_src.to_path_buf())
+    })?;
 
     let main_file_path = main_dir.join(module_name.to_owned() + ".elm");
-    let mut file: File = File::create(main_file_path)?;
+    let mut file: File = File::create(main_file_path).map_err(|_| {
+        Problem::Write(generated_src.to_path_buf())
+    })?;
 
-    file.write(contents.as_bytes())
+    file.write(contents.as_bytes()).map_err(|_| {
+        Problem::Write(generated_src.to_path_buf())
+    })
 }

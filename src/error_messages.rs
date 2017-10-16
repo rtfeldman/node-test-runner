@@ -2,8 +2,10 @@
 use problems::Problem;
 use read_elmi;
 use files::ElmJsonError;
+use files;
 use cli;
 use exposed_tests;
+use generate_elm;
 
 pub fn report(problem: Problem) -> String {
     match problem {
@@ -125,6 +127,30 @@ pub fn report(problem: Problem) -> String {
                 "Your project's elm.json file contains an invalid source-directory: {}",
                 source_dir
             )
+        }
+        Problem::ReadElmJson(ElmJsonError::InvalidSourceDirectory(source_dir)) => {
+            format!(
+                "Your project's elm.json file contains an invalid source-directory: {}",
+                source_dir
+            )
+        }
+        Problem::GenerateElm(generate_elm::Problem::Write(file_path)) => {
+            format!(
+                "Unable to write {}",
+                file_path.as_os_str().to_str().unwrap_or("")
+            )
+        }
+        Problem::GenerateElm(generate_elm::Problem::GetElmTestPath(_)) => {
+            format!("Unable to read the current elm-test directory")
+        }
+        Problem::GenerateElm(generate_elm::Problem::MalformedElmJson) => {
+            format!(
+                "It looks like your {} file is malformed JSON. Double-check it!",
+                files::ELM_JSON_FILENAME
+            )
+        }
+        Problem::GenerateElm(generate_elm::Problem::CanonicalizeError(string)) => {
+            format!("Unable to canonicalize path {}", string)
         }
         Problem::UnexposedTests(bad_tests_by_module) => {
             let result_strings = bad_tests_by_module

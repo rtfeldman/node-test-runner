@@ -2,7 +2,6 @@ extern crate clap;
 
 use clap::{App, Arg};
 use std::path::{Path, PathBuf};
-use std::collections::HashSet;
 use std::iter::FromIterator;
 
 // Use the version number in Cargo.toml

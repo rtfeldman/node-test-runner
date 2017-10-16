@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::collections::{HashSet, HashMap};
 use read_elmi;
 use files;
+use generate_elm;
 use cli;
 use exposed_tests;
 
@@ -28,6 +29,7 @@ pub enum Problem {
 
     // Problems from other modules
     ReadElmi(read_elmi::Problem),
+    GenerateElm(generate_elm::Problem),
     Cli(cli::Problem),
     ExposedTest(PathBuf, exposed_tests::Problem),
 }
