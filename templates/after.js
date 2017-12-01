@@ -37,12 +37,11 @@ client.on("data", function(msg) {
 
 // Use ports for inter-process communication.
 app.ports.send.subscribe(function(msg) {
-  // We do this in order to prevent a bug where two back-to-back-json
-  // messages get passed, resulting in the supervisor trying to parse
-  // "{ ...json object 1... }{ ...json object 2... }" which won't parse.
-  // By appending a comma, and having the supervisor strip the
-  // trailing comma and wrap the whole thing in [], the above becomes
-  // the valid JSON string "[{ ...json object 1... },{ ...json object 2... }]"
-  // and all is well!
-  client.write(msg + ",");
+  // We split incoming messages on the socket on newlines. The gist is that node
+  // is rather unpredictable in whether or not a single `write` will result in a
+  // single `on('data')` callback. Sometimes it does, sometimes multiple writes
+  // result in a single callback and - worst of all - sometimes a single read
+  // results in multiple callbacks, each receiving a piece of the data. The
+  // horror.
+  client.write(msg + "\n");
 });

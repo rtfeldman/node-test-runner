@@ -43,6 +43,7 @@
     "minimist": "^1.2.0",
     "murmur-hash-js": "1.0.0",
     "node-elm-compiler": "4.3.3",
+    "split": "^1.0.1",
     "supports-color": "4.2.0",
     "xmlbuilder": "^8.2.2"
   },
