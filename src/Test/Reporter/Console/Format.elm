@@ -77,7 +77,10 @@ format formatEquality description reason =
 
 highlightEqual : String -> String -> Maybe ( List (Highlightable String), List (Highlightable String) )
 highlightEqual expected actual =
-    if isFloat expected && isFloat actual then
+    if expected == "\"\"" || actual == "\"\"" then
+        -- Diffing when one is the empty string looks silly. Don't bother.
+        Nothing
+    else if isFloat expected && isFloat actual then
         -- Diffing numbers looks silly. Don't bother.
         Nothing
     else
