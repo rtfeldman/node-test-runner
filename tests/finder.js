@@ -4,7 +4,7 @@ const finder = require("../lib/finder.js");
 describe("finder", function() {
   it("should initialize okay twice in a row", done => {
     finder
-      .readExposing(__dirname + "/SeveralFailingWithComments.elm")
+      .readExposing(__dirname + "/SeveralWithCommentsFailing.elm")
       .then(exposedFunctions => {
         assert.deepEqual(exposedFunctions, [
           "testExpectations",
