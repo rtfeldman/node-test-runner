@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors major Elm versions. So version 0.18.* of this project will
 be compatible with Elm 0.18.*.
 
+## 0.18.11 - 2017-08-07
+
+### Fixed
+
+- Low-contrast diff color (#229)
+- Socket write edge case (#228)
+- Invalid JUnit XML (#218)
+
+## 0.18.10 - 2017-11-16
+
+### Fixed
+
+- Potentially fixed: elm-test hanging
+
+
 ## 0.18.8 - 2017-08-07
 
 ### Added
