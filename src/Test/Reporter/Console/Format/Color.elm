@@ -25,6 +25,6 @@ fromHighlightable =
     Highlightable.resolve
         -- Cyan seems to look readable with both white and black text on top,
         -- so it should work with both dark and light console themes
-        { fromHighlighted = Console.bgCyan
+        { fromHighlighted = Console.colorsInverted
         , fromPlain = identity
         }
