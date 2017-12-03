@@ -9,10 +9,12 @@ var elmTest = "elm-test";
 
 function run(testFile) {
   if (!testFile) {
-    echo("Running: elm-test");
-    return exec(elmTest).code;
+    var cmd = [elmTest, "--color"].join(" ");
+
+    echo("Running: " + cmd);
+    return exec(cmd).code;
   } else {
-    var cmd = [elmTest, testFile].join(" ");
+    var cmd = [elmTest, testFile, "--color"].join(" ");
 
     echo("Running: " + cmd);
     return exec(cmd).code;
@@ -121,6 +123,8 @@ assertTestSuccess(path.join("tests", "*Pass*"));
 assertTestFailure(path.join("tests", "*Fail*"));
 assertTestFailure();
 
+cd("../");
+
 ls("tests/*.elm").forEach(function(testToRun) {
   if (/Passing\.elm$/.test(testToRun)) {
     echo("\n### Testing " + testToRun + " (expecting it to pass)\n");
@@ -135,6 +139,9 @@ ls("tests/*.elm").forEach(function(testToRun) {
         " (expecting it to error with a runtime exception)\n"
     );
     assertTestErrored(testToRun);
+  } else if (/Port\d.elm$/.test(testToRun)){
+    echo("\n### Skipping " + testToRun + " (helper file)\n");
+    return;
   } else {
     echo(
       "Tried to run " +
@@ -144,8 +151,6 @@ ls("tests/*.elm").forEach(function(testToRun) {
     process.exit(1);
   }
 });
-
-cd("..");
 
 echo("### Testing elm-test init && elm-test");
 rm("-Rf", "tmp");
