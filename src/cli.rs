@@ -77,8 +77,8 @@ pub fn parse_args<'a>() -> Result<CliArgs, Problem> {
 
 pub enum Report {
     Console,
-    JUnit,
-    Json,
+    // JUnit,
+    // Json,
 }
 
 pub struct CliArgs {

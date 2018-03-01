@@ -20,8 +20,8 @@ const MURMUR3_SEED: u32 = 8675309;
 
 fn get_report_code(report: &Report, supports_color: bool) -> String {
     match report {
-        &Report::Json => "JsonReport",
-        &Report::JUnit => "JUnitReport",
+        // &Report::Json => "JsonReport",
+        // &Report::JUnit => "JUnitReport",
         &Report::Console => {
             if supports_color {
                 "(ConsoleReport UseColor)"
