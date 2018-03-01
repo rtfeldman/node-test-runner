@@ -59,10 +59,7 @@ pub fn gather_all<I: Iterator<Item = PathBuf>>(
             // Use a stack instead of recursion.
             let mut stack: Vec<PathBuf> = vec![path];
 
-            while !stack.is_empty() {
-                // It's okay to unwrap() here, since we just verified the stack is non-empty.
-                let dir = stack.pop().unwrap();
-
+            while let Some(dir) = stack.pop() {
                 // Ignore elm-stuff directories
                 if dir.file_name() != elm_stuff_dir {
                     for raw_child in fs::read_dir(dir)? {
