@@ -16,6 +16,7 @@ pub enum Problem {
 const ARG_SEED: &'static str = "seed";
 const ARG_FUZZ: &'static str = "fuzz";
 const ARG_COMPILER: &'static str = "compiler";
+const ARG_WATCH: &'static str = "watch";
 const FILES_OR_DIRECTORIES: &'static str = "FILES_OR_DIRECTORIES";
 
 pub fn parse_args<'a>() -> Result<CliArgs, Problem> {
@@ -46,6 +47,12 @@ pub fn parse_args<'a>() -> Result<CliArgs, Problem> {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name(ARG_WATCH)
+                .long("watch")
+                .help("Run tests on file changes")
+                .takes_value(false),
+        )
+        .arg(
             Arg::with_name(FILES_OR_DIRECTORIES)
                 .help("Run all tests found in these files and directories")
                 .multiple(true)
@@ -56,6 +63,7 @@ pub fn parse_args<'a>() -> Result<CliArgs, Problem> {
     let seed = parse_int_arg(ARG_SEED, &matches)?;
     let fuzz = parse_int_arg(ARG_FUZZ, &matches)?;
     let compiler = matches.value_of(ARG_COMPILER).map(String::from);
+    let watch = matches.is_present(ARG_WATCH);
     let file_paths: Vec<PathBuf> = Vec::from_iter(
         matches
             .values_of(FILES_OR_DIRECTORIES)
@@ -72,6 +80,7 @@ pub fn parse_args<'a>() -> Result<CliArgs, Problem> {
         compiler: compiler,
         file_paths: file_paths,
         report: report,
+        watch: watch,
     })
 }
 
@@ -87,6 +96,7 @@ pub struct CliArgs {
     pub compiler: Option<String>,
     pub file_paths: Vec<PathBuf>,
     pub report: Report,
+    pub watch: bool,
 }
 
 // Turn the given Option<&str> into an Option<u64>, or else die and report the invalid argument.
