@@ -4,7 +4,7 @@ extern crate num_cpus;
 use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
 use problems::Problem;
@@ -68,11 +68,13 @@ fn run() -> Result<(), Problem> {
     print_headline();
 
     // Start `elm make` running.
-    let elm_make_process = Command::new(path_to_elm_binary)
+    let mut elm_make_process = Command::new(path_to_elm_binary)
         .arg("make")
         .arg("--yes")
         .arg("--output=/dev/null")
         .args(&test_files)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(Problem::SpawnElmMake)?;
 
@@ -87,6 +89,10 @@ fn run() -> Result<(), Problem> {
                 exposed_values_by_file.insert(test_file, exposed_values);
             }
             Err(err) => {
+                // There may be an RFC to do SIGTERM in a cross-platform way. If that becomes
+                // a thing, we should use SIGTERM instead of SIGKILL so elm-make can graacefully exit.
+                // https://github.com/rust-lang/rust/issues/41822#issuecomment-345485002
+                elm_make_process.kill().expect("command wasn't running");
                 return Err(Problem::ExposedTest(test_file, err));
             }
         }
@@ -102,9 +108,13 @@ fn run() -> Result<(), Problem> {
     )?;
     let possible_module_names = files::possible_module_names(&test_files, &source_dirs);
 
-    elm_make_process.wait_with_output().map_err(
-        Problem::CompilationFailed,
-    )?;
+    let elm_make_output = elm_make_process
+        .wait_with_output()
+        .map_err(Problem::CompilationFailed)?;
+
+    if !elm_make_output.status.success() {
+        println!("elm-make died with stderr: {:?}", elm_make_output.stderr);
+    }
 
     let test_paths_by_module: HashMap<String, (PathBuf, HashSet<String>)> =
         read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
