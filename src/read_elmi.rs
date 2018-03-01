@@ -1,8 +1,6 @@
 extern crate json;
 
-use std;
 use std::io;
-use std::fs;
 use std::io::{Read, BufReader};
 use std::path::{PathBuf, Path};
 use std::collections::{HashSet, HashMap};
