@@ -61,8 +61,10 @@ fn elm_make(
 
     if !elm_make_output.status.success() {
         // TODO this should bail out right?
-        println!("elm-make died with stderr: {:?}", elm_make_output.stderr);
+        println!(
+            "elm-make died with stderr: {}",
+            String::from_utf8_lossy(&elm_make_output.stderr)
+        );
     };
-    // TODO return data used outside
     Ok(exposed_values_by_file)
 }
