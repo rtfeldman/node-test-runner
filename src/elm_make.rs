@@ -1,23 +1,15 @@
+#![feature(proc_macro, conservative_impl_trait, generators)]
+extern crate futures_await as futures;
+use futures::prelude::*;
 use std::path::PathBuf;
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-use std::thread;
 use std::process::{Command, Stdio};
 use std::collections::{HashMap, HashSet};
 use problems::Problem;
 use cli;
 use exposed_tests;
 
+#[async]
 pub fn run(
-    compiler: Option<String>,
-    test_files: HashSet<PathBuf>,
-) -> Receiver<Result<HashMap<PathBuf, Option<HashSet<String>>>, Problem>> {
-    let (tx, rx) = mpsc::channel();
-    thread::spawn(move || tx.send(elm_make(compiler, test_files)));
-    rx
-}
-
-fn elm_make(
     compiler: Option<String>,
     test_files: HashSet<PathBuf>,
 ) -> Result<HashMap<PathBuf, Option<HashSet<String>>>, Problem> {

@@ -1,5 +1,9 @@
+#![feature(proc_macro, conservative_impl_trait, generators)]
 extern crate clap;
 extern crate num_cpus;
+
+extern crate futures_await as futures;
+use futures::prelude::*;
 use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -66,15 +70,14 @@ fn run() -> Result<(), Problem> {
     // TODO we can do these next two things in parallel!
     let compiler = args.compiler.clone();
     let test_files_clone = test_files.clone();
-    let elm_make_rx = elm_make::run(compiler, test_files_clone);
-
+    let elm_make_future = elm_make::run(compiler, test_files_clone);
     let elm_json = files::read_test_elm_json(root.as_path()).map_err(Problem::ReadElmJson)?;
 
     // TODO [Thread 2] Determine what our valid module names are.
     let source_dirs = files::read_source_dirs(&elm_json).map_err(Problem::ReadElmJson)?;
     let possible_module_names = files::possible_module_names(&test_files, &source_dirs);
 
-    let exposed_values_by_file = elm_make_rx.recv().unwrap()?;
+    let exposed_values_by_file = elm_make_future.wait()?;
     let test_paths_by_module: HashMap<String, (PathBuf, HashSet<String>)> =
         read_elmi::read_test_interfaces(root.as_path(), &possible_module_names)
             .map_err(Problem::ReadElmi)?;
