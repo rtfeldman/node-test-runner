@@ -1,10 +1,10 @@
 extern crate json;
 
 use std::io;
-use std::io::{Read, BufReader};
-use std::path::{PathBuf, Path};
-use std::collections::{HashSet, HashMap};
-use std::process::{Command, Child, Stdio};
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
+use std::collections::{HashMap, HashSet};
+use std::process::{Child, Command, Stdio};
 use elm_test_path;
 
 #[derive(Debug)]
@@ -40,13 +40,12 @@ pub fn read_test_interfaces(
 
     let tests_by_module = read_json(&mut elmi_to_json_process, possible_module_names);
 
-    elmi_to_json_process.wait().map_err(
-        Problem::CompilationFailed,
-    )?;
+    elmi_to_json_process
+        .wait()
+        .map_err(Problem::CompilationFailed)?;
 
     Ok(tests_by_module?)
 }
-
 
 fn read_json(
     program: &mut Child,
@@ -58,9 +57,9 @@ fn read_json(
             let mut json_output = String::new();
 
             // Populate json_output with the stdout coming from elm-interface-to-json
-            buf_reader.read_to_string(&mut json_output).map_err(
-                Problem::ReadElmiToJson,
-            )?;
+            buf_reader
+                .read_to_string(&mut json_output)
+                .map_err(Problem::ReadElmiToJson)?;
 
             parse_json(&json_output, possible_module_names)
         }
@@ -107,10 +106,10 @@ fn parse_json(
                             // to get an entry in the map.
                             if !top_level_tests.is_empty() {
                                 // Add this module to the map, along with its values.
-                                tests_by_module.insert(module_name.to_owned(), (
-                                    test_path.clone(),
-                                    top_level_tests,
-                                ));
+                                tests_by_module.insert(
+                                    module_name.to_owned(),
+                                    (test_path.clone(), top_level_tests),
+                                );
                             }
                         }
                     }
