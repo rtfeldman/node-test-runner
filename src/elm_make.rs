@@ -38,22 +38,11 @@ fn elm_make(
     // TODO we can do these next two things in parallel!
 
     // TODO [Thread 1] Determine what values each module exposes.
-    let mut exposed_values_by_file: HashMap<PathBuf, Option<HashSet<String>>> = HashMap::new();
-
-    for test_file in test_files.clone() {
-        match exposed_tests::read_exposed_values(&test_file) {
-            Ok(exposed_values) => {
-                exposed_values_by_file.insert(test_file, exposed_values);
-            }
-            Err(err) => {
-                // There may be an RFC to do SIGTERM in a cross-platform way. If that becomes
-                // a thing, we should use SIGTERM instead of SIGKILL so elm-make can graacefully exit.
-                // https://github.com/rust-lang/rust/issues/41822#issuecomment-345485002
-                elm_make_process.kill().expect("command wasn't running");
-                return Err(Problem::ExposedTest(test_file, err));
-            }
-        }
-    }
+    let exposed_values_by_file: HashMap<PathBuf, Option<HashSet<String>>> =
+        exposed_tests::get_exposed_tests(test_files).map_err(|(test_file, err)| {
+            elm_make_process.kill().expect("command wasn't running");
+            Problem::ExposedTest(test_file, err)
+        })?;
 
     let elm_make_output = elm_make_process
         .wait_with_output()
@@ -66,5 +55,10 @@ fn elm_make(
             String::from_utf8_lossy(&elm_make_output.stderr)
         );
     };
+    // TODO we probably want some nicer output
+    println!(
+        "elm-make {}",
+        String::from_utf8_lossy(&elm_make_output.stdout)
+    );
     Ok(exposed_values_by_file)
 }

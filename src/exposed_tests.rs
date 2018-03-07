@@ -1,10 +1,10 @@
 // Determine which values of type Test are exposed from a given module.
 
 use std::fs::File;
-use std::io::{BufReader, BufRead};
+use std::io::{BufRead, BufReader};
 use io;
 use std::path::{Path, PathBuf};
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub enum Problem {
@@ -14,7 +14,25 @@ pub enum Problem {
     ParseError,
 }
 
-pub fn read_exposed_values(path: &Path) -> Result<Option<HashSet<String>>, Problem> {
+pub fn get_exposed_tests(
+    test_files: HashSet<PathBuf>,
+) -> Result<HashMap<PathBuf, Option<HashSet<String>>>, (PathBuf, Problem)> {
+    let mut exposed_values_by_file: HashMap<PathBuf, Option<HashSet<String>>> = HashMap::new();
+
+    for test_file in test_files.clone() {
+        match read_exposed_values(&test_file) {
+            Ok(exposed_values) => {
+                exposed_values_by_file.insert(test_file, exposed_values);
+            }
+            Err(err) => {
+                return Err((test_file, err));
+            }
+        }
+    }
+    Ok(exposed_values_by_file)
+}
+
+fn read_exposed_values(path: &Path) -> Result<Option<HashSet<String>>, Problem> {
     let file = File::open(path).map_err(Problem::OpenFileToReadExports)?;
     let exposing = read_exposing(&file)?;
 
@@ -26,7 +44,6 @@ pub fn read_exposed_values(path: &Path) -> Result<Option<HashSet<String>>, Probl
         Ok(Some(exposing))
     }
 }
-
 
 fn read_exposing(file: &File) -> Result<HashSet<String>, Problem> {
     let mut reader = BufReader::new(file);
@@ -50,9 +67,9 @@ fn read_exposing(file: &File) -> Result<HashSet<String>, Problem> {
 
     loop {
         let mut line = String::new();
-        reader.read_line(&mut line).map_err(|err| {
-            Problem::ReadingFileForExports(err)
-        })?;
+        reader
+            .read_line(&mut line)
+            .map_err(|err| Problem::ReadingFileForExports(err))?;
 
         if line.is_empty() {
             return Err(Problem::ParseError);
@@ -146,7 +163,7 @@ mod test_read_exposing {
     extern crate tempfile;
 
     use super::*;
-    use std::io::{Write, Seek, SeekFrom};
+    use std::io::{Seek, SeekFrom, Write};
 
     fn read_with(contents: &str) -> Result<HashSet<String>, Problem> {
         let mut file: File = tempfile::tempfile().unwrap();
@@ -170,7 +187,6 @@ mod test_read_exposing {
             read_with("module Foo exposing (..)").unwrap(),
             hash_set(vec![".."])
         );
-
     }
 
     #[test]
@@ -294,7 +310,6 @@ mod test_remove_exposing {
     }
 }
 
-
 /* Remove all the comments from the line,
    and also return whether we are still in a comment block.
 */
@@ -381,7 +396,6 @@ fn strip_comments(original_line: &str, original_block_comment_depth: u32) -> (St
     }
 }
 
-
 #[cfg(test)]
 mod test_strip_comments {
     use super::*;
@@ -443,7 +457,6 @@ mod test_strip_comments {
         }
     }
 }
-
 
 // Returns whether it found and removed a module declaration
 fn remove_module_declaration(line: &str) -> &str {
