@@ -1,23 +1,13 @@
-#![feature(proc_macro, conservative_impl_trait, generators)]
-extern crate futures_await as futures;
-use futures::prelude::*;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use std::collections::{HashMap, HashSet};
+use std::process::{Child, Command, Stdio};
+use std::collections::HashSet;
 use problems::Problem;
 use cli;
-use exposed_tests;
 
-#[async]
-pub fn run(
-    compiler: Option<String>,
-    test_files: HashSet<PathBuf>,
-) -> Result<HashMap<PathBuf, Option<HashSet<String>>>, Problem> {
+pub fn run(compiler: Option<String>, test_files: HashSet<PathBuf>) -> Result<Child, Problem> {
     let path_to_elm_binary: PathBuf =
         cli::elm_binary_path_from_compiler_flag(compiler).map_err(Problem::Cli)?;
-
-    // Start `elm make` running.
-    let mut elm_make_process = Command::new(path_to_elm_binary)
+    Command::new(path_to_elm_binary)
         .arg("make")
         .arg("--yes")
         .arg("--output=/dev/null")
@@ -25,32 +15,21 @@ pub fn run(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(Problem::SpawnElmMake)?;
+        .map_err(Problem::SpawnElmMake)
+}
 
-    // TODO we can do these next two things in parallel!
-
-    // TODO [Thread 1] Determine what values each module exposes.
-    let exposed_values_by_file: HashMap<PathBuf, Option<HashSet<String>>> =
-        exposed_tests::get_exposed_tests(test_files).map_err(|(test_file, err)| {
-            elm_make_process.kill().expect("command wasn't running");
-            Problem::ExposedTest(test_file, err)
-        })?;
-
-    let elm_make_output = elm_make_process
+pub fn wait(process: Child) -> Result<(), Problem> {
+    let output = process
         .wait_with_output()
         .map_err(Problem::CompilationFailed)?;
-
-    if !elm_make_output.status.success() {
+    if !output.status.success() {
         // TODO this should bail out right?
         println!(
             "elm-make died with stderr: {}",
-            String::from_utf8_lossy(&elm_make_output.stderr)
+            String::from_utf8_lossy(&output.stderr)
         );
     };
     // TODO we probably want some nicer output
-    println!(
-        "elm-make {}",
-        String::from_utf8_lossy(&elm_make_output.stdout)
-    );
-    Ok(exposed_values_by_file)
+    println!("elm-make {}", String::from_utf8_lossy(&output.stdout));
+    Ok(())
 }

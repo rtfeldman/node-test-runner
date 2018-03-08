@@ -10,7 +10,6 @@ tempfile = "2.1.6"
 json = "0.11.9"
 num_cpus = "1.6.2"
 murmur3 = "0.4.0"
-futures-await = "0.1"
 
 [dependencies.clap]
 version = "~2.26.0"

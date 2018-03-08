@@ -2,6 +2,7 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use io;
+use std::thread;
 use std::path::{Path, PathBuf};
 use std::collections::{HashMap, HashSet};
 
@@ -14,6 +15,12 @@ pub enum Problem {
 }
 
 pub fn get_exposed_tests(
+    test_files: HashSet<PathBuf>,
+) -> thread::JoinHandle<Result<HashMap<PathBuf, Option<HashSet<String>>>, (PathBuf, Problem)>> {
+    thread::spawn(move || get_exposed_tests_(test_files))
+}
+
+fn get_exposed_tests_(
     test_files: HashSet<PathBuf>,
 ) -> Result<HashMap<PathBuf, Option<HashSet<String>>>, (PathBuf, Problem)> {
     let mut exposed_values_by_file: HashMap<PathBuf, Option<HashSet<String>>> = HashMap::new();
