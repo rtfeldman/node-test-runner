@@ -95,7 +95,7 @@ encodeFailure { given, description, reason } =
 encodeReasonType : String -> Value -> Value
 encodeReasonType reasonType data =
     Encode.object
-        [ ( "type", Encode.string "custom" ), ( "data", data ) ]
+        [ ( "type", Encode.string reasonType ), ( "data", data ) ]
 
 
 encodeReason : String -> Reason -> Value
