@@ -16,7 +16,6 @@ import Dict exposing (Dict)
 import Expect exposing (Expectation)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Native.RunTest
 import Platform
 import Task exposing (Task)
 import Test exposing (Test)
@@ -25,17 +24,7 @@ import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, o
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Test.Runner.Node.App as App
-import Time exposing (Time)
-
-
-{-| Execute the given thunk.
-
-If it throws an exception, return a failure instead of crashing.
-
--}
-runThunk : (() -> List Expectation) -> List Expectation
-runThunk =
-    Native.RunTest.runThunk
+import Time exposing (Posix)
 
 
 port receive : (Decode.Value -> msg) -> Sub msg
@@ -64,8 +53,8 @@ type alias TestProgram =
 
 type Msg
     = Receive Decode.Value
-    | Dispatch Time
-    | Complete (List String) (List Outcome) Time Time
+    | Dispatch Posix
+    | Complete (List String) (List Outcome) Posix Posix
 
 
 port send : String -> Cmd msg
@@ -80,7 +69,7 @@ warn str result =
     result
 
 
-dispatch : Model -> Time -> Cmd Msg
+dispatch : Model -> Posix -> Cmd Msg
 dispatch model startTime =
     case Dict.get model.nextTestToRun model.available of
         Nothing ->
@@ -90,7 +79,7 @@ dispatch model startTime =
         Just { labels, run } ->
             let
                 outcomes =
-                    outcomesFromExpectations (runThunk run)
+                    outcomesFromExpectations (run ())
             in
             Time.now
                 |> Task.perform (Complete labels outcomes startTime)
@@ -120,8 +109,10 @@ update msg ({ testReporter } as model) =
                         exitCode =
                             if failed > 0 then
                                 2
+
                             else if model.autoFail == Nothing && List.isEmpty todos then
                                 0
+
                             else
                                 3
 
@@ -145,6 +136,7 @@ update msg ({ testReporter } as model) =
                         ( { model | nextTestToRun = index + model.processes }
                         , Cmd.batch [ cmd, sendBegin model ]
                         )
+
                     else
                         ( { model | nextTestToRun = index }, cmd )
 
@@ -153,7 +145,7 @@ update msg ({ testReporter } as model) =
                         cmd =
                             Encode.object
                                 [ ( "type", Encode.string "ERROR" )
-                                , ( "message", Encode.string err )
+                                , ( "message", Encode.string (Decode.errorToString err) )
                                 ]
                                 |> Encode.encode 0
                                 |> send
@@ -166,13 +158,13 @@ update msg ({ testReporter } as model) =
         Complete labels outcomes startTime endTime ->
             let
                 duration =
-                    endTime - startTime
+                    Time.posixToMillis endTime - Time.posixToMillis startTime
 
-                prependOutcome outcome results =
+                prependOutcome outcome rest =
                     ( model.nextTestToRun
                     , { labels = labels, outcome = outcome, duration = duration }
                     )
-                        :: results
+                        :: rest
 
                 results =
                     List.foldl prependOutcome model.results outcomes
@@ -191,6 +183,7 @@ update msg ({ testReporter } as model) =
                 if isFinished then
                     -- Don't bother updating the model, since we're done
                     ( model, cmd )
+
                 else
                     -- Clear out the results, now that we've flushed them.
                     ( { model | nextTestToRun = nextTestToRun, results = [] }
@@ -199,6 +192,7 @@ update msg ({ testReporter } as model) =
                         , Task.perform Dispatch Time.now
                         ]
                     )
+
             else
                 ( { model | nextTestToRun = nextTestToRun, results = results }
                 , Task.perform Dispatch Time.now
@@ -221,13 +215,14 @@ sendResults isFinished testReporter results =
         typeStr =
             if isFinished then
                 "FINISHED"
+
             else
                 "RESULTS"
 
         addToKeyValues ( testId, result ) list =
             -- These are coming in in reverse order. Doing a foldl with ::
             -- means we reverse the list again, while also doing the conversion!
-            ( toString testId, testReporter.reportComplete result ) :: list
+            ( String.fromInt testId, testReporter.reportComplete result ) :: list
     in
     Encode.object
         [ ( "type", Encode.string typeStr )
@@ -268,17 +263,17 @@ init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
         { indexedRunners, autoFail } =
             case runners of
                 Plain runnerList ->
-                    { indexedRunners = List.indexedMap (,) runnerList
+                    { indexedRunners = List.indexedMap (\a b -> ( a, b )) runnerList
                     , autoFail = Nothing
                     }
 
                 Only runnerList ->
-                    { indexedRunners = List.indexedMap (,) runnerList
+                    { indexedRunners = List.indexedMap (\a b -> ( a, b )) runnerList
                     , autoFail = Just "Test.only was used"
                     }
 
                 Skipping runnerList ->
-                    { indexedRunners = List.indexedMap (,) runnerList
+                    { indexedRunners = List.indexedMap (\a b -> ( a, b )) runnerList
                     , autoFail = Just "Test.skip was used"
                     }
 

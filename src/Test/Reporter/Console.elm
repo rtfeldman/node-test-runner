@@ -7,12 +7,11 @@ import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
 import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo, TestResult, isTodo)
 import Test.Runner exposing (formatLabels)
-import Time exposing (Time)
 
 
-formatDuration : Time -> String
+formatDuration : Float -> String
 formatDuration time =
-    toString time ++ " ms"
+    String.fromFloat time ++ " ms"
 
 
 indent : String -> String
@@ -29,10 +28,11 @@ pluralize singular plural count =
         suffix =
             if count == 1 then
                 singular
+
             else
                 plural
     in
-    String.join " " [ toString count, suffix ]
+    String.join " " [ String.fromInt count, suffix ]
 
 
 todosToText : ( List String, String ) -> Text
@@ -99,9 +99,9 @@ reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
             "Running "
                 ++ pluralize "test" "tests" testCount
                 ++ ". To reproduce these results, run: elm-test --fuzz "
-                ++ toString fuzzRuns
+                ++ String.fromInt fuzzRuns
                 ++ " --seed "
-                ++ toString initialSeed
+                ++ String.fromInt initialSeed
     in
     (String.join " " (prefix :: paths) ++ "\n")
         |> plain
@@ -125,7 +125,7 @@ reportComplete useColor { duration, labels, outcome } =
         Todo str ->
             Encode.object
                 [ ( "todo", Encode.string str )
-                , ( "labels", Encode.list (List.map Encode.string labels) )
+                , ( "labels", Encode.list Encode.string labels )
                 ]
 
 
@@ -146,7 +146,7 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
                     Err ( yellow, "TEST RUN INCOMPLETE", " because there is 1 TODO remaining" )
 
                 ( Nothing, 0, numTodos ) ->
-                    Err ( yellow, "TEST RUN INCOMPLETE", " because there are " ++ toString numTodos ++ " TODOs remaining" )
+                    Err ( yellow, "TEST RUN INCOMPLETE", " because there are " ++ String.fromInt numTodos ++ " TODOs remaining" )
 
                 ( Just failure, 0, _ ) ->
                     Err ( yellow, "TEST RUN INCOMPLETE", " because " ++ failure )
@@ -173,18 +173,19 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
                     plain ""
 
                 numTodos ->
-                    stat "Todo:     " (toString numTodos)
+                    stat "Todo:     " (String.fromInt numTodos)
 
         individualTodos =
             if failed > 0 then
                 plain ""
+
             else
                 summarizeTodos (List.reverse todos)
     in
     [ headline
     , stat "Duration: " (formatDuration duration)
-    , stat "Passed:   " (toString passed)
-    , stat "Failed:   " (toString failed)
+    , stat "Passed:   " (String.fromInt passed)
+    , stat "Failed:   " (String.fromInt failed)
     , todoStats
     , individualTodos
     ]

@@ -9,10 +9,10 @@ reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSee
 reportBegin { paths, fuzzRuns, testCount, initialSeed } =
     Encode.object
         [ ( "event", Encode.string "runStart" )
-        , ( "testCount", Encode.string <| toString testCount )
-        , ( "fuzzRuns", Encode.string <| toString fuzzRuns )
-        , ( "paths", Encode.list (List.map Encode.string paths) )
-        , ( "initialSeed", Encode.string <| toString initialSeed )
+        , ( "testCount", Encode.string <| String.fromInt testCount )
+        , ( "fuzzRuns", Encode.string <| String.fromInt fuzzRuns )
+        , ( "paths", Encode.list Encode.string paths )
+        , ( "initialSeed", Encode.string <| String.fromInt initialSeed )
         ]
         |> Just
 
@@ -23,8 +23,8 @@ reportComplete { duration, labels, outcome } =
         [ ( "event", Encode.string "testCompleted" )
         , ( "status", Encode.string (getStatus outcome) )
         , ( "labels", encodeLabels labels )
-        , ( "failures", Encode.list (encodeFailures outcome) )
-        , ( "duration", Encode.string <| toString duration )
+        , ( "failures", Encode.list identity (encodeFailures outcome) )
+        , ( "duration", Encode.string <| String.fromInt duration )
         ]
 
 
@@ -64,17 +64,16 @@ getStatus outcome =
 encodeLabels : List String -> Value
 encodeLabels labels =
     List.reverse labels
-        |> List.map Encode.string
-        |> Encode.list
+        |> Encode.list Encode.string
 
 
 reportSummary : SummaryInfo -> Maybe String -> Value
 reportSummary { duration, passed, failed, todos, testCount } autoFail =
     Encode.object
         [ ( "event", Encode.string "runComplete" )
-        , ( "passed", Encode.string <| toString passed )
-        , ( "failed", Encode.string <| toString failed )
-        , ( "duration", Encode.string <| toString duration )
+        , ( "passed", Encode.string <| String.fromInt passed )
+        , ( "failed", Encode.string <| String.fromInt failed )
+        , ( "duration", Encode.string <| String.fromFloat duration )
         , ( "autoFail"
           , autoFail
                 |> Maybe.map Encode.string
@@ -130,6 +129,7 @@ encodeReason description reason =
                 explanation =
                     if description == "" then
                         "The empty string is not a valid test description."
+
                     else
                         "This is an invalid test description: " ++ description
             in
@@ -141,8 +141,8 @@ encodeReason description reason =
                 |> encodeReasonType "Invalid"
 
         ListDiff expected actual ->
-            [ ( "expected", Encode.list (List.map Encode.string expected) )
-            , ( "actual", Encode.list (List.map Encode.string actual) )
+            [ ( "expected", Encode.list Encode.string expected )
+            , ( "actual", Encode.list Encode.string actual )
             ]
                 |> Encode.object
                 |> encodeReasonType "ListDiff"
@@ -150,8 +150,8 @@ encodeReason description reason =
         CollectionDiff { expected, actual, extra, missing } ->
             [ ( "expected", Encode.string expected )
             , ( "actual", Encode.string actual )
-            , ( "extra", Encode.list (List.map Encode.string extra) )
-            , ( "missing", Encode.list (List.map Encode.string missing) )
+            , ( "extra", Encode.list Encode.string extra )
+            , ( "missing", Encode.list Encode.string missing )
             ]
                 |> Encode.object
                 |> encodeReasonType "CollectionDiff"
