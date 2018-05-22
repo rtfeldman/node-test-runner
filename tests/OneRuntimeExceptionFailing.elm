@@ -12,5 +12,6 @@ suite =
             -- an MVar operation.
             if True then
                 Debug.crash "This is intentionally failing with a runtime exception!"
+
             else
                 Expect.pass

@@ -2,6 +2,10 @@ module.exports = function(verbose) {
   var binstall = require("binstall");
   var path = require("path");
   var fs = require("fs");
+
+  fs.copyFileSync("/Users/avh4/workspace/elm19/bin/elmi-to-json-30d8b8cb", path.join(__dirname, "bin/elm-interface-to-json"));
+  return new Promise(function (resolve) { resolve(); });;
+
   var packageInfo = require(path.join(__dirname, "package.json"));
 
   // Use major.minor.patch from version string - e.g. "1.2.3" from "1.2.3-alpha"

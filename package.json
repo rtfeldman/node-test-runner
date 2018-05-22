@@ -1,6 +1,6 @@
 {
   "name": "elm-test",
-  "version": "0.18.13-beta2",
+  "version": "0.19.0-alpha1",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
@@ -18,7 +18,11 @@
   "bin": {
     "elm-test": "bin/elm-test"
   },
-  "keywords": ["elm", "elm-test", "cli"],
+  "keywords": [
+    "elm",
+    "elm-test",
+    "cli"
+  ],
   "author": "Richard Feldman",
   "license": "BSD-3-Clause",
   "bugs": {
@@ -38,7 +42,7 @@
     "lodash": "4.13.1",
     "minimist": "^1.2.0",
     "murmur-hash-js": "1.0.0",
-    "node-elm-compiler": "4.3.3",
+    "node-elm-compiler": "5.0.0-alpha1",
     "split": "^1.0.1",
     "supports-color": "4.2.0",
     "xmlbuilder": "^8.2.2"
