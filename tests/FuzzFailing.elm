@@ -17,7 +17,7 @@ testWithoutNums =
     describe "withoutNums"
         [ fuzzWith { runs = 100 } (tuple3 ( string, float, string )) "adding numbers to strings has no effect" <|
             \( prefix, num, suffix ) ->
-                withoutNums (prefix ++ toString num ++ suffix)
+                withoutNums (prefix ++ String.fromFloat num ++ suffix)
                     |> Expect.equal (withoutNums (prefix ++ suffix))
         ]
 
@@ -107,7 +107,7 @@ testOxfordify =
             , test "runs a Debug.crash on purpose" <|
                 \() ->
                     oxfordify "Everything is normal"
-                        |> Debug.crash "this test runs a Debug.crash on purpose!"
+                        |> Debug.todo "this test runs a Debug.crash on purpose!"
             ]
         ]
 

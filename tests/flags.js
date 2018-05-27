@@ -21,14 +21,14 @@ describe("flags", () => {
     it("should copy over missing dependencies to the destination", done => {
       shell.cp("-R", "../tests/add-dependency-test/*", ".");
 
-      shell.exec("elm-test --add-dependencies test-elm-package.json", {
+      shell.exec("elm-test --add-dependencies test-elm.json", {
         silent: true
       });
 
-      fs.readJson("test-elm-package.json", "utf8", (err, data) => {
+      fs.readJson("test-elm.json", "utf8", (err, data) => {
         if (err) throw err;
 
-        assert.equal(data.dependencies.foo, "1.0.0 <= v < 2.0.0");
+        assert.equal(data.dependencies.foo, "1.0.1");
         done();
       });
     });
@@ -179,6 +179,9 @@ describe("flags", () => {
 
       let hasRetriggered = false;
 
+      child.on("close", code => {
+        done(new Error("elm-test --watch exited with status code: " + code));
+      });
       child.stdout.on("data", line => {
         try {
           const parsedLine = JSON.parse(line);
