@@ -9,7 +9,9 @@
         "elm/core": "1.0.0",
         "elm/html": "1.0.0"
     },
-    "test-dependencies": {},
+    "test-dependencies": {
+        "elm-explorations/test": "1.0.0"
+    },
     "do-not-edit-this-by-hand": {
         "transitive-dependencies": {
             "elm/json": "1.0.0",

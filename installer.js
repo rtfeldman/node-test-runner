@@ -3,7 +3,7 @@ module.exports = function(verbose) {
   var path = require("path");
   var fs = require("fs");
 
-  fs.copyFileSync("/Users/avh4/workspace/elm19/bin/elmi-to-json-30d8b8cb", path.join(__dirname, "bin/elm-interface-to-json"));
+  fs.copyFileSync("/Users/avh4/workspace/elm19/bin/elmi-to-json-a650892", path.join(__dirname, "bin/elm-interface-to-json"));
   return new Promise(function (resolve) { resolve(); });;
 
   var packageInfo = require(path.join(__dirname, "package.json"));
