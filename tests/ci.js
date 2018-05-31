@@ -125,6 +125,16 @@ assertTestFailure();
 
 cd("../");
 
+echo("### Testing elm-test on example-package/");
+
+cd("example-package");
+
+assertTestSuccess(path.join("tests", "*Pass*"));
+assertTestFailure(path.join("tests", "*Fail*"));
+assertTestFailure();
+
+cd("../");
+
 ls("tests/*.elm").forEach(function(testToRun) {
   if (/Passing\.elm$/.test(testToRun)) {
     echo("\n### Testing " + testToRun + " (expecting it to pass)\n");
