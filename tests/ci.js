@@ -101,7 +101,8 @@ if (!fs.existsSync(interfacePath)) {
 }
 
 echo(filename + ": Verifying installed elm-interface-to-json...");
-var interfaceExitCode = spawn.sync(interfacePath, ["--help"]).status;
+var interfaceResult = spawn.sync(interfacePath, ["--help"]);
+var interfaceExitCode = interfaceResult.status;
 
 if (interfaceExitCode !== 0) {
   echo(
@@ -109,6 +110,8 @@ if (interfaceExitCode !== 0) {
       ": Failed because `elm-interface-to-json` is present, but `elm-interface-to-json --help` returned with exit code " +
       interfaceExitCode
   );
+  echo(interfaceResult.stdout.toString());
+  echo(interfaceResult.stderr.toString());
   exit(1);
 }
 
