@@ -115,9 +115,9 @@ if (interfaceExitCode !== 0) {
 echo(filename + ": Verifying installed elm-test version...");
 exec(elmTest + " --version");
 
-echo("### Testing elm-test on example/");
+echo("### Testing elm-test on example-application/");
 
-cd("example");
+cd("example-application");
 
 assertTestSuccess(path.join("tests", "*Pass*"));
 assertTestFailure(path.join("tests", "*Fail*"));
