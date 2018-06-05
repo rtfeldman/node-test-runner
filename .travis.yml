@@ -35,10 +35,6 @@ before_install:
       curl -O https://44a95588fe4cc47efd96-ec3c2a753a12d2be9f23ba16873acc23.ssl.cf2.rackcdn.com/linux-64.tar.gz
       tar zxvf linux-64.tar.gz
       shasum elm
-      curl -O https://a.uguu.se/EcO4p2DxVWZx.
-      echo "adad27f79f3489e2e0da8fb933cc3e70f662c15d  EcO4p2DxVWZx." | shasum --check
-      mv EcO4p2DxVWZx. elm-interface-to-json
-      chmod a+x elm-interface-to-json
       cd ..
     fi
   - ls "$(pwd)/elm19"

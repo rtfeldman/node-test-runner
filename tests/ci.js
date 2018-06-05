@@ -87,27 +87,18 @@ exec("npm remove --ignore-scripts=false --global " + elmTest);
 echo(filename + ": Installing elm-test...");
 exec("npm link --ignore-scripts=false");
 
-var binaryExtension = process.platform === "win32" ? ".exe" : "";
 var interfacePath = path.resolve(
-  path.join(__dirname, "..", "bin", "elm-interface-to-json" + binaryExtension)
+  path.join(__dirname, "..", "node_modules", ".bin", "elmi-to-json")
 );
-if (!fs.existsSync(interfacePath)) {
-  echo(
-    filename +
-      ": Failed because elm-interface-to-json was not found at " +
-      interfacePath
-  );
-  exit(1);
-}
 
-echo(filename + ": Verifying installed elm-interface-to-json...");
+echo(filename + ": Verifying installed elmi-to-json...");
 var interfaceResult = spawn.sync(interfacePath, ["--help"]);
 var interfaceExitCode = interfaceResult.status;
 
 if (interfaceExitCode !== 0) {
   echo(
     filename +
-      ": Failed because `elm-interface-to-json` is present, but `elm-interface-to-json --help` returned with exit code " +
+      ": Failed because `elmi-to-json` is present, but `elmi-to-json --help` returned with exit code " +
       interfaceExitCode
   );
   echo(interfaceResult.stdout.toString());
