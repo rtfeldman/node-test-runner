@@ -104,10 +104,10 @@ testOxfordify =
                 \() ->
                     oxfordify "This sentence contains " "." [ "one item", "two item", "three item" ]
                         |> Expect.equal "This sentence contains one item, two item, and three item."
-            , test "runs a Debug.crash on purpose" <|
+            , test "runs a Debug.todo on purpose" <|
                 \() ->
                     oxfordify "Everything is normal"
-                        |> Debug.todo "this test runs a Debug.crash on purpose!"
+                        |> Debug.todo "this test runs a Debug.todo on purpose!"
             ]
         ]
 
