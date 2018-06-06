@@ -87,9 +87,7 @@ exec("npm remove --ignore-scripts=false --global " + elmTest);
 echo(filename + ": Installing elm-test...");
 exec("npm link --ignore-scripts=false");
 
-var interfacePath = path.resolve(
-  path.join(__dirname, "..", "node_modules", ".bin", "elmi-to-json")
-);
+var interfacePath = require("elmi-to-json").paths["elmi-to-json"];
 
 echo(filename + ": Verifying installed elmi-to-json...");
 var interfaceResult = spawn.sync(interfacePath, ["--help"]);
