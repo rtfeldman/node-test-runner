@@ -106,6 +106,16 @@ describe("flags", () => {
         done();
       });
     }).timeout(60000);
+
+    it("Should be able to report compilation errors", () => {
+      const runResult = shell.exec(
+        "elm-test --report=junit tests/compile-error-test/InvalidSyntax.elm",
+        { silent: true }
+      );
+
+      assert.ok(runResult.stderr.match(/SYNTAX PROBLEM/));
+    }).timeout(60000);
+
     it("Should be able to report failing junit xml", done => {
       const runResult = shell.exec(
         "elm-test --report=junit tests/OneFailing.elm",
