@@ -5,12 +5,15 @@
     ],
     "elm-version": "0.19.0",
     "dependencies": {
-        "elm/core": "1.0.0"
+        "direct": {
+            "elm/core": "1.0.0"
+        },
+        "indirect": {}
     },
     "test-dependencies": {
-        "elm-explorations/test": "1.0.0"
-    },
-    "do-not-edit-this-by-hand": {
-        "transitive-dependencies": {}
+        "direct": {
+            "elm-explorations/test": "1.0.0"
+        },
+        "indrect": {}
     }
 }
