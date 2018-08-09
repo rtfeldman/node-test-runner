@@ -29,7 +29,7 @@ client.setNoDelay(true);
 var testModule = Elm.Test.Generated[potentialModuleNames[0]];
 
 // Run the Elm app.
-var app = testModule.worker({ seed: initialSeed, report: report });
+var app = testModule.init({ flags: { seed: initialSeed, report: report } });
 
 client.on("data", function(msg) {
   app.ports.receive.send(JSON.parse(msg));
