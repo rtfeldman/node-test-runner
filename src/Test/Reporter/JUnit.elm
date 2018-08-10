@@ -3,7 +3,6 @@ module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 import Json.Encode as Encode exposing (Value)
 import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo, TestResult, isFailure)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
-import Time exposing (Time)
 
 
 reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
@@ -59,11 +58,10 @@ formatClassAndName labels =
             ( "", "" )
 
 
-encodeTime : Time -> Value
-encodeTime time =
-    time
-        |> Time.inSeconds
-        |> toString
+encodeDuration : Int -> Value
+encodeDuration time =
+    (toFloat time / 1000)
+        |> String.fromFloat
         |> Encode.string
 
 
@@ -76,7 +74,7 @@ reportComplete { labels, duration, outcome } =
     Encode.object
         ([ ( "@classname", Encode.string classname )
          , ( "@name", Encode.string name )
-         , ( "@time", encodeTime duration )
+         , ( "@time", encodeDuration duration )
          ]
             ++ encodeOutcome outcome
         )
@@ -115,7 +113,7 @@ reportSummary { testCount, duration, passed, failed, todos } autoFail =
                 , ( "@failed", Encode.int failed )
                 , ( "@errors", Encode.int 0 )
                 , ( "@time", Encode.float duration )
-                , ( "testcase", Encode.list extraFailures )
+                , ( "testcase", Encode.list identity extraFailures )
                 ]
           )
         ]
@@ -141,6 +139,7 @@ reasonToString description reason =
                 explanation =
                     if description == "" then
                         "The empty string is not a valid test description."
+
                     else
                         "This is an invalid test description: " ++ description
             in
@@ -150,13 +149,13 @@ reasonToString description reason =
             "Invalid test: " ++ description
 
         ListDiff expected actual ->
-            toString expected ++ "\n\nhad different elements than\n\n" ++ toString actual
+            String.join ", " expected ++ "\n\nhad different elements than\n\n" ++ String.join ", " actual
 
         CollectionDiff { expected, actual, extra, missing } ->
-            toString expected
+            expected
                 ++ "\n\nhad different contents than\n\n"
-                ++ toString actual
+                ++ actual
                 ++ "\n\nthese were extra:\n\n"
-                ++ toString extra
+                ++ String.join "\n" extra
                 ++ "\n\nthese were missing:\n\n"
-                ++ toString missing
+                ++ String.join "\n" missing

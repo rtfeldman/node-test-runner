@@ -1,7 +1,7 @@
 module Test.Reporter.Console.Format exposing (format, highlightEqual)
 
 import Test.Reporter.Highlightable as Highlightable exposing (Highlightable)
-import Test.Runner.Failure exposing (InvalidReason(BadDescription), Reason(..))
+import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
 
 format :
@@ -35,6 +35,7 @@ format formatEquality description reason =
         Invalid BadDescription ->
             if description == "" then
                 "The empty string is not a valid test description."
+
             else
                 "This is an invalid test description: " ++ description
 
@@ -56,6 +57,7 @@ format formatEquality description reason =
                 extraStr =
                     if List.isEmpty extra then
                         ""
+
                     else
                         "\nThese keys are extra: "
                             ++ (extra |> String.join ", " |> (\d -> "[ " ++ d ++ " ]"))
@@ -63,6 +65,7 @@ format formatEquality description reason =
                 missingStr =
                     if List.isEmpty missing then
                         ""
+
                     else
                         "\nThese keys are missing: "
                             ++ (missing |> String.join ", " |> (\d -> "[ " ++ d ++ " ]"))
@@ -80,9 +83,11 @@ highlightEqual expected actual =
     if expected == "\"\"" || actual == "\"\"" then
         -- Diffing when one is the empty string looks silly. Don't bother.
         Nothing
+
     else if isFloat expected && isFloat actual then
         -- Diffing numbers looks silly. Don't bother.
         Nothing
+
     else
         let
             expectedChars =
@@ -102,10 +107,10 @@ highlightEqual expected actual =
 isFloat : String -> Bool
 isFloat str =
     case String.toFloat str of
-        Ok _ ->
+        Just _ ->
             True
 
-        Err _ ->
+        Nothing ->
             False
 
 
@@ -122,21 +127,21 @@ listDiffToString index description { expected, actual } originals =
             , "This should never happen!"
             , "Please report this bug to https://github.com/elm-community/elm-test/issues - and include these lists: "
             , "\n"
-            , toString originals.originalExpected
+            , String.join ", " originals.originalExpected
             , "\n"
-            , toString originals.originalActual
+            , String.join ", " originals.originalActual
             ]
                 |> String.join ""
 
         ( first :: _, [] ) ->
             verticalBar (description ++ " was shorter than")
-                (toString originals.originalExpected)
-                (toString originals.originalActual)
+                (String.join ", " originals.originalExpected)
+                (String.join ", " originals.originalActual)
 
         ( [], first :: _ ) ->
             verticalBar (description ++ " was longer than")
-                (toString originals.originalExpected)
-                (toString originals.originalActual)
+                (String.join ", " originals.originalExpected)
+                (String.join ", " originals.originalActual)
 
         ( firstExpected :: restExpected, firstActual :: restActual ) ->
             if firstExpected == firstActual then
@@ -147,14 +152,15 @@ listDiffToString index description { expected, actual } originals =
                     , actual = restActual
                     }
                     originals
+
             else
                 -- We found elements that differ; fail!
                 String.join ""
                     [ verticalBar description
-                        (toString originals.originalExpected)
-                        (toString originals.originalActual)
+                        (String.join ", " originals.originalExpected)
+                        (String.join ", " originals.originalActual)
                     , "\n\nThe first diff is at index "
-                    , toString index
+                    , String.fromInt index
                     , ": it was `"
                     , firstActual
                     , "`, but `"
