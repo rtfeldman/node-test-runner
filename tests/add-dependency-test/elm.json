@@ -12,7 +12,9 @@
         "indirect": {}
     },
     "test-dependencies": {
-        "direct": {},
+        "direct": {
+            "elm-explorations/test": "1.0.0"
+        },
         "indirect": {}
     }
 }
