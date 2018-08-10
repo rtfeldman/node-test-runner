@@ -27,30 +27,32 @@ describe("flags", () => {
 
       fs.readJson("test-elm.json", "utf8", (err, data) => {
         if (err) throw err;
-
-        assert.equal(data.dependencies.foo, "1.0.1");
+        assert.equal(
+          data.dependencies.direct["this-is-not-real-but-we-are-testing-its-existence"],
+          "1.0.1"
+        );
         done();
       });
     });
 
     it("should fail if the destination file does not exist", () => {
       shell.cp("-R", "../tests/add-dependency-test/*", ".");
-      shell.rm("-R", "test-elm-package.json");
+      shell.rm("-R", "test-elm.json");
 
       const runResult = shell.exec(
-        "elm-test --add-dependencies test-elm-package.json",
+        "elm-test --add-dependencies test-elm.json",
         { silent: true }
       );
 
       assert.notEqual(runResult.code, 0);
     });
 
-    it("should fail if the current directory does not contain an elm-package.json", () => {
+    it("should fail if the current directory does not contain an elm.json", () => {
       shell.cp("-R", "../tests/add-dependency-test/*", ".");
-      shell.rm("-R", "elm-package.json");
+      shell.rm("-R", "elm.json");
 
       const runResult = shell.exec(
-        "elm-test --add-dependencies test-elm-package.json",
+        "elm-test --add-dependencies test-elm.json",
         { silent: true }
       );
 
