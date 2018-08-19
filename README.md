@@ -25,6 +25,14 @@ Running `elm-test` will also ensure that any dependencies in `elm-package.json` 
 
 Initializes the recommended project setup for testable Elm. It will create a `tests` folder with an `elm-package.json` based on your project's main `elm-package.json` with `elm-test` dependencies added, add `elm-stuff` to a `.gitignore` file and make your `elm-package.json` point to the `src/` folder.
 
+#### `install`
+
+Like `elm install`, except it installs to the `test-dependencies` field of your project's `elm.json` file instead of `dependencies`.
+
+```
+elm-test install elm/regex
+```
+
 #### `--compiler`
 
 The `--compiler` flag can be used to use a version of the Elm compiler that
@@ -49,14 +57,6 @@ Define how many times a fuzzer should run. Defaults to `100`
 
 ```
 elm-test --fuzz=500
-```
-
-#### `--add-dependencies`
-
-Utility to add missing dependencies from the `elm-package.json` in the current directory to a target `elm-package.json` file. Helpful after adding a dependency to your application.
-
-```
-elm-test --add-dependencies tests/elm-package.json
 ```
 
 #### `--report`
