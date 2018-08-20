@@ -7,7 +7,7 @@ const fs = require("fs-extra");
 const xml2js = require("xml2js");
 
 describe("flags", () => {
-  describe("--add-dependencies", () => {
+  describe("elm-test install", () => {
     beforeEach(() => {
       shell.mkdir("-p", "tmp");
       shell.cd("tmp");
@@ -18,41 +18,12 @@ describe("flags", () => {
       shell.rm("-Rf", "tmp");
     });
 
-    it("should copy over missing dependencies to the destination", done => {
-      shell.cp("-R", "../tests/add-dependency-test/*", ".");
-
-      shell.exec("elm-test --add-dependencies test-elm.json", {
-        silent: true
-      });
-
-      fs.readJson("test-elm.json", "utf8", (err, data) => {
-        if (err) throw err;
-        assert.equal(
-          data.dependencies.direct["this-is-not-real-but-we-are-testing-its-existence"],
-          "1.0.1"
-        );
-        done();
-      });
-    });
-
-    it("should fail if the destination file does not exist", () => {
-      shell.cp("-R", "../tests/add-dependency-test/*", ".");
-      shell.rm("-R", "test-elm.json");
-
-      const runResult = shell.exec(
-        "elm-test --add-dependencies test-elm.json",
-        { silent: true }
-      );
-
-      assert.notEqual(runResult.code, 0);
-    });
-
     it("should fail if the current directory does not contain an elm.json", () => {
-      shell.cp("-R", "../tests/add-dependency-test/*", ".");
+      shell.cp("-R", "../tests/install/*", ".");
       shell.rm("-R", "elm.json");
 
       const runResult = shell.exec(
-        "elm-test --add-dependencies test-elm.json",
+        "elm-test install elm/regex",
         { silent: true }
       );
 
