@@ -2,12 +2,14 @@ sudo: false
 
 language: node_js
 node_js:
-    - "node"
-    # - "4"
+    - "4"
+    - "6"
+    - "8"
+    - "10"
 
 os:
   - linux
-  # - osx
+  - osx
 
 env: ELM_VERSION=0.19.0
 
