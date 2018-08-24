@@ -47,7 +47,7 @@ module Test.Runner.Node.Vendor.Console exposing (..)
 -}
 plain : String -> String
 plain str =
-    String.join "" [ "\x1B[0m", str, "\x1B[0m" ]
+    String.join "" [ "\u{001B}[0m", str, "\u{001B}[0m" ]
 
 
 {-| Make the text darker.
@@ -67,7 +67,7 @@ Not all terminals support this.
 -}
 dark : String -> String
 dark str =
-    String.join "" [ "\x1B[2m", str, "\x1B[22m" ]
+    String.join "" [ "\u{001B}[2m", str, "\u{001B}[22m" ]
 
 
 {-| Make the text bold.
@@ -87,7 +87,7 @@ Some terminals implement this as a color change rather than a boldness change.
 -}
 bold : String -> String
 bold str =
-    String.join "" [ "\x1B[1m", str, "\x1B[22m" ]
+    String.join "" [ "\u{001B}[1m", str, "\u{001B}[22m" ]
 
 
 {-| Make the text underlined.
@@ -107,14 +107,14 @@ Not all terminals support this.
 -}
 underline : String -> String
 underline str =
-    String.join "" [ "\x1B[4m", str, "\x1B[24m" ]
+    String.join "" [ "\u{001B}[4m", str, "\u{001B}[24m" ]
 
 
 {-| Invert the foreground and background colors from what they would otherwise be.
 -}
 colorsInverted : String -> String
 colorsInverted str =
-    String.join "" [ "\x1B[7m", str, "\x1B[27m" ]
+    String.join "" [ "\u{001B}[7m", str, "\u{001B}[27m" ]
 
 
 
@@ -125,56 +125,56 @@ colorsInverted str =
 -}
 black : String -> String
 black str =
-    String.join "" [ "\x1B[30m", str, "\x1B[39m" ]
+    String.join "" [ "\u{001B}[30m", str, "\u{001B}[39m" ]
 
 
 {-| Make the foreground text red.
 -}
 red : String -> String
 red str =
-    String.join "" [ "\x1B[31m", str, "\x1B[39m" ]
+    String.join "" [ "\u{001B}[31m", str, "\u{001B}[39m" ]
 
 
 {-| Make the foreground text green.
 -}
 green : String -> String
 green str =
-    String.join "" [ "\x1B[32m", str, "\x1B[39m" ]
+    String.join "" [ "\u{001B}[32m", str, "\u{001B}[39m" ]
 
 
 {-| Make the foreground text yellow.
 -}
 yellow : String -> String
 yellow str =
-    String.join "" [ "\x1B[33m", str, "\x1B[39m" ]
+    String.join "" [ "\u{001B}[33m", str, "\u{001B}[39m" ]
 
 
 {-| Make the foreground text blue.
 -}
 blue : String -> String
 blue str =
-    String.join "" [ "\x1B[34m", str, "\x1B[39m" ]
+    String.join "" [ "\u{001B}[34m", str, "\u{001B}[39m" ]
 
 
 {-| Make the foreground text magenta.
 -}
 magenta : String -> String
 magenta str =
-    String.join "" [ "\x1B[35m", str, "\x1B[39m" ]
+    String.join "" [ "\u{001B}[35m", str, "\u{001B}[39m" ]
 
 
 {-| Make the foreground text cyan.
 -}
 cyan : String -> String
 cyan str =
-    String.join "" [ "\x1B[36m", str, "\x1B[39m" ]
+    String.join "" [ "\u{001B}[36m", str, "\u{001B}[39m" ]
 
 
 {-| Make the foreground text white.
 -}
 white : String -> String
 white str =
-    String.join "" [ "\x1B[37m", str, "\x1B[39m" ]
+    String.join "" [ "\u{001B}[37m", str, "\u{001B}[39m" ]
 
 
 
@@ -185,53 +185,53 @@ white str =
 -}
 bgBlack : String -> String
 bgBlack str =
-    String.join "" [ "\x1B[40m", str, "\x1B[49m" ]
+    String.join "" [ "\u{001B}[40m", str, "\u{001B}[49m" ]
 
 
 {-| Make the background red.
 -}
 bgRed : String -> String
 bgRed str =
-    String.join "" [ "\x1B[41m", str, "\x1B[49m" ]
+    String.join "" [ "\u{001B}[41m", str, "\u{001B}[49m" ]
 
 
 {-| Make the background green.
 -}
 bgGreen : String -> String
 bgGreen str =
-    String.join "" [ "\x1B[42m", str, "\x1B[49m" ]
+    String.join "" [ "\u{001B}[42m", str, "\u{001B}[49m" ]
 
 
 {-| Make the background yellow.
 -}
 bgYellow : String -> String
 bgYellow str =
-    String.join "" [ "\x1B[43m", str, "\x1B[49m" ]
+    String.join "" [ "\u{001B}[43m", str, "\u{001B}[49m" ]
 
 
 {-| Make the background blue.
 -}
 bgBlue : String -> String
 bgBlue str =
-    String.join "" [ "\x1B[44m", str, "\x1B[49m" ]
+    String.join "" [ "\u{001B}[44m", str, "\u{001B}[49m" ]
 
 
 {-| Make the background magenta.
 -}
 bgMagenta : String -> String
 bgMagenta str =
-    String.join "" [ "\x1B[45m", str, "\x1B[49m" ]
+    String.join "" [ "\u{001B}[45m", str, "\u{001B}[49m" ]
 
 
 {-| Make the background cyan.
 -}
 bgCyan : String -> String
 bgCyan str =
-    String.join "" [ "\x1B[46m", str, "\x1B[49m" ]
+    String.join "" [ "\u{001B}[46m", str, "\u{001B}[49m" ]
 
 
 {-| Make the background white.
 -}
 bgWhite : String -> String
 bgWhite str =
-    String.join "" [ "\x1B[47m", str, "\x1B[49m" ]
+    String.join "" [ "\u{001B}[47m", str, "\u{001B}[49m" ]

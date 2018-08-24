@@ -8,16 +8,16 @@ module Test.Runner.Node.App exposing (InitArgs, Model, Msg, RunnerOptions, run)
 
 import Json.Decode as Decode exposing (Value)
 import Platform
-import Random.Pcg
+import Random
 import Task
 import Test exposing (Test)
-import Test.Reporter.Reporter as Reporter exposing (Report(ConsoleReport))
+import Test.Reporter.Reporter as Reporter exposing (Report(..))
 import Test.Runner exposing (Runner, SeededRunners)
-import Time exposing (Time)
+import Time exposing (Posix)
 
 
 type Msg subMsg
-    = Init Time
+    = Init Posix
     | SubMsg subMsg
 
 
@@ -26,7 +26,7 @@ type alias InitArgs =
     , processes : Int
     , paths : List String
     , fuzzRuns : Int
-    , startTime : Time
+    , startTime : Posix
     , runners : SeededRunners
     , report : Report
     }
@@ -46,12 +46,12 @@ type Model subMsg subModel
         }
 
 
-timeToNumericSeed : Time -> Int
+timeToNumericSeed : Posix -> Int
 timeToNumericSeed time =
     time
-        |> floor
-        |> Random.Pcg.initialSeed
-        |> Random.Pcg.step (Random.Pcg.int 100 Random.Pcg.maxInt)
+        |> Time.posixToMillis
+        |> Random.initialSeed
+        |> Random.step (Random.int 100 Random.maxInt)
         |> Tuple.first
 
 
@@ -71,7 +71,7 @@ initOrUpdate msg maybeModel =
                                     timeToNumericSeed time
 
                         seed =
-                            Random.Pcg.initialSeed numericSeed
+                            Random.initialSeed numericSeed
 
                         runners =
                             Test.Runner.fromTest runs seed test
@@ -90,7 +90,8 @@ initOrUpdate msg maybeModel =
                     ( Initialized update subModel, Cmd.map SubMsg subCmd )
 
                 SubMsg _ ->
-                    Debug.crash "Attempted to run a SubMsg pre-Init!"
+                    -- Should never happen (got a SubMsg before Init happened)
+                    ( maybeModel, Cmd.none )
 
         Initialized update model ->
             case msg of
@@ -102,7 +103,8 @@ initOrUpdate msg maybeModel =
                     ( Initialized update newModel, Cmd.map SubMsg cmd )
 
                 Init _ ->
-                    Debug.crash "Attempted to init twice!"
+                    -- Should never happen (got more than one Init msg)
+                    ( maybeModel, Cmd.none )
 
 
 type alias SubUpdate msg model =
@@ -162,7 +164,7 @@ run { runs, seed, report, paths, processes } appOpts test =
             , cmd
             )
     in
-    Platform.programWithFlags
+    Platform.worker
         { init = init
         , update = initOrUpdate
         , subscriptions = subscriptions appOpts.subscriptions

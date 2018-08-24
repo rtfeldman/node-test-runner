@@ -12,7 +12,6 @@ module Test.Reporter.TestResults
 import Expect exposing (Expectation)
 import Test.Runner
 import Test.Runner.Failure exposing (Reason(..))
-import Time exposing (Time)
 
 
 type Outcome
@@ -24,7 +23,7 @@ type Outcome
 type alias TestResult =
     { labels : List String
     , outcome : Outcome
-    , duration : Time
+    , duration : Int -- in milliseconds
     }
 
 
@@ -33,7 +32,7 @@ type alias SummaryInfo =
     , passed : Int
     , failed : Int
     , todos : List ( List String, String )
-    , duration : Time
+    , duration : Float
     }
 
 
@@ -76,6 +75,7 @@ outcomesFromExpectations expectations =
                 Just failure ->
                     if Test.Runner.isTodo expectation then
                         [ Todo failure.description ]
+
                     else
                         [ Failed [ failure ] ]
 
@@ -114,6 +114,7 @@ outcomesFromExpectationsHelp expectation builder =
         Just failure ->
             if Test.Runner.isTodo expectation then
                 { builder | todos = failure.description :: builder.todos }
+
             else
                 { builder | failures = failure :: builder.failures }
 
