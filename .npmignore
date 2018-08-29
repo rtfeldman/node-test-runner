@@ -34,3 +34,14 @@ tmp
 # Specific to .npmignore
 .travis.yml
 README.md
+
+# Elm tests
+tests/
+
+example-application/
+example-package/
+
+README.md
+CHANGELOG.md
+
+.flowconfig
