@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (TestProgram, runWithOptions)
+port module Test.Runner.Node exposing (TestProgram, run)
 
 {-|
 
@@ -8,7 +8,7 @@ port module Test.Runner.Node exposing (TestProgram, runWithOptions)
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs run, runWithOptions, TestProgram
+@docs run, TestProgram
 
 -}
 
@@ -17,21 +17,40 @@ import Expect exposing (Expectation)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Platform
+import Random
 import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, outcomesFromExpectations)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
-import Test.Runner.Node.App as App
 import Time exposing (Posix)
 
 
-port receive : (Decode.Value -> msg) -> Sub msg
+-- TYPES
 
 
 type alias TestId =
     Int
+
+
+type alias InitArgs =
+    { initialSeed : Int
+    , processes : Int
+    , paths : List String
+    , fuzzRuns : Int
+    , runners : SeededRunners
+    , report : Report
+    }
+
+
+type alias RunnerOptions =
+    { seed : Int
+    , runs : Maybe Int
+    , report : Report
+    , paths : List String
+    , processes : Int
+    }
 
 
 type alias Model =
@@ -48,7 +67,7 @@ type alias Model =
 {-| A program which will run tests and report their results.
 -}
 type alias TestProgram =
-    Platform.Program Value (App.Model Msg Model) (App.Msg Msg)
+    Platform.Program Int Model Msg
 
 
 type Msg
@@ -76,13 +95,13 @@ dispatch model startTime =
             -- We're finished! Nothing left to run.
             sendResults True model.testReporter model.results
 
-        Just { labels, run } ->
+        Just config ->
             let
                 outcomes =
-                    outcomesFromExpectations (run ())
+                    outcomesFromExpectations (config.run ())
             in
             Time.now
-                |> Task.perform (Complete labels outcomes startTime)
+                |> Task.perform (Complete config.labels outcomes startTime)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -109,10 +128,8 @@ update msg ({ testReporter } as model) =
                         exitCode =
                             if failed > 0 then
                                 2
-
                             else if model.autoFail == Nothing && List.isEmpty todos then
                                 0
-
                             else
                                 3
 
@@ -136,7 +153,6 @@ update msg ({ testReporter } as model) =
                         ( { model | nextTestToRun = index + model.processes }
                         , Cmd.batch [ cmd, sendBegin model ]
                         )
-
                     else
                         ( { model | nextTestToRun = index }, cmd )
 
@@ -183,7 +199,6 @@ update msg ({ testReporter } as model) =
                 if isFinished then
                     -- Don't bother updating the model, since we're done
                     ( model, cmd )
-
                 else
                     -- Clear out the results, now that we've flushed them.
                     ( { model | nextTestToRun = nextTestToRun, results = [] }
@@ -192,7 +207,6 @@ update msg ({ testReporter } as model) =
                         , Task.perform Dispatch Time.now
                         ]
                     )
-
             else
                 ( { model | nextTestToRun = nextTestToRun, results = results }
                 , Task.perform Dispatch Time.now
@@ -215,7 +229,6 @@ sendResults isFinished testReporter results =
         typeStr =
             if isFinished then
                 "FINISHED"
-
             else
                 "RESULTS"
 
@@ -257,9 +270,12 @@ sendBegin model =
         |> send
 
 
-init : App.InitArgs -> ( Model, Cmd Msg )
-init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
+init : InitArgs -> Int -> ( Model, Cmd Msg )
+init { processes, paths, fuzzRuns, initialSeed, report, runners } startTimeMs =
     let
+        startTime =
+            Time.millisToPosix startTimeMs
+
         { indexedRunners, autoFail } =
             case runners of
                 Plain runnerList ->
@@ -306,16 +322,37 @@ init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
     ( model, Cmd.none )
 
 
-{-| Run the test using the provided options. If `Nothing` is provided for either
-`runs` or `seed`, it will fall back on the options used in [`run`](#run).
+{-| Run the tests.
 -}
-runWithOptions :
-    App.RunnerOptions
-    -> Test
-    -> TestProgram
-runWithOptions options =
-    App.run options
-        { init = init
+run : RunnerOptions -> Test -> Program Int Model Msg
+run { runs, seed, report, paths, processes } test =
+    let
+        fuzzRuns =
+            Maybe.withDefault defaultRunCount runs
+
+        runners =
+            Test.Runner.fromTest fuzzRuns (Random.initialSeed seed) test
+
+        wrappedInit =
+            init
+                { initialSeed = seed
+                , processes = processes
+                , paths = paths
+                , fuzzRuns = fuzzRuns
+                , runners = runners
+                , report = report
+                }
+    in
+    Platform.worker
+        { init = wrappedInit
         , update = update
         , subscriptions = \_ -> receive Receive
         }
+
+
+defaultRunCount : Int
+defaultRunCount =
+    100
+
+
+port receive : (Decode.Value -> msg) -> Sub msg
