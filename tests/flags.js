@@ -115,7 +115,7 @@ describe("flags", () => {
         { silent: true }
       );
 
-      assert.ok(runResult.stderr.match(/SYNTAX PROBLEM/));
+      assert.ok(runResult.stderr.match(/PARSE ERROR/));
     }).timeout(60000);
 
     it("Should be able to report failing junit xml", done => {
