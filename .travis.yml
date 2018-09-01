@@ -11,7 +11,9 @@ os:
   - linux
   - osx
 
-env: ELM_VERSION=0.19.0
+env:
+  global:
+    ELM_VERSION=0.19.0
 
 install:
   - node --version
