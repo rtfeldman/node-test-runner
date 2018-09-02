@@ -87,37 +87,39 @@ exec("npm remove --ignore-scripts=false --global " + elmTest);
 echo(filename + ": Installing elm-test...");
 exec("npm link --ignore-scripts=false");
 
-var binaryExtension = process.platform === "win32" ? ".exe" : "";
-var interfacePath = path.resolve(
-  path.join(__dirname, "..", "bin", "elm-interface-to-json" + binaryExtension)
-);
-if (!fs.existsSync(interfacePath)) {
-  echo(
-    filename +
-      ": Failed because elm-interface-to-json was not found at " +
-      interfacePath
-  );
-  exit(1);
-}
+var interfacePath = require("elmi-to-json").paths["elmi-to-json"];
 
-echo(filename + ": Verifying installed elm-interface-to-json...");
-var interfaceExitCode = spawn.sync(interfacePath, ["--help"]).status;
+echo(filename + ": Verifying installed elmi-to-json...");
+var interfaceResult = spawn.sync(interfacePath, ["--help"]);
+var interfaceExitCode = interfaceResult.status;
 
 if (interfaceExitCode !== 0) {
   echo(
     filename +
-      ": Failed because `elm-interface-to-json` is present, but `elm-interface-to-json --help` returned with exit code " +
+      ": Failed because `elmi-to-json` is present, but `elmi-to-json --help` returned with exit code " +
       interfaceExitCode
   );
+  echo(interfaceResult.stdout.toString());
+  echo(interfaceResult.stderr.toString());
   exit(1);
 }
 
 echo(filename + ": Verifying installed elm-test version...");
 exec(elmTest + " --version");
 
-echo("### Testing elm-test on example/");
+echo("### Testing elm-test on example-application/");
 
-cd("example");
+cd("example-application");
+
+assertTestSuccess(path.join("tests", "*Pass*"));
+assertTestFailure(path.join("tests", "*Fail*"));
+assertTestFailure();
+
+cd("../");
+
+echo("### Testing elm-test on example-package/");
+
+cd("example-package");
 
 assertTestSuccess(path.join("tests", "*Pass*"));
 assertTestFailure(path.join("tests", "*Fail*"));
@@ -132,14 +134,16 @@ ls("tests/*.elm").forEach(function(testToRun) {
   } else if (/Failing\.elm$/.test(testToRun)) {
     echo("\n### Testing " + testToRun + " (expecting it to fail)\n");
     assertTestFailure(testToRun);
-  } else if (/PortRuntimeException.elm$/.test(testToRun)) {
+  } else if (/PortRuntimeException\.elm$/.test(testToRun)) {
+    echo("\n### TODO " + testToRun + " (Elm 0.19 beta allows multiple ports with the same name?)");
+    return;
     echo(
       "\n### Testing " +
         testToRun +
         " (expecting it to error with a runtime exception)\n"
     );
     assertTestErrored(testToRun);
-  } else if (/Port\d.elm$/.test(testToRun)){
+  } else if (/Port\d\.elm$/.test(testToRun)){
     echo("\n### Skipping " + testToRun + " (helper file)\n");
     return;
   } else {

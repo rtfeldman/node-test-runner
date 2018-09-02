@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (TestProgram, runWithOptions)
+port module Test.Runner.Node exposing (TestProgram, run)
 
 {-|
 
@@ -8,7 +8,7 @@ port module Test.Runner.Node exposing (TestProgram, runWithOptions)
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs run, runWithOptions, TestProgram
+@docs run, TestProgram
 
 -}
 
@@ -16,33 +16,41 @@ import Dict exposing (Dict)
 import Expect exposing (Expectation)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Native.RunTest
 import Platform
+import Random
 import Task exposing (Task)
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, outcomesFromExpectations)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
-import Test.Runner.Node.App as App
-import Time exposing (Time)
+import Time exposing (Posix)
 
 
-{-| Execute the given thunk.
-
-If it throws an exception, return a failure instead of crashing.
-
--}
-runThunk : (() -> List Expectation) -> List Expectation
-runThunk =
-    Native.RunTest.runThunk
-
-
-port receive : (Decode.Value -> msg) -> Sub msg
+-- TYPES
 
 
 type alias TestId =
     Int
+
+
+type alias InitArgs =
+    { initialSeed : Int
+    , processes : Int
+    , paths : List String
+    , fuzzRuns : Int
+    , runners : SeededRunners
+    , report : Report
+    }
+
+
+type alias RunnerOptions =
+    { seed : Int
+    , runs : Maybe Int
+    , report : Report
+    , paths : List String
+    , processes : Int
+    }
 
 
 type alias Model =
@@ -59,13 +67,13 @@ type alias Model =
 {-| A program which will run tests and report their results.
 -}
 type alias TestProgram =
-    Platform.Program Value (App.Model Msg Model) (App.Msg Msg)
+    Platform.Program Int Model Msg
 
 
 type Msg
     = Receive Decode.Value
-    | Dispatch Time
-    | Complete (List String) (List Outcome) Time Time
+    | Dispatch Posix
+    | Complete (List String) (List Outcome) Posix Posix
 
 
 port send : String -> Cmd msg
@@ -80,20 +88,20 @@ warn str result =
     result
 
 
-dispatch : Model -> Time -> Cmd Msg
+dispatch : Model -> Posix -> Cmd Msg
 dispatch model startTime =
     case Dict.get model.nextTestToRun model.available of
         Nothing ->
             -- We're finished! Nothing left to run.
             sendResults True model.testReporter model.results
 
-        Just { labels, run } ->
+        Just config ->
             let
                 outcomes =
-                    outcomesFromExpectations (runThunk run)
+                    outcomesFromExpectations (config.run ())
             in
             Time.now
-                |> Task.perform (Complete labels outcomes startTime)
+                |> Task.perform (Complete config.labels outcomes startTime)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -153,7 +161,7 @@ update msg ({ testReporter } as model) =
                         cmd =
                             Encode.object
                                 [ ( "type", Encode.string "ERROR" )
-                                , ( "message", Encode.string err )
+                                , ( "message", Encode.string (Decode.errorToString err) )
                                 ]
                                 |> Encode.encode 0
                                 |> send
@@ -166,13 +174,13 @@ update msg ({ testReporter } as model) =
         Complete labels outcomes startTime endTime ->
             let
                 duration =
-                    endTime - startTime
+                    Time.posixToMillis endTime - Time.posixToMillis startTime
 
-                prependOutcome outcome results =
+                prependOutcome outcome rest =
                     ( model.nextTestToRun
                     , { labels = labels, outcome = outcome, duration = duration }
                     )
-                        :: results
+                        :: rest
 
                 results =
                     List.foldl prependOutcome model.results outcomes
@@ -227,7 +235,7 @@ sendResults isFinished testReporter results =
         addToKeyValues ( testId, result ) list =
             -- These are coming in in reverse order. Doing a foldl with ::
             -- means we reverse the list again, while also doing the conversion!
-            ( toString testId, testReporter.reportComplete result ) :: list
+            ( String.fromInt testId, testReporter.reportComplete result ) :: list
     in
     Encode.object
         [ ( "type", Encode.string typeStr )
@@ -262,23 +270,26 @@ sendBegin model =
         |> send
 
 
-init : App.InitArgs -> ( Model, Cmd Msg )
-init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
+init : InitArgs -> Int -> ( Model, Cmd Msg )
+init { processes, paths, fuzzRuns, initialSeed, report, runners } startTimeMs =
     let
+        startTime =
+            Time.millisToPosix startTimeMs
+
         { indexedRunners, autoFail } =
             case runners of
                 Plain runnerList ->
-                    { indexedRunners = List.indexedMap (,) runnerList
+                    { indexedRunners = List.indexedMap (\a b -> ( a, b )) runnerList
                     , autoFail = Nothing
                     }
 
                 Only runnerList ->
-                    { indexedRunners = List.indexedMap (,) runnerList
+                    { indexedRunners = List.indexedMap (\a b -> ( a, b )) runnerList
                     , autoFail = Just "Test.only was used"
                     }
 
                 Skipping runnerList ->
-                    { indexedRunners = List.indexedMap (,) runnerList
+                    { indexedRunners = List.indexedMap (\a b -> ( a, b )) runnerList
                     , autoFail = Just "Test.skip was used"
                     }
 
@@ -311,16 +322,37 @@ init { startTime, processes, paths, fuzzRuns, initialSeed, runners, report } =
     ( model, Cmd.none )
 
 
-{-| Run the test using the provided options. If `Nothing` is provided for either
-`runs` or `seed`, it will fall back on the options used in [`run`](#run).
+{-| Run the tests.
 -}
-runWithOptions :
-    App.RunnerOptions
-    -> Test
-    -> TestProgram
-runWithOptions options =
-    App.run options
-        { init = init
+run : RunnerOptions -> Test -> Program Int Model Msg
+run { runs, seed, report, paths, processes } test =
+    let
+        fuzzRuns =
+            Maybe.withDefault defaultRunCount runs
+
+        runners =
+            Test.Runner.fromTest fuzzRuns (Random.initialSeed seed) test
+
+        wrappedInit =
+            init
+                { initialSeed = seed
+                , processes = processes
+                , paths = paths
+                , fuzzRuns = fuzzRuns
+                , runners = runners
+                , report = report
+                }
+    in
+    Platform.worker
+        { init = wrappedInit
         , update = update
         , subscriptions = \_ -> receive Receive
         }
+
+
+defaultRunCount : Int
+defaultRunCount =
+    100
+
+
+port receive : (Decode.Value -> msg) -> Sub msg

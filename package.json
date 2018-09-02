@@ -1,15 +1,14 @@
 {
   "name": "elm-test",
-  "version": "0.18.13-beta",
+  "version": "0.19.0-beta6",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
     "node": ">=4.7.0"
   },
   "scripts": {
-    "install": "node install.js",
     "flow": "flow",
-    "test": "mocha tests"
+    "test": "flow check && mocha tests"
   },
   "repository": {
     "type": "git",
@@ -30,30 +29,32 @@
   },
   "homepage": "https://github.com/rtfeldman/node-test-runner#readme",
   "dependencies": {
-    "binstall": "1.2.0",
     "chalk": "2.1.0",
     "chokidar": "1.7.0",
     "cross-spawn": "4.0.0",
+    "elmi-to-json": "0.19.0",
     "find-parent-dir": "^0.3.0",
     "firstline": "1.2.1",
     "fs-extra": "0.30.0",
     "glob": "^7.1.1",
-    "lodash": "4.13.1",
+    "lodash": "4.17.10",
     "minimist": "^1.2.0",
     "murmur-hash-js": "1.0.0",
-    "node-elm-compiler": "4.3.3",
+    "node-elm-compiler": "5.0.0-alpha1",
     "split": "^1.0.1",
     "supports-color": "4.2.0",
+    "temp": "0.8.3",
     "xmlbuilder": "^8.2.2"
   },
   "optionalDependencies": {
     "fsevents": "1.2.4"
   },
   "devDependencies": {
+    "elm": "0.19.0-bugfix2",
     "flow-bin": "0.48.0",
-    "mocha": "^3.4.1",
+    "mocha": "5.2.0",
     "prettier": "1.5.2",
     "shelljs": "0.7.3",
-    "xml2js": "^0.4.17"
+    "xml2js": "0.4.17"
   }
 }

@@ -21,36 +21,38 @@ describe("flags", () => {
     it("should copy over missing dependencies to the destination", done => {
       shell.cp("-R", "../tests/add-dependency-test/*", ".");
 
-      shell.exec("elm-test --add-dependencies test-elm-package.json", {
+      shell.exec("elm-test --add-dependencies test-elm.json", {
         silent: true
       });
 
-      fs.readJson("test-elm-package.json", "utf8", (err, data) => {
+      fs.readJson("test-elm.json", "utf8", (err, data) => {
         if (err) throw err;
-
-        assert.equal(data.dependencies.foo, "1.0.0 <= v < 2.0.0");
+        assert.equal(
+          data.dependencies.direct["this-is-not-real-but-we-are-testing-its-existence"],
+          "1.0.1"
+        );
         done();
       });
     });
 
     it("should fail if the destination file does not exist", () => {
       shell.cp("-R", "../tests/add-dependency-test/*", ".");
-      shell.rm("-R", "test-elm-package.json");
+      shell.rm("-R", "test-elm.json");
 
       const runResult = shell.exec(
-        "elm-test --add-dependencies test-elm-package.json",
+        "elm-test --add-dependencies test-elm.json",
         { silent: true }
       );
 
       assert.notEqual(runResult.code, 0);
     });
 
-    it("should fail if the current directory does not contain an elm-package.json", () => {
+    it("should fail if the current directory does not contain an elm.json", () => {
       shell.cp("-R", "../tests/add-dependency-test/*", ".");
-      shell.rm("-R", "elm-package.json");
+      shell.rm("-R", "elm.json");
 
       const runResult = shell.exec(
-        "elm-test --add-dependencies test-elm-package.json",
+        "elm-test --add-dependencies test-elm.json",
         { silent: true }
       );
 
@@ -113,7 +115,7 @@ describe("flags", () => {
         { silent: true }
       );
 
-      assert.ok(runResult.stderr.match(/SYNTAX PROBLEM/));
+      assert.ok(runResult.stderr.match(/PARSE ERROR/));
     }).timeout(60000);
 
     it("Should be able to report failing junit xml", done => {
@@ -189,6 +191,9 @@ describe("flags", () => {
 
       let hasRetriggered = false;
 
+      child.on("close", code => {
+        done(new Error("elm-test --watch exited with status code: " + code));
+      });
       child.stdout.on("data", line => {
         try {
           const parsedLine = JSON.parse(line);

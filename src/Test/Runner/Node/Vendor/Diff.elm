@@ -1,6 +1,18 @@
 module Test.Runner.Node.Vendor.Diff exposing (Change(..), diff, diffLines)
 
-{-| This describes how each line has changed and also contains its value.
+{-| Compares two list and returns how they have changed.
+Each function internally uses Wu's [O(NP) algorithm](http://myerslab.mpi-cbg.de/wp-content/uploads/2014/06/np_diff.pdf).
+
+
+# Types
+
+@docs Change
+
+
+# Diffing
+
+@docs diff, diffLines
+
 -}
 
 -- NOTE: This is copy/pasted from https://github.com/jinjor/elm-diff
@@ -45,6 +57,8 @@ module Test.Runner.Node.Vendor.Diff exposing (Change(..), diff, diffLines)
 import Array exposing (Array)
 
 
+{-| This describes how each line has changed and also contains its value.
+-}
 type Change a
     = Added a
     | Removed a
@@ -54,6 +68,12 @@ type Change a
 type StepResult
     = Continue (Array (List ( Int, Int )))
     | Found (List ( Int, Int ))
+
+
+type BugReport
+    = CannotGetA Int
+    | CannotGetB Int
+    | UnexpectedPath ( Int, Int ) (List ( Int, Int ))
 
 
 {-| Compares two text.
@@ -95,6 +115,19 @@ diffLines a b =
 -}
 diff : List a -> List a -> List (Change a)
 diff a b =
+    case testDiff a b of
+        Ok changes ->
+            changes
+
+        Err _ ->
+            []
+
+
+{-| Test the algolithm itself.
+If it returns Err, it should be a bug.
+-}
+testDiff : List a -> List a -> Result BugReport (List (Change a))
+testDiff a b =
     let
         arrA =
             Array.fromList a
@@ -108,67 +141,83 @@ diff a b =
         n =
             Array.length arrB
 
-        -- Elm's Array doesn't allow null element, so we'll use shifted index to access source.
+        -- Elm's Array doesn't allow null element,
+        -- so we'll use shifted index to access source.
         getA =
             \x -> Array.get (x - 1) arrA
 
         getB =
             \y -> Array.get (y - 1) arrB
 
-        -- This is used for formatting result. If `ond` is working correctly, illegal accesses never happen.
-        getAOrCrash x =
-            case getA x of
-                Just a ->
-                    a
-
-                Nothing ->
-                    Debug.crash ("Cannot get A[" ++ toString x ++ "]")
-
-        getBOrCrash y =
-            case getB y of
-                Just b ->
-                    b
-
-                Nothing ->
-                    Debug.crash ("Cannot get B[" ++ toString y ++ "]")
-
         path =
             -- Is there any case ond is needed?
             -- ond getA getB m n
             onp getA getB m n
     in
-    makeChanges getAOrCrash getBOrCrash path
+    makeChanges getA getB path
 
 
-makeChanges : (Int -> a) -> (Int -> a) -> List ( Int, Int ) -> List (Change a)
+makeChanges :
+    (Int -> Maybe a)
+    -> (Int -> Maybe a)
+    -> List ( Int, Int )
+    -> Result BugReport (List (Change a))
 makeChanges getA getB path =
     case path of
         [] ->
-            []
+            Ok []
 
         latest :: tail ->
             makeChangesHelp [] getA getB latest tail
 
 
-makeChangesHelp : List (Change a) -> (Int -> a) -> (Int -> a) -> ( Int, Int ) -> List ( Int, Int ) -> List (Change a)
+makeChangesHelp :
+    List (Change a)
+    -> (Int -> Maybe a)
+    -> (Int -> Maybe a)
+    -> ( Int, Int )
+    -> List ( Int, Int )
+    -> Result BugReport (List (Change a))
 makeChangesHelp changes getA getB ( x, y ) path =
     case path of
         [] ->
-            changes
+            Ok changes
 
         ( prevX, prevY ) :: tail ->
             let
                 change =
                     if x - 1 == prevX && y - 1 == prevY then
-                        NoChange (getA x)
+                        case getA x of
+                            Just a ->
+                                Ok (NoChange a)
+
+                            Nothing ->
+                                Err (CannotGetA x)
+
                     else if x == prevX then
-                        Added (getB y)
+                        case getB y of
+                            Just b ->
+                                Ok (Added b)
+
+                            Nothing ->
+                                Err (CannotGetB y)
+
                     else if y == prevY then
-                        Removed (getA x)
+                        case getA x of
+                            Just a ->
+                                Ok (Removed a)
+
+                            Nothing ->
+                                Err (CannotGetA x)
+
                     else
-                        Debug.crash ("Unexpected path: " ++ toString ( ( x, y ), path ))
+                        Err (UnexpectedPath ( x, y ) path)
             in
-            makeChangesHelp (change :: changes) getA getB ( prevX, prevY ) tail
+            change
+                |> Result.andThen
+                    (\c ->
+                        makeChangesHelp (c :: changes) getA getB ( prevX, prevY ) tail
+                    )
 
 
 
@@ -191,16 +240,17 @@ ondLoopDK :
     -> Int
     -> Array (List ( Int, Int ))
     -> List ( Int, Int )
-ondLoopDK snake offset d k v =
+ondLoopDK snake_ offset d k v =
     if k > d then
-        ondLoopDK snake offset (d + 1) (-d - 1) v
+        ondLoopDK snake_ offset (d + 1) (-d - 1) v
+
     else
-        case step snake offset k v of
+        case step snake_ offset k v of
             Found path ->
                 path
 
-            Continue v ->
-                ondLoopDK snake offset d (k + 2) v
+            Continue v_ ->
+                ondLoopDK snake_ offset d (k + 2) v_
 
 
 
@@ -226,20 +276,23 @@ onpLoopP :
     -> Int
     -> Array (List ( Int, Int ))
     -> List ( Int, Int )
-onpLoopP snake delta offset p v =
+onpLoopP snake_ delta offset p v =
     let
         ks =
             if delta > 0 then
-                List.reverse (List.range (delta + 1) (delta + p)) ++ List.range -p delta
+                List.reverse (List.range (delta + 1) (delta + p))
+                    ++ List.range -p delta
+
             else
-                List.reverse (List.range (delta + 1) p) ++ List.range (-p + delta) delta
+                List.reverse (List.range (delta + 1) p)
+                    ++ List.range (-p + delta) delta
     in
-    case onpLoopK snake offset ks v of
+    case onpLoopK snake_ offset ks v of
         Found path ->
             path
 
-        Continue v ->
-            onpLoopP snake delta offset (p + 1) v
+        Continue v_ ->
+            onpLoopP snake_ delta offset (p + 1) v_
 
 
 onpLoopK :
@@ -248,18 +301,18 @@ onpLoopK :
     -> List Int
     -> Array (List ( Int, Int ))
     -> StepResult
-onpLoopK snake offset ks v =
+onpLoopK snake_ offset ks v =
     case ks of
         [] ->
             Continue v
 
-        k :: ks ->
-            case step snake offset k v of
+        k :: ks_ ->
+            case step snake_ offset k v of
                 Found path ->
                     Found path
 
-                Continue v ->
-                    onpLoopK snake offset ks v
+                Continue v_ ->
+                    onpLoopK snake_ offset ks_ v_
 
 
 step :
@@ -268,7 +321,7 @@ step :
     -> Int
     -> Array (List ( Int, Int ))
     -> StepResult
-step snake offset k v =
+step snake_ offset k v =
     let
         fromLeft =
             Maybe.withDefault [] (Array.get (k - 1 + offset) v)
@@ -291,24 +344,38 @@ step snake offset k v =
                     -- this implies "remove" comes always earlier than "add"
                     if leftY + 1 >= topY then
                         ( fromLeft, ( leftX, leftY + 1 ) )
+
                     else
                         ( fromTop, ( topX + 1, topY ) )
 
         ( newPath, goal ) =
-            snake (x + 1) (y + 1) (( x, y ) :: path)
+            snake_ (x + 1) (y + 1) (( x, y ) :: path)
     in
     if goal then
         Found newPath
+
     else
         Continue (Array.set (k + offset) newPath v)
 
 
-snake : (Int -> Maybe a) -> (Int -> Maybe a) -> Int -> Int -> List ( Int, Int ) -> ( List ( Int, Int ), Bool )
+snake :
+    (Int -> Maybe a)
+    -> (Int -> Maybe a)
+    -> Int
+    -> Int
+    -> List ( Int, Int )
+    -> ( List ( Int, Int ), Bool )
 snake getA getB nextX nextY path =
     case ( getA nextX, getB nextY ) of
         ( Just a, Just b ) ->
             if a == b then
-                snake getA getB (nextX + 1) (nextY + 1) (( nextX, nextY ) :: path)
+                snake
+                    getA
+                    getB
+                    (nextX + 1)
+                    (nextY + 1)
+                    (( nextX, nextY ) :: path)
+
             else
                 ( path, False )
 
