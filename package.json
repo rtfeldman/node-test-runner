@@ -32,7 +32,7 @@
   "dependencies": {
     "binstall": "1.2.0",
     "chalk": "2.1.0",
-    "chokidar": "^1.7.0",
+    "chokidar": "1.7.0",
     "cross-spawn": "4.0.0",
     "find-parent-dir": "^0.3.0",
     "firstline": "1.2.1",
@@ -47,7 +47,7 @@
     "xmlbuilder": "^8.2.2"
   },
   "optionalDependencies": {
-    "fsevents": "^1.2.4"
+    "fsevents": "1.2.4"
   },
   "devDependencies": {
     "flow-bin": "0.48.0",
