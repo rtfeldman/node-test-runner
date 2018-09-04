@@ -1,12 +1,35 @@
 "use strict";
 
 const assert = require("assert");
+const path = require("path");
 const shell = require("shelljs");
 const spawn = require("cross-spawn");
 const fs = require("fs-extra");
 const xml2js = require("xml2js");
 
 describe("flags", () => {
+  describe("elm-test init", () => {
+    beforeEach(() => {
+      shell.mkdir("-p", "tmp");
+      shell.cd("tmp");
+    });
+
+    afterEach(() => {
+      shell.cd("..");
+      shell.rm("-Rf", "tmp");
+    });
+
+    it("Testing elm-test init", (done) => {
+      shell.cp(path.join(__dirname, "..", "templates", "package", "elm.json"), "elm.json");
+      var child = spawn(path.join(__dirname, "..", "bin", "elm-test"), ["init"]);
+      child.stdin.setEncoding("utf-8");
+      child.stdin.write("y\n");
+      child.on('exit', (code) => {
+        assert.equal(code, 0);
+        done()
+      })
+    });
+  });
   describe("elm-test install", () => {
     beforeEach(() => {
       shell.mkdir("-p", "tmp");
