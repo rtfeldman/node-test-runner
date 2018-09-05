@@ -156,25 +156,6 @@ ls("tests/*.elm").forEach(function(testToRun) {
   }
 });
 
-echo("### Testing elm-test init && elm-test");
-rm("-Rf", "tmp");
-mkdir("-p", "tmp");
-cd("tmp");
-exec(elmTest + " init --yes");
-assertTestIncomplete();
-
-cd("..");
-
-echo("\n### Testing elm-test init on a non-empty directory\n");
-rm("-Rf", "tmp");
-cp("-R", "tests/init-test", "tmp");
-cd("tmp");
-exec(elmTest + " init --yes");
-assertTestIncomplete();
-
-cd("..");
-rm("-Rf", "tmp");
-
 echo("");
 echo(filename + ": Everything looks good!");
 echo("                                                            ");
