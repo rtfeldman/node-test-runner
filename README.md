@@ -5,49 +5,51 @@ Runs [elm-test](https://github.com/elm-community/elm-test) suites from Node.js
 
 ## Installation
 
-```bash
+```shell
 npm install -g elm-test
 ```
 
 ## Usage
 
-```bash
-elm-test init    # Adds the elm-test dependency and creates a suitable folder structure
-elm-test         # Runs all exposed Test values in *.elm files in the test/ and tests/ directories
-elm-test Foo.elm # Runs all exposed Test values in Foo.elm
+```shell
+elm-test install foo/bar # Install the foo/bar package to "test-dependencies"
+elm-test init            # `elm-test install elm-explorations/test` and create tests/Example.elm
+elm-test                 # Run all exposed Test values in *.elm files in tests/
+elm-test Foo.elm         # Run all exposed Test values in Foo.elm
 ```
 
-Running `elm-test` will also ensure that any dependencies in `elm-package.json` and `tests/elm-package.json` are installed before it runs the tests.
-
 ### Configuration
-
-#### `init`
-
-Initializes the recommended project setup for testable Elm. It will create a `tests` folder with an `elm-package.json` based on your project's main `elm-package.json` with `elm-test` dependencies added, add `elm-stuff` to a `.gitignore` file and make your `elm-package.json` point to the `src/` folder.
 
 #### `install`
 
 Like `elm install`, except it installs to the `test-dependencies` field of your project's `elm.json` file instead of `dependencies`.
 
-```
+```shell
 elm-test install elm/regex
 ```
+
+#### `init`
+
+Runs `elm-test install elm-explorations/test` and then creates a `tests/Example.elm`
+example test to get you started.
+
+Afterwards, you can run `elm-test` with no arguments to try out the example.
 
 #### `--compiler`
 
 The `--compiler` flag can be used to use a version of the Elm compiler that
 has not been installed globally.
 
-```
+```shell
 npm install elm
-elm-test --compiler ./node_modules/.bin/elm-make
+elm-test --compiler ./node_modules/.bin/elm
 ```
 
 #### `--seed`
 
 Allow running the tests with a predefined seed, rather than a randomly generated seed. This is especially helpful when trying to reproduce a failing fuzz-test.
 
-```
+```shell
 elm-test --seed=12345
 ```
 
@@ -55,7 +57,7 @@ elm-test --seed=12345
 
 Define how many times a fuzzer should run. Defaults to `100`
 
-```
+```shell
 elm-test --fuzz=500
 ```
 
@@ -67,7 +69,7 @@ Specify which reporter to use for reporting your test results. Valid options are
 - `json`: every event will be written to stdout as a json-encoded object
 - `junit`: junit-compatible xml will be written to stdout
 
-```
+```shell
 elm-test --report=json
 ```
 
@@ -75,9 +77,9 @@ elm-test --report=json
 
 Displays the version of the current elm-test.
 
-```
+```shell
 $ elm-test --version
-0.18.4
+0.19.0
 ```
 
 #### `--watch`
@@ -86,7 +88,7 @@ Starts the runner in watch mode. Upon changing any currently watched source
 files (either in your your source-directories or in your tests'
 source-directories), your tests will get rerun.
 
-```
+```shell
 elm-test --watch
 ```
 
@@ -112,7 +114,7 @@ cache:
 os:
   - linux
 
-env: ELM_VERSION=0.18.0
+env: ELM_VERSION=0.19.0
 
 before_install:
   - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
@@ -121,8 +123,6 @@ install:
   - node --version
   - npm --version
   - npm install -g elm@$ELM_VERSION elm-test
-  - git clone https://github.com/NoRedInk/elm-ops-tooling
-  - elm-ops-tooling/with_retry.rb elm package install --yes
   # Faster compile on Travis.
   - |
     if [ ! -d sysconfcpus/bin ];
@@ -134,10 +134,6 @@ install:
       cd ..;
     fi
 
-before_script:
-  - cd tests && $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 elm-make --yes Tests.elm && cd ..
-
 script:
-  - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 elm-test
-
+  - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 1 elm-test
 ```
