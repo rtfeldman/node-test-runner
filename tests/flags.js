@@ -5,12 +5,14 @@ const path = require("path");
 const shell = require("shelljs");
 const spawn = require("cross-spawn");
 const fs = require("fs-extra");
+const os = require("os");
 const xml2js = require("xml2js");
 
 function elmTestWithYes(args, callback) {
   var child = spawn(path.join(__dirname, "..", "bin", "elm-test"), args);
   child.stdin.setEncoding("utf-8");
-  child.stdin.write("y\n");
+  child.stdin.write(os.EOL);
+  child.stdin.end();
   child.on('exit', (code) => {
     callback(code);
   });
@@ -88,8 +90,8 @@ describe("flags", () => {
     });
 
     it("should fail if the current directory does not contain an elm.json", () => {
-      shell.cp("-R", "../tests/install/*", ".");
-      shell.rm("-R", "elm.json");
+      shell.cp("-R", path.join(__dirname, "install", "*", "."));
+      shell.rm("-f", "elm.json");
 
       const runResult = shell.exec(
         "elm-test install elm/regex",
