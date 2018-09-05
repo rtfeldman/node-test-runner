@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors major Elm versions. So version 0.18.* of this project will
 be compatible with Elm 0.18.*.
 
+## 0.19.0 - 2018-08-19
+
+### Added
+
+- `elm-test install PACKAGE` - works like `elm install` but installs into `test-dependencies`
+
+### Removed
+
+- `--add-dependencies` (replaced by `elm-test install`)
+- CLI aliases (e.g. `-f` as a shorthand for `--fuzz`).
+
 ## 0.18.11 - 2017-08-07
 
 ### Fixed

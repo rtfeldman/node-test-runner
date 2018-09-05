@@ -1,9 +1,9 @@
-module TestsFailing exposing (..)
+module TestsFailing exposing (oxfordify, someTodos, testExpectations, testFuzz, testWithoutNums, ultimateTest, withoutNums)
 
 import Char
-import Example
 import Expect
 import Fuzz exposing (..)
+import Something
 import String
 import Test exposing (..)
 
@@ -12,7 +12,7 @@ ultimateTest : Test
 ultimateTest =
     test "the ultimate answer is 41" <|
         \() ->
-            Example.ultimateAnswer
+            Something.ultimateAnswer
                 |> Expect.equal 41
 
 

@@ -1,4 +1,4 @@
-module Example exposing (..)
+module Something exposing (ultimateAnswer)
 
 
 ultimateAnswer : Int

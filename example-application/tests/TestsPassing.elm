@@ -1,7 +1,7 @@
-module TestsPassing exposing (..)
+module TestsPassing exposing (testEqual, testFalse, testTrue)
 
-import Example
 import Expect
+import Something
 import Test exposing (Test, test)
 
 
@@ -9,7 +9,7 @@ testEqual : Test
 testEqual =
     test "Expect.equal works" <|
         \() ->
-            Example.ultimateAnswer
+            Something.ultimateAnswer
                 |> Expect.equal 42
 
 

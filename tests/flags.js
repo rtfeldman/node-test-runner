@@ -1,15 +1,27 @@
 "use strict";
 
 const assert = require("assert");
+const path = require("path");
 const shell = require("shelljs");
 const spawn = require("cross-spawn");
 const fs = require("fs-extra");
+const os = require("os");
 const xml2js = require("xml2js");
 
+function elmTestWithYes(args, callback) {
+  var child = spawn(path.join(__dirname, "..", "bin", "elm-test"), args);
+  child.stdin.setEncoding("utf-8");
+  child.stdin.write(os.EOL);
+  child.stdin.end();
+  child.on('exit', (code) => {
+    callback(code);
+  });
+}
+
 describe("flags", () => {
-  describe("--add-dependencies", () => {
+  describe("elm-test init", () => {
     beforeEach(() => {
-      shell.mkdir("-p", "tmp");
+      shell.mkdir("-p", path.join("tmp", "src"));
       shell.cd("tmp");
     });
 
@@ -18,41 +30,71 @@ describe("flags", () => {
       shell.rm("-Rf", "tmp");
     });
 
-    it("should copy over missing dependencies to the destination", done => {
-      shell.cp("-R", "../tests/add-dependency-test/*", ".");
-
-      shell.exec("elm-test --add-dependencies test-elm.json", {
-        silent: true
+    describe("for a PACKAGE", () => {
+      beforeEach(() => {
+        shell.cp(path.join(__dirname, "templates", "package", "elm.json"), "elm.json");
       });
 
-      fs.readJson("test-elm.json", "utf8", (err, data) => {
-        if (err) throw err;
-        assert.equal(
-          data.dependencies.direct["this-is-not-real-but-we-are-testing-its-existence"],
-          "1.0.1"
-        );
-        done();
+      afterEach(() => {
+        shell.rm("-f", "elm.json");
+      });
+
+      it("Adds elm-explorations/test", (done) => {
+        var json = JSON.parse(fs.readFileSync("elm.json", {encoding: "utf-8"}));
+        assert.equal(typeof json["test-dependencies"]["elm-explorations/test"], "undefined");
+
+        elmTestWithYes(["init"], (code) => {
+          assert.equal(code, 0);
+
+          json = JSON.parse(fs.readFileSync("elm.json", {encoding: "utf-8"}));
+          assert.equal(typeof json["test-dependencies"]["elm-explorations/test"], "string");
+
+          done();
+        });
       });
     });
 
-    it("should fail if the destination file does not exist", () => {
-      shell.cp("-R", "../tests/add-dependency-test/*", ".");
-      shell.rm("-R", "test-elm.json");
+    describe("for an APPLICATION", () => {
+      beforeEach(() => {
+        shell.cp(path.join(__dirname, "templates", "application", "elm.json"), "elm.json");
+      });
 
-      const runResult = shell.exec(
-        "elm-test --add-dependencies test-elm.json",
-        { silent: true }
-      );
+      afterEach(() => {
+        shell.rm("-f", "elm.json");
+      });
 
-      assert.notEqual(runResult.code, 0);
+      it("Adds elm-explorations/test", (done) => {
+        var json = JSON.parse(fs.readFileSync("elm.json", {encoding: "utf-8"}));
+        assert.equal(typeof json["test-dependencies"]["direct"]["elm-explorations/test"], "undefined");
+
+        elmTestWithYes(["init"], (code) => {
+          assert.equal(code, 0);
+
+          json = JSON.parse(fs.readFileSync("elm.json", {encoding: "utf-8"}));
+          assert.equal(typeof json["test-dependencies"]["direct"]["elm-explorations/test"], "string");
+
+          done();
+        });
+      });
+    });
+  });
+  describe("elm-test install", () => {
+    beforeEach(() => {
+      shell.mkdir("-p", path.join("tmp", "src"));
+      shell.cd("tmp");
+    });
+
+    afterEach(() => {
+      shell.cd("..");
+      shell.rm("-Rf", "tmp");
     });
 
     it("should fail if the current directory does not contain an elm.json", () => {
-      shell.cp("-R", "../tests/add-dependency-test/*", ".");
-      shell.rm("-R", "elm.json");
+      shell.cp("-R", path.join(__dirname, "install", "*", "."));
+      shell.rm("-f", "elm.json");
 
       const runResult = shell.exec(
-        "elm-test --add-dependencies test-elm.json",
+        "elm-test install elm/regex",
         { silent: true }
       );
 
