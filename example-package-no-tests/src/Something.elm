@@ -1,4 +1,4 @@
-module Example exposing (..)
+module Something exposing (ultimateAnswer)
 
 -- Elm.Docs from elm/project-metadata-utils is imported because
 -- it has a dependency on elm/parser, which is not a dependency of

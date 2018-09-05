@@ -7,10 +7,19 @@ const spawn = require("cross-spawn");
 const fs = require("fs-extra");
 const xml2js = require("xml2js");
 
+function elmTestWithYes(args, callback) {
+  var child = spawn(path.join(__dirname, "..", "bin", "elm-test"), args);
+  child.stdin.setEncoding("utf-8");
+  child.stdin.write("y\n");
+  child.on('exit', (code) => {
+    callback(code);
+  });
+}
+
 describe("flags", () => {
   describe("elm-test init", () => {
     beforeEach(() => {
-      shell.mkdir("-p", "tmp");
+      shell.mkdir("-p", path.join("tmp", "src"));
       shell.cd("tmp");
     });
 
@@ -19,20 +28,57 @@ describe("flags", () => {
       shell.rm("-Rf", "tmp");
     });
 
-    it("Testing elm-test init", (done) => {
-      shell.cp(path.join(__dirname, "..", "templates", "package", "elm.json"), "elm.json");
-      var child = spawn(path.join(__dirname, "..", "bin", "elm-test"), ["init"]);
-      child.stdin.setEncoding("utf-8");
-      child.stdin.write("y\n");
-      child.on('exit', (code) => {
-        assert.equal(code, 0);
-        done()
-      })
+    describe("for a PACKAGE", () => {
+      beforeEach(() => {
+        shell.cp(path.join(__dirname, "templates", "package", "elm.json"), "elm.json");
+      });
+
+      afterEach(() => {
+        shell.rm("-f", "elm.json");
+      });
+
+      it("Adds elm-explorations/test", (done) => {
+        var json = JSON.parse(fs.readFileSync("elm.json", {encoding: "utf-8"}));
+        assert.equal(typeof json["test-dependencies"]["elm-explorations/test"], "undefined");
+
+        elmTestWithYes(["init"], (code) => {
+          assert.equal(code, 0);
+
+          json = JSON.parse(fs.readFileSync("elm.json", {encoding: "utf-8"}));
+          assert.equal(typeof json["test-dependencies"]["elm-explorations/test"], "string");
+
+          done();
+        });
+      });
+    });
+
+    describe("for an APPLICATION", () => {
+      beforeEach(() => {
+        shell.cp(path.join(__dirname, "templates", "application", "elm.json"), "elm.json");
+      });
+
+      afterEach(() => {
+        shell.rm("-f", "elm.json");
+      });
+
+      it("Adds elm-explorations/test", (done) => {
+        var json = JSON.parse(fs.readFileSync("elm.json", {encoding: "utf-8"}));
+        assert.equal(typeof json["test-dependencies"]["direct"]["elm-explorations/test"], "undefined");
+
+        elmTestWithYes(["init"], (code) => {
+          assert.equal(code, 0);
+
+          json = JSON.parse(fs.readFileSync("elm.json", {encoding: "utf-8"}));
+          assert.equal(typeof json["test-dependencies"]["direct"]["elm-explorations/test"], "string");
+
+          done();
+        });
+      });
     });
   });
   describe("elm-test install", () => {
     beforeEach(() => {
-      shell.mkdir("-p", "tmp");
+      shell.mkdir("-p", path.join("tmp", "src"));
       shell.cd("tmp");
     });
 
