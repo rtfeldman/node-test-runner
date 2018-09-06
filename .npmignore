@@ -45,3 +45,8 @@ README.md
 CHANGELOG.md
 
 .flowconfig
+
+lib
+tsconfig.json
+tslint.json
+.prettierrc

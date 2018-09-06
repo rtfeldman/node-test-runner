@@ -2,13 +2,18 @@
   "name": "elm-test",
   "version": "0.19.0-beta8",
   "description": "Run elm-test suites.",
-  "main": "elm-test.js",
+  "main": "dist/elm-test.js",
+  "types": "dist/index.d.ts",
   "engines": {
     "node": ">=4.7.0"
   },
   "scripts": {
-    "flow": "flow",
-    "test": "flow check && mocha tests"
+    "build": "tsc",
+    "test": "npm run build && mocha tests",
+    "format": "prettier --write \"lib/**/*.ts\" \"lib/**/*.js\"",
+    "lint": "tslint -p tsconfig.json",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint"
   },
   "repository": {
     "type": "git",
@@ -55,6 +60,9 @@
     "mocha": "5.2.0",
     "prettier": "1.5.2",
     "shelljs": "0.7.3",
+    "tslint": "5.11.0",
+    "tslint-config-prettier": "1.15.0",
+    "typescript": "3.0.3",
     "xml2js": "0.4.17"
   }
 }

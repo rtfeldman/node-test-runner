@@ -30,3 +30,4 @@ bin/elm-interface-to-json
 node_modules
 /elm-stuff
 tmp
+dist
