@@ -1,15 +1,13 @@
-//@flow
-
-const path = require("path"),
-  elmCompiler = require("node-elm-compiler"),
-  spawn = require("cross-spawn");
+import path = require("path");
+import elmCompiler = require("node-elm-compiler");
+import spawn = require("cross-spawn");
 
 function compile(
-  testFile/*:string*/,
-  projectRootDir/*:string*/,
-  verbose/*:boolean*/,
-  pathToElmBinary/*:string*/,
-  report/*:string*/
+  testFile:string,
+  projectRootDir:string,
+  verbose:boolean,
+  pathToElmBinary:string,
+  report:string
 ) {
   return new Promise((resolve, reject) => {
     const generatedCodeDir = path.resolve(
@@ -25,7 +23,7 @@ function compile(
       processOpts: processOptsForReporter(report)
     });
 
-    compileProcess.on("close", function(exitCode) {
+    compileProcess.on("close", function(exitCode:number) {
       if (exitCode !== 0) {
         reject("Compilation failed");
       } else {
@@ -36,11 +34,11 @@ function compile(
 }
 
 function compileAll(
-    testFilePaths/*:Array<string>*/,
-    generatedCodeDir/*:string*/,
-    verbose/*:boolean*/,
-    pathToElmBinary/*:string*/,
-    report/*:string*/
+    testFilePaths:Array<string>,
+    generatedCodeDir:string,
+    verbose:boolean,
+    pathToElmBinary:string,
+    report:string
   ) {
   return new Promise((resolve, reject) => {
     const compileProcess = elmCompiler.compile(testFilePaths, {
@@ -52,7 +50,7 @@ function compileAll(
       processOpts: processOptsForReporter(report)
     });
 
-    compileProcess.on("close", function(exitCode) {
+    compileProcess.on("close", function(exitCode:number) {
       if (exitCode === 0) {
         resolve();
       } else {
@@ -65,8 +63,8 @@ function compileAll(
   });
 }
 
-function spawnCompiler(report /*:string*/) {
-  return (pathToElm /*:string*/, processArgs/*:Array<string>*/, processOpts) => {
+function spawnCompiler(report:string) {
+  return (pathToElm:string, processArgs:Array<string>, processOpts) => {
     const finalOpts = Object.assign({},
       processOpts,
       {
@@ -82,7 +80,7 @@ function spawnCompiler(report /*:string*/) {
   }
 }
 
-function processOptsForReporter(reporter) {
+function processOptsForReporter(reporter:string) {
   if (isMachineReadableReporter(reporter)) {
     return { stdio: ["ignore", "ignore", process.stderr] };
   } else {
@@ -90,7 +88,7 @@ function processOptsForReporter(reporter) {
   }
 }
 
-function isMachineReadableReporter(reporter/*:string*/) {
+function isMachineReadableReporter(reporter:string) {
   return reporter === "json" || reporter === "junit";
 }
 

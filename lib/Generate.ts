@@ -1,11 +1,8 @@
-// @flow
+import path = require("path");
+import fs = require("fs-extra");
+import pipeFilename = require("./pipe-filename");
 
-const path = require("path"),
-  spawn = require("cross-spawn"),
-  fs = require("fs-extra"),
-  pipeFilename = require("./pipe-filename.js");
-
-function prepareCompiledJsFile(dest/*:string*/) {
+function prepareCompiledJsFile(dest:string) {
   return Promise.all([
     readUtf8(path.join(__dirname, "..", "templates", "before.js")),
     readUtf8(dest),
@@ -25,7 +22,7 @@ function prepareCompiledJsFile(dest/*:string*/) {
   });
 }
 
-function readUtf8(filepath) {
+function readUtf8(filepath:string) {
   return new Promise((resolve, reject) => {
     fs.readFile(filepath, {encoding: "utf8"}, (err, contents) =>
       {

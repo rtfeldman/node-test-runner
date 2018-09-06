@@ -1,21 +1,19 @@
-// @flow
-
-var chalk = require("chalk"), // Chalk is used only for the "Watching for changes..." message
-  XmlBuilder = require("xmlbuilder"),
-  _ = require("lodash"),
-  fs = require("fs-extra"),
-  net = require("net"),
-  child_process = require("child_process"),
-  pipeFilename = require("./pipe-filename.js"),
-  split = require("split");
+import chalk = require("chalk"); // Chalk is used only for the "Watching for changes..." message
+import XmlBuilder = require("xmlbuilder");
+import _ = require("lodash");
+import fs = require("fs-extra");
+import net = require("net");
+import child_process = require("child_process");
+import pipeFilename = require("./pipe-filename");
+import split = require("split");
 
 function run(
-  elmTestVersion /*:string*/,
-  format /*:string*/,
-  processes /*:number*/,
-  dest /*:string*/,
-  watch /*:boolean*/,
-  isMachineReadable /*:boolean*/
+  elmTestVersion:string,
+  format:string,
+  processes:number,
+  dest:string,
+  watch:boolean,
+  isMachineReadable:boolean
 ) {
   var nextResultToPrint = null;
   var finishedWorkers = 0;

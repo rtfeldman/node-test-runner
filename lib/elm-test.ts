@@ -1,11 +1,11 @@
 // @flow
 
 var packageInfo = require("../package.json");
-var pipeFilename = require("./pipe-filename.js");
-var Version = require("./version.js");
-var Install = require("./install.js");
-var Compile = require("./Compile.js");
-var Generate = require("./Generate.js");
+var pipeFilename = require("./pipe-filename");
+var Version = require("./version");
+var Install = require("./install");
+var Compile = require("./Compile");
+var Generate = require("./Generate");
 var dns = require("dns");
 var processTitle = "elm-test";
 
