@@ -4,7 +4,7 @@
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
-    "node": ">=4.7.0"
+    "node": ">=6.0.0"
   },
   "scripts": {
     "flow": "flow",
