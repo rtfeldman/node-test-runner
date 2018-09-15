@@ -13,7 +13,7 @@ const temp = require("temp");
 temp.track();
 
 const elmTestPath = path.join(__dirname, "..", "bin", "elm-test");
-const spawnOpts = { silent: false };
+const spawnOpts = { silent: true };
 
 function elmTestWithYes(args, callback) {
   const child = spawn(elmTestPath, args, spawnOpts);
