@@ -6,18 +6,23 @@ var spawn = require("cross-spawn");
 
 var filename = __filename.replace(__dirname + "/", "");
 var elmTest = "elm-test";
+const elmHome = path.join(__dirname, "..", "fixtures", "elm-home");
+const spawnOpts = { silent: true, env: Object.assign({ELM_HOME: elmHome}, process.env)};
+
+console.log("Clearing elm-stuff");
+rm("-rf", "elm-stuff");
 
 function run(testFile) {
   if (!testFile) {
     var cmd = [elmTest, "--color"].join(" ");
 
     echo("Running: " + cmd);
-    return exec(cmd).code;
+    return exec(cmd, spawnOpts).code;
   } else {
     var cmd = [elmTest, testFile, "--color"].join(" ");
 
     echo("Running: " + cmd);
-    return exec(cmd).code;
+    return exec(cmd, spawnOpts).code;
   }
 }
 
@@ -105,7 +110,7 @@ if (interfaceExitCode !== 0) {
 }
 
 echo(filename + ": Verifying installed elm-test version...");
-exec(elmTest + " --version");
+run("--version");
 
 echo("### Testing elm-test on example-application/");
 
