@@ -27,7 +27,7 @@ function elmTestWithYes(args, callback) {
 }
 
 function execElmTest(args) {
-  return shell.exec([elmTestPath].concat(args).join(" "), spawnOpts);
+  return shell.exec(["ELM_HOME=" + process.env.ELM_HOME, elmTestPath].concat(args).join(" "), spawnOpts);
 }
 
 describe("flags", () => {
