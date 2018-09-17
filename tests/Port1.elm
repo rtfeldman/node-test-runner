@@ -1,4 +1,4 @@
-port module Port1 exposing (..)
+port module Port1 exposing (check)
 
 
 port check : String -> Cmd msg

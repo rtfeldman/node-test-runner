@@ -140,8 +140,6 @@ shell.ls("tests/*.elm").forEach(function(testToRun) {
     shell.echo("\n### Testing " + testToRun + " (expecting it to fail)\n");
     assertTestFailure(testToRun);
   } else if (/PortRuntimeException\.elm$/.test(testToRun)) {
-    shell.echo("\n### TODO " + testToRun + " (Elm 0.19 beta allows multiple ports with the same name?)");
-    return;
     shell.echo(
       "\n### Testing " +
         testToRun +
