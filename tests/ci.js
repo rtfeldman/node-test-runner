@@ -9,10 +9,10 @@ var elmTest = "elm-test";
 const elmHome = path.join(__dirname, "..", "fixtures", "elm-home");
 const spawnOpts = { silent: true, env: Object.assign({ELM_HOME: elmHome}, process.env)};
 
-console.log("Clearing elm-stuff");
-shell.rm("-rf", "elm-stuff");
-
 function run(testFile) {
+  console.log("\nClearing elm-stuff prior to run");
+  shell.rm("-rf", "elm-stuff");
+
   if (!testFile) {
     var cmd = [elmTest, "--color"].join(" ");
 
