@@ -212,6 +212,10 @@ describe("flags", () => {
 
       let hasRetriggered = false;
 
+      child.on("error", err => {
+        done(new Error("elm-test --watch errored with: " + err));
+      });
+
       child.on("close", code => {
         done(new Error("elm-test --watch exited with status code: " + code));
       });
