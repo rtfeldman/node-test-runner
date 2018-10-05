@@ -150,7 +150,7 @@ update msg ({ testReporter } as model) =
                             Task.perform Dispatch Time.now
                     in
                     if index == -1 then
-                        ( { model | nextTestToRun = index + model.processes }
+                        ( { model | nextTestToRun = model.processes - 1 }
                         , Cmd.batch [ cmd, sendBegin model ]
                         )
                     else
