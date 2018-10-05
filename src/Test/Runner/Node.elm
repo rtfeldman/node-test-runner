@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (TestProgram, run)
+port module Test.Runner.Node exposing (run, TestProgram)
 
 {-|
 
@@ -25,6 +25,7 @@ import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, o
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Time exposing (Posix)
+
 
 
 -- TYPES
@@ -128,8 +129,10 @@ update msg ({ testReporter } as model) =
                         exitCode =
                             if failed > 0 then
                                 2
+
                             else if model.autoFail == Nothing && List.isEmpty todos then
                                 0
+
                             else
                                 3
 
@@ -153,6 +156,7 @@ update msg ({ testReporter } as model) =
                         ( { model | nextTestToRun = model.processes - 1 }
                         , Cmd.batch [ cmd, sendBegin model ]
                         )
+
                     else
                         ( { model | nextTestToRun = index }, cmd )
 
@@ -199,6 +203,7 @@ update msg ({ testReporter } as model) =
                 if isFinished then
                     -- Don't bother updating the model, since we're done
                     ( model, cmd )
+
                 else
                     -- Clear out the results, now that we've flushed them.
                     ( { model | nextTestToRun = nextTestToRun, results = [] }
@@ -207,6 +212,7 @@ update msg ({ testReporter } as model) =
                         , Task.perform Dispatch Time.now
                         ]
                     )
+
             else
                 ( { model | nextTestToRun = nextTestToRun, results = results }
                 , Task.perform Dispatch Time.now
@@ -229,6 +235,7 @@ sendResults isFinished testReporter results =
         typeStr =
             if isFinished then
                 "FINISHED"
+
             else
                 "RESULTS"
 
