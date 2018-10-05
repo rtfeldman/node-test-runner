@@ -8,6 +8,7 @@ var filename = __filename.replace(__dirname + "/", "");
 var elmTest = "elm-test";
 const elmHome = path.join(__dirname, "..", "fixtures", "elm-home");
 const spawnOpts = { silent: true, env: Object.assign({ELM_HOME: elmHome}, process.env)};
+const os = require("os");
 
 function run(testFile) {
   console.log("\nClearing elm-stuff prior to run");
@@ -85,6 +86,8 @@ function assertTestSuccess(testFile) {
     shell.exit(1);
   }
 }
+
+shell.echo("Running CI tests on " + os.cpus().length + " CPU cores.");
 
 shell.echo(filename + ": Uninstalling old elm-test...");
 shell.exec("npm remove --ignore-scripts=false --global " + elmTest);
