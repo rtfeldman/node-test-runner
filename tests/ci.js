@@ -117,15 +117,15 @@ run("--version");
 
 shell.echo("### Testing elm-test on example-application/");
 
-shell.cd("example-application");
+// shell.cd("example-application");
 
-assertTestFailure();
-assertTestSuccess(path.join("tests", "*Pass*"));
-assertTestFailure(path.join("tests", "*Fail*"));
+// assertTestSuccess(path.join("tests", "*Pass*"));
+// assertTestFailure(path.join("tests", "*Fail*"));
+// assertTestFailure();
 
-shell.cd("../");
+// shell.cd("../");
 
-shell.echo("### Testing elm-test on example-package/");
+// shell.echo("### Testing elm-test on example-package/");
 
 shell.cd("example-package");
 
