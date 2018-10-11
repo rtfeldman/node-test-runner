@@ -8,6 +8,8 @@ const fs = require("fs-extra");
 const os = require("os");
 const xml2js = require("xml2js");
 const temp = require("temp");
+const byline = require("byline");
+const stripAnsi = require("strip-ansi");
 
 // Automatically track and cleanup files at exit
 temp.track();
@@ -212,18 +214,24 @@ describe("flags", () => {
 
       let hasRetriggered = false;
 
-      child.on("close", code => {
-        done(new Error("elm-test --watch exited with status code: " + code));
+      child.on("close", (code, signal) => {
+        // don't send error when killed after test passed
+        if (code !== null || signal !== 'SIGTERM') {
+          done(new Error("elm-test --watch exited with status code: " + code));
+        }
       });
-      child.stdout.on("data", line => {
+
+      byline(child.stdout).on("data", line => {
         try {
-          const parsedLine = JSON.parse(line);
-          if (parsedLine.event === "runComplete" && !hasRetriggered) {
+          const json = stripAnsi("" + line);
+          // skip expected non-json
+          if (json === "Watching for changes...") return;
+          const parsedLine = JSON.parse(json);
+          if (parsedLine.event !== "runComplete") return;
+          if (!hasRetriggered) {
             shell.touch("tests/OnePassing.elm");
             hasRetriggered = true;
-          }
-
-          if (parsedLine.event == "runComplete" && hasRetriggered) {
+          } else {
             child.kill();
             done();
           }
