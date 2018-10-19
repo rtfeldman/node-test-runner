@@ -42,8 +42,7 @@ expectTestToFail test =
         |> Test.Runner.fromTest 100 seed
         |> getRunners
         |> List.concatMap (.run >> (\run -> run ()))
-        |> List.map expectToFail
-        |> List.map always
+        |> List.map (expectToFail >> always)
         |> Expect.all
         |> (\all -> all ())
 
