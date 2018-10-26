@@ -14,24 +14,9 @@ const stripAnsi = require("strip-ansi");
 // Automatically track and cleanup files at exit
 temp.track();
 
+const elmTestPath = path.join(__dirname, "..", "bin", "elm-test");
 const elmHome = path.join(__dirname, "..", "fixtures", "elm-home");
 const spawnOpts = { silent: true, env: Object.assign({ELM_HOME: elmHome}, process.env)};
-let elmTestPath = path.join(__dirname, "..", "bin", "elm-test");
-
-if(!fs.existsSync(elmTestPath)) {
-  throw new Error("Could not find elm-test binary at:", elmTestPath);
-}
-
-// On Windows, use the locally-installed binary because
-// trying to execute bin/elm-test with an absolute path
-// doesn't work.
-//
-// TODO: can we find a way to do that? This way has the
-//       downside of making it so you have to `npm install`
-//       before these tests will work properly on Windows.
-if (process.platform === "win32") {
-  elmTestPath = "elm-test";
-}
 
 function elmTestWithYes(args, callback) {
   const child = spawn(elmTestPath, args, spawnOpts);
@@ -45,7 +30,7 @@ function elmTestWithYes(args, callback) {
 }
 
 function execElmTest(args) {
-  return shell.exec([elmTestPath].concat(args).join(" "), spawnOpts);
+  return spawn.sync(elmTestPath, args, Object.assign({encoding: "utf-8"}, spawnOpts));
 }
 
 describe("flags", () => {
