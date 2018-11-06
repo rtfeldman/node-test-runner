@@ -169,6 +169,20 @@ describe("flags", () => {
         done();
       });
     }).timeout(60000);
+
+    it("Should be able to report compilation errors with valid JSON", () => {
+      const runResult = execElmTest(["--report=json", "tests/compile-error-test/InvalidSyntax.elm"]);
+      let linesReceived = 0;
+      runResult.stderr.split("\n").forEach(line => {
+        if (line.length === 0) {
+          return;
+        }
+
+        linesReceived += 1;
+        assert.doesNotThrow(() => JSON.parse(line));
+      });
+      assert.ok(linesReceived > 0);
+    }).timeout(60000);
   });
 
   describe("--seed", () => {
