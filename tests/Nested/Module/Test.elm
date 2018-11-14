@@ -17,7 +17,7 @@ testWithoutNums =
     describe "withoutNums"
         [ fuzzWith { runs = 100 } (tuple3 ( string, int, string )) "adding numbers to strings has no effect" <|
             \( prefix, num, suffix ) ->
-                withoutNums (prefix ++ toString num ++ suffix)
+                withoutNums (prefix ++ String.fromInt num ++ suffix)
                     |> Expect.equal (withoutNums (prefix ++ suffix))
         ]
 

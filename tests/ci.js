@@ -1,4 +1,4 @@
-require("shelljs/global");
+const shell = require("shelljs");
 var _ = require("lodash");
 var fs = require("fs-extra");
 var path = require("path");
@@ -6,25 +6,30 @@ var spawn = require("cross-spawn");
 
 var filename = __filename.replace(__dirname + "/", "");
 var elmTest = "elm-test";
+const elmHome = path.join(__dirname, "..", "fixtures", "elm-home");
+const spawnOpts = { silent: true, env: Object.assign({ELM_HOME: elmHome}, process.env)};
 
 function run(testFile) {
+  console.log("\nClearing elm-stuff prior to run");
+  shell.rm("-rf", "elm-stuff");
+
   if (!testFile) {
     var cmd = [elmTest, "--color"].join(" ");
 
-    echo("Running: " + cmd);
-    return exec(cmd).code;
+    shell.echo("Running: " + cmd);
+    return shell.exec(cmd, spawnOpts).code;
   } else {
     var cmd = [elmTest, testFile, "--color"].join(" ");
 
-    echo("Running: " + cmd);
-    return exec(cmd).code;
+    shell.echo("Running: " + cmd);
+    return shell.exec(cmd, spawnOpts).code;
   }
 }
 
 function assertTestErrored(testfile) {
   var code = run(testfile);
   if (code !== 1) {
-    exec(
+    shell.exec(
       "echo " +
         filename +
         ": error: " +
@@ -33,14 +38,14 @@ function assertTestErrored(testfile) {
         code +
         " >&2"
     );
-    exit(1);
+    shell.exit(1);
   }
 }
 
 function assertTestIncomplete(testfile) {
   var code = run(testfile);
   if (code !== 3) {
-    exec(
+    shell.exec(
       "echo " +
         filename +
         ": error: " +
@@ -49,132 +54,115 @@ function assertTestIncomplete(testfile) {
         code +
         " >&2"
     );
-    exit(1);
+    shell.exit(1);
   }
 }
 
 function assertTestFailure(testfile) {
   var code = run(testfile);
   if (code < 2) {
-    exec(
+    shell.exec(
       "echo " +
         filename +
         ": error: " +
         (testfile ? testfile + ": " : "") +
         "expected tests to fail >&2"
     );
-    exit(1);
+    shell.exit(1);
   }
 }
 
 function assertTestSuccess(testFile) {
   var code = run(testFile);
   if (code !== 0) {
-    exec(
+    shell.exec(
       "echo " +
         filename +
         ": ERROR: " +
         (testFile ? testFile + ": " : "") +
         "Expected tests to pass >&2"
     );
-    exit(1);
+    shell.exit(1);
   }
 }
 
-echo(filename + ": Uninstalling old elm-test...");
-exec("npm remove --ignore-scripts=false --global " + elmTest);
+shell.echo(filename + ": Uninstalling old elm-test...");
+shell.exec("npm remove --ignore-scripts=false --global " + elmTest);
 
-echo(filename + ": Installing elm-test...");
-exec("npm link --ignore-scripts=false");
+shell.echo(filename + ": Installing elm-test...");
+shell.exec("npm link --ignore-scripts=false");
 
-var binaryExtension = process.platform === "win32" ? ".exe" : "";
-var interfacePath = path.resolve(
-  path.join(__dirname, "..", "bin", "elm-interface-to-json" + binaryExtension)
-);
-if (!fs.existsSync(interfacePath)) {
-  echo(
-    filename +
-      ": Failed because elm-interface-to-json was not found at " +
-      interfacePath
-  );
-  exit(1);
-}
+var interfacePath = require("elmi-to-json").paths["elmi-to-json"];
 
-echo(filename + ": Verifying installed elm-interface-to-json...");
-var interfaceExitCode = spawn.sync(interfacePath, ["--help"]).status;
+shell.echo(filename + ": Verifying installed elmi-to-json...");
+var interfaceResult = spawn.sync(interfacePath, ["--help"]);
+var interfaceExitCode = interfaceResult.status;
 
 if (interfaceExitCode !== 0) {
-  echo(
+  shell.echo(
     filename +
-      ": Failed because `elm-interface-to-json` is present, but `elm-interface-to-json --help` returned with exit code " +
+      ": Failed because `elmi-to-json` is present, but `elmi-to-json --help` returned with exit code " +
       interfaceExitCode
   );
-  exit(1);
+  shell.echo(interfaceResult.stdout.toString());
+  shell.echo(interfaceResult.stderr.toString());
+  shell.exit(1);
 }
 
-echo(filename + ": Verifying installed elm-test version...");
-exec(elmTest + " --version");
+shell.echo(filename + ": Verifying installed elm-test version...");
+run("--version");
 
-echo("### Testing elm-test on example/");
+shell.echo("### Testing elm-test on example-application/");
 
-cd("example");
+shell.cd("example-application");
+
+assertTestFailure();
+assertTestSuccess(path.join("tests", "*Pass*"));
+assertTestFailure(path.join("tests", "*Fail*"));
+
+shell.cd("../");
+
+shell.echo("### Testing elm-test on example-package/");
+
+shell.cd("example-package");
 
 assertTestSuccess(path.join("tests", "*Pass*"));
 assertTestFailure(path.join("tests", "*Fail*"));
 assertTestFailure();
 
-cd("../");
+shell.cd("../");
 
-ls("tests/*.elm").forEach(function(testToRun) {
+shell.ls("tests/*.elm").forEach(function(testToRun) {
   if (/Passing\.elm$/.test(testToRun)) {
-    echo("\n### Testing " + testToRun + " (expecting it to pass)\n");
+    shell.echo("\n### Testing " + testToRun + " (expecting it to pass)\n");
     assertTestSuccess(testToRun);
   } else if (/Failing\.elm$/.test(testToRun)) {
-    echo("\n### Testing " + testToRun + " (expecting it to fail)\n");
+    shell.echo("\n### Testing " + testToRun + " (expecting it to fail)\n");
     assertTestFailure(testToRun);
-  } else if (/PortRuntimeException.elm$/.test(testToRun)) {
-    echo(
+  } else if (/PortRuntimeException\.elm$/.test(testToRun)) {
+    shell.echo(
       "\n### Testing " +
         testToRun +
         " (expecting it to error with a runtime exception)\n"
     );
     assertTestErrored(testToRun);
-  } else if (/Port\d.elm$/.test(testToRun)){
-    echo("\n### Skipping " + testToRun + " (helper file)\n");
+  } else if (/Port\d\.elm$/.test(testToRun)){
+    shell.echo("\n### Skipping " + testToRun + " (helper file)\n");
     return;
   } else {
-    echo(
+    shell.echo(
       "Tried to run " +
         testToRun +
         ' but it has an invalid filename; node-test-runner tests should fit the pattern "*Passing.elm" or "*Failing.elm"'
     );
-    process.exit(1);
+    shell.exit(1);
   }
 });
 
-echo("### Testing elm-test init && elm-test");
-rm("-Rf", "tmp");
-mkdir("-p", "tmp");
-cd("tmp");
-exec(elmTest + " init --yes");
-assertTestIncomplete();
-
-cd("..");
-
-echo("\n### Testing elm-test init on a non-empty directory\n");
-rm("-Rf", "tmp");
-cp("-R", "tests/init-test", "tmp");
-cd("tmp");
-exec(elmTest + " init --yes");
-assertTestIncomplete();
-
-cd("..");
-rm("-Rf", "tmp");
-
-echo("");
-echo(filename + ": Everything looks good!");
-echo("                                                            ");
-echo("  __   ,_   _  __,  -/-     ,         __   __   _   ,    ,  ");
-echo("_(_/__/ (__(/_(_/(__/_    _/_)__(_/__(_,__(_,__(/__/_)__/_)_");
-echo(" _/_                                                        ");
-echo("(/                                                          ");
+shell.echo("");
+shell.echo(filename + ": Everything looks good!");
+shell.echo("                                                            ");
+shell.echo("  __   ,_   _  __,  -/-     ,         __   __   _   ,    ,  ");
+shell.echo("_(_/__/ (__(/_(_/(__/_    _/_)__(_/__(_,__(_,__(/__/_)__/_)_");
+shell.echo(" _/_                                                        ");
+shell.echo("(/                                                          ");

@@ -33,6 +33,6 @@ decodeMessageFromType messageType =
 
 todoDecoder : Decoder ( List String, String )
 todoDecoder =
-    Decode.map2 (,)
+    Decode.map2 (\a b -> ( a, b ))
         (Decode.field "labels" (Decode.list Decode.string))
         (Decode.field "todo" Decode.string)

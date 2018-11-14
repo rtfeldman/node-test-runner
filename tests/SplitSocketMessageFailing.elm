@@ -1,8 +1,9 @@
 module SplitSocketMessageFailing exposing (..)
 
+import Array
 import Expect exposing (Expectation)
 import Test exposing (..)
-import Array.Hamt as Array
+
 
 
 {- This is a regression test.

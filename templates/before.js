@@ -28,6 +28,12 @@ if (typeof XMLHttpRequest === "undefined") {
       send: function() {}
     };
   };
+
+  var oldConsoleWarn = console.warn
+  console.warn = function () {
+    if (arguments.length === 1 && arguments[0].indexOf('Compiled in DEV mode') === 0) return
+    return oldConsoleWarn.apply(console, arguments)
+  }
 }
 
 if (typeof FormData === "undefined") {
