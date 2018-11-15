@@ -24,6 +24,11 @@ if (typeof FileList === "undefined") {
     FileList = function() {};
 }
 
+if (typeof File === "undefined") {
+    File = function() {};
+}
+
+
 if (typeof XMLHttpRequest === "undefined") {
   XMLHttpRequest = function() {
     return {
