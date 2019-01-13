@@ -1,6 +1,6 @@
 [ignore]
 
-.*elm-package.json
+.*elm.json
 
 [include]
 
