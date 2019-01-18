@@ -48,10 +48,6 @@ describe("flags", () => {
         shell.cp(path.join(__dirname, "templates", "package", "elm.json"), "elm.json");
       });
 
-      afterEach(() => {
-        shell.rm("-f", "elm.json");
-      });
-
       it("Adds elm-explorations/test", (done) => {
         var json = JSON.parse(fs.readFileSync("elm.json", {encoding: "utf-8"}));
         assert.equal(typeof json["test-dependencies"]["elm-explorations/test"], "undefined");
@@ -70,10 +66,6 @@ describe("flags", () => {
     describe("for an APPLICATION", () => {
       beforeEach(() => {
         shell.cp(path.join(__dirname, "templates", "application", "elm.json"), "elm.json");
-      });
-
-      afterEach(() => {
-        shell.rm("-f", "elm.json");
       });
 
       it("Adds elm-explorations/test", (done) => {
@@ -98,7 +90,6 @@ describe("flags", () => {
 
     afterEach(() => {
       shell.popd();
-      shell.rm("-f", "elm.json");
     });
 
     it("should fail if the current directory does not contain an elm.json", () => {
