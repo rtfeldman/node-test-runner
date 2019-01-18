@@ -117,8 +117,8 @@ shell.echo("### Testing elm-test on example-application/");
 shell.cd("example-application");
 
 assertTestFailure();
-assertTestSuccess(path.join("tests", "*Pass*"));
-assertTestFailure(path.join("tests", "*Fail*"));
+assertTestSuccess(path.join("tests", "*Pass*.elm"));
+assertTestFailure(path.join("tests", "*Fail*.elm"));
 
 shell.cd("../");
 
@@ -126,8 +126,8 @@ shell.echo("### Testing elm-test on example-package/");
 
 shell.cd("example-package");
 
-assertTestSuccess(path.join("tests", "*Pass*"));
-assertTestFailure(path.join("tests", "*Fail*"));
+assertTestSuccess(path.join("tests", "*Pass*.elm"));
+assertTestFailure(path.join("tests", "*Fail*.elm"));
 assertTestFailure();
 
 shell.cd("../");
