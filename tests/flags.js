@@ -98,7 +98,6 @@ describe("flags", () => {
 
     afterEach(() => {
       shell.popd();
-      shell.rm("-f", "elm.json");
     });
 
     it("should fail if the current directory does not contain an elm.json", () => {
