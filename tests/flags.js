@@ -98,6 +98,7 @@ describe("flags", () => {
 
     afterEach(() => {
       shell.popd();
+      shell.rm("-f", "elm.json");
     });
 
     it("should fail if the current directory does not contain an elm.json", () => {
@@ -108,6 +109,18 @@ describe("flags", () => {
 
       assert.notEqual(runResult.code, 0);
     });
+
+    it.only("should not allow command injection", () => {
+      shell.cp(path.join(__dirname, "templates", "application", "elm.json"), "elm.json");
+      const runResult = spawn.sync(
+        elmTestPath,
+        ["install", "elm/regex; printf 'FINDME'; printf 'TWICE'"],
+        Object.assign({ encoding: "utf-8", input: 'y\n' }, spawnOpts),
+      );
+      console.log(runResult);
+      assert(!runResult.stdout.includes('FINDME'));
+      assert(!runResult.stderr.includes('FINDMETWICE'));
+    }).timeout(60000);
   });
 
   describe("--help", () => {
