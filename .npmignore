@@ -33,15 +33,25 @@ tmp
 
 # Specific to .npmignore
 .travis.yml
+appveyor.yml
 README.md
+CHANGELOG.md
 
 # Elm tests
 tests/
 
 example-application/
+example-application-no-tests/
 example-package/
+example-package-no-tests/
 
 README.md
 CHANGELOG.md
 
 .flowconfig
+.prettierignore
+prettier.config.js
+
+
+tests/
+fixtures/
