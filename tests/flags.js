@@ -108,7 +108,6 @@ describe("flags", () => {
         ["install", "elm/regex; printf 'FINDME'; printf 'TWICE'"],
         Object.assign({ encoding: "utf-8", input: 'y\n' }, spawnOpts),
       );
-      console.log(runResult);
       assert(!runResult.stdout.includes('FINDME'));
       assert(!runResult.stderr.includes('FINDMETWICE'));
     }).timeout(60000);
