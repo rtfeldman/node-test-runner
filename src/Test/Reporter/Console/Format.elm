@@ -90,18 +90,51 @@ highlightEqual expected actual =
 
     else
         let
+            isHighlighted =
+                Highlightable.resolve
+                    { fromHighlighted = always True
+                    , fromPlain = always False
+                    }
+
+            edgeCount highlightedString =
+                let
+                    highlights =
+                        List.map isHighlighted highlightedString
+                in
+                highlights
+                    |> List.map2 Tuple.pair (List.drop 1 highlights)
+                    |> List.filter (\(lhs, rhs) -> lhs /= rhs)
+                    |> List.length
+
             expectedChars =
                 String.toList expected
 
             actualChars =
                 String.toList actual
+
+            highlightedExpected =
+                Highlightable.diffLists expectedChars actualChars
+                    |> List.map (Highlightable.map String.fromChar)
+
+            highlightedActual =
+                Highlightable.diffLists actualChars expectedChars
+                    |> List.map (Highlightable.map String.fromChar)
+
+            plainCharCount =
+                highlightedExpected
+                    |> List.filter (not << isHighlighted)
+                    |> List.length
+
         in
-        Just
-            ( Highlightable.diffLists expectedChars actualChars
-                |> List.map (Highlightable.map String.fromChar)
-            , Highlightable.diffLists actualChars expectedChars
-                |> List.map (Highlightable.map String.fromChar)
-            )
+        if edgeCount highlightedActual > plainCharCount || edgeCount highlightedExpected > plainCharCount then
+            -- Large number of small highlighted blocks. Diff is too messy to be useful.
+            Nothing
+
+        else
+            Just
+                ( highlightedExpected
+                , highlightedActual
+                )
 
 
 isFloat : String -> Bool
