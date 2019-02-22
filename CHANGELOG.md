@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors major Elm versions. So version 0.18.* of this project will
 be compatible with Elm 0.18.*.
 
+## 0.19.0-rev5
+
+### Fixed
+
+- Excessive small highlights in some diffs (#263)
+- Upgraded to a version of lodash with a vulnerability fixed.
+
 ## 0.19.0 - 2018-08-19
 
 ### Added
