@@ -78,7 +78,7 @@ describe('flags', () => {
 
           done();
         });
-      });
+      }).timeout(60000);
     });
 
     describe('for an APPLICATION', () => {
@@ -109,7 +109,7 @@ describe('flags', () => {
 
           done();
         });
-      });
+      }).timeout(60000);
     });
   });
   describe('elm-test install', () => {
@@ -128,7 +128,7 @@ describe('flags', () => {
       const runResult = execElmTest(['install', 'elm/regex']);
 
       assert.notEqual(runResult.code, 0);
-    });
+    }).timeout(60000);
 
     it('should not allow command injection', () => {
       shell.cp(
@@ -151,12 +151,12 @@ describe('flags', () => {
       // Checking against a fixture is brittle here
       // For now, check that the output is non-empty.
       assert.ok(runResult.stdout.length > 0);
-    });
+    }).timeout(60000);
 
     it('Should exit indicating failure', () => {
       const runResult = execElmTest(['--help']);
       assert.notEqual(0, runResult.code);
-    });
+    }).timeout(60000);
   });
 
   describe('--report', () => {
