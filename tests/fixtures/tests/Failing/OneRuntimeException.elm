@@ -1,4 +1,4 @@
-module OneRuntimeExceptionFailing exposing (suite)
+module Failing.OneRuntimeException exposing (suite)
 
 import Expect
 import Test exposing (..)

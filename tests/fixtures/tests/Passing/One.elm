@@ -1,4 +1,4 @@
-module OnePassing exposing (..)
+module Passing.One exposing (..)
 
 import Expect
 import Test exposing (..)

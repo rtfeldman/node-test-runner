@@ -1,4 +1,4 @@
-module OneFailing exposing (suite)
+module Failing.One exposing (suite)
 
 import Expect
 import Test exposing (..)

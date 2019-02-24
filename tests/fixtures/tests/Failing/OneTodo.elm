@@ -1,15 +1,13 @@
-module SeveralTodosFailing exposing (..)
+module Failing.OneTodo exposing (..)
 
 import Expect
 import Test exposing (..)
 
 
-someTodos : Test
-someTodos =
-    Test.describe "three Todo tests"
+suite : Test
+suite =
+    Test.describe "Todo tests"
         [ Test.todo "write a test here"
-        , Test.todo "write a second test here"
-        , Test.todo "write a third test here"
         ]
 
 

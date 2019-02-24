@@ -1,4 +1,4 @@
-module SeveralPassing exposing (..)
+module Passing.Several exposing (..)
 
 import Expect
 import Test exposing (..)

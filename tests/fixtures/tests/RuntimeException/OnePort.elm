@@ -1,4 +1,4 @@
-module OnePortRuntimeException exposing (testRuntimeException)
+module RuntimeException.OnePort exposing (testRuntimeException)
 
 import Expect
 import Port1

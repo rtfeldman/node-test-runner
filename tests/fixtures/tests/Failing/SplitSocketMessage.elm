@@ -1,4 +1,4 @@
-module SplitSocketMessageFailing exposing (..)
+module Failing.SplitSocketMessage exposing (..)
 
 import Array
 import Expect exposing (Expectation)

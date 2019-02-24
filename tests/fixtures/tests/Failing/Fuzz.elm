@@ -1,4 +1,4 @@
-module FuzzFailing exposing (..)
+module Failing.Fuzz exposing (..)
 
 import Char
 import Expect

@@ -6,6 +6,7 @@ var spawn = require('cross-spawn');
 
 var filename = __filename.replace(__dirname + '/', '');
 var elmTest = 'elm-test';
+const fixturesDir =  path.join(__dirname, 'fixtures');
 const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
 const spawnOpts = {
   silent: true,
@@ -133,33 +134,25 @@ assertTestSuccess(path.join('tests', '*Pass*.elm'));
 assertTestFailure(path.join('tests', '*Fail*.elm'));
 assertTestFailure();
 
-shell.cd('../');
+shell.cd(fixturesDir);
 
-shell.ls('tests/*.elm').forEach(function(testToRun) {
-  if (/Passing\.elm$/.test(testToRun)) {
-    shell.echo('\n### Testing ' + testToRun + ' (expecting it to pass)\n');
-    assertTestSuccess(testToRun);
-  } else if (/Failing\.elm$/.test(testToRun)) {
+shell.ls('tests/Passing/').forEach(function(testToRun) {
+  shell.echo('\n### Testing ' + testToRun + ' (expecting it to pass)\n');
+  assertTestSuccess(path.join('tests', 'Passing', testToRun));
+});
+
+shell.ls('tests/Failing').forEach(function(testToRun) {
     shell.echo('\n### Testing ' + testToRun + ' (expecting it to fail)\n');
-    assertTestFailure(testToRun);
-  } else if (/PortRuntimeException\.elm$/.test(testToRun)) {
-    shell.echo(
-      '\n### Testing ' +
+    assertTestFailure(path.join('tests', 'Failing', testToRun));
+});
+
+shell.ls('tests/RuntimeException').forEach(function(testToRun) {
+  shell.echo(
+        '\n### Testing ' +
         testToRun +
         ' (expecting it to error with a runtime exception)\n'
     );
-    assertTestErrored(testToRun);
-  } else if (/Port\d\.elm$/.test(testToRun)) {
-    shell.echo('\n### Skipping ' + testToRun + ' (helper file)\n');
-    return;
-  } else {
-    shell.echo(
-      'Tried to run ' +
-        testToRun +
-        ' but it has an invalid filename; node-test-runner tests should fit the pattern "*Passing.elm" or "*Failing.elm"'
-    );
-    shell.exit(1);
-  }
+    assertTestErrored(path.join('tests', 'RuntimeException', testToRun));
 });
 
 shell.echo('');

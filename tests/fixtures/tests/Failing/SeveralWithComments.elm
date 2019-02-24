@@ -1,4 +1,4 @@
-module SeveralFailing exposing (..)
+module Failing.SeveralWithComments exposing (testExpectations, testFailingFuzzTests, {- hello -} testWithoutNums, withoutNums)
 
 import Char
 import Expect

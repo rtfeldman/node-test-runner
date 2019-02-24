@@ -1,4 +1,4 @@
-module DependencyPassing exposing (..)
+module Passing.Dependency exposing (..)
 
 import Expect
 import Regex
