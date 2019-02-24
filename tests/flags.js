@@ -130,7 +130,7 @@ describe('flags', () => {
       assert.notEqual(runResult.code, 0);
     });
 
-    it.only('should not allow command injection', () => {
+    it('should not allow command injection', () => {
       shell.cp(
         path.join(__dirname, 'templates', 'application', 'elm.json'),
         'elm.json'
