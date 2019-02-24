@@ -7,7 +7,7 @@ var spawn = require('cross-spawn');
 var filename = __filename.replace(__dirname + '/', '');
 var elmTest = 'elm-test';
 const fixturesDir =  path.join(__dirname, 'fixtures');
-const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
+const elmHome = path.join(fixturesDir, 'elm-home');
 const spawnOpts = {
   silent: true,
   env: Object.assign({ ELM_HOME: elmHome }, process.env),
