@@ -58,7 +58,7 @@ describe('flags', () => {
     describe('for a PACKAGE', () => {
       beforeEach(() => {
         shell.cp(
-          path.join(__dirname, 'templates', 'package', 'elm.json'),
+          path.join(fixturesDir, 'templates', 'package', 'elm.json'),
           'elm.json'
         );
       });
@@ -89,7 +89,7 @@ describe('flags', () => {
     describe('for an APPLICATION', () => {
       beforeEach(() => {
         shell.cp(
-          path.join(__dirname, 'templates', 'application', 'elm.json'),
+          path.join(fixturesDir, 'templates', 'application', 'elm.json'),
           'elm.json'
         );
       });
@@ -127,7 +127,7 @@ describe('flags', () => {
     });
 
     it('should fail if the current directory does not contain an elm.json', () => {
-      shell.cp('-R', path.join(__dirname, 'install', '*', '.'));
+      shell.cp('-R', path.join(fixturesDir, 'install', '*', '.'));
       shell.rm('-f', 'elm.json');
 
       const runResult = execElmTest(['install', 'elm/regex']);
@@ -137,7 +137,7 @@ describe('flags', () => {
 
     it('should not allow command injection', () => {
       shell.cp(
-        path.join(__dirname, 'templates', 'application', 'elm.json'),
+        path.join(fixturesDir, 'templates', 'application', 'elm.json'),
         'elm.json'
       );
       const runResult = spawn.sync(
