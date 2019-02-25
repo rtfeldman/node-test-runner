@@ -137,17 +137,17 @@ shell.ls('tests/Passing/').forEach(function(testToRun) {
 });
 
 shell.ls('tests/Failing').forEach(function(testToRun) {
-    shell.echo('\n### Testing ' + testToRun + ' (expecting it to fail)\n');
-    assertTestFailure(path.join('tests', 'Failing', testToRun));
+  shell.echo('\n### Testing ' + testToRun + ' (expecting it to fail)\n');
+  assertTestFailure(path.join('tests', 'Failing', testToRun));
 });
 
 shell.ls('tests/RuntimeException').forEach(function(testToRun) {
   shell.echo(
-        '\n### Testing ' +
-        testToRun +
-        ' (expecting it to error with a runtime exception)\n'
-    );
-    assertTestErrored(path.join('tests', 'RuntimeException', testToRun));
+    '\n### Testing ' +
+      testToRun +
+      ' (expecting it to error with a runtime exception)\n'
+  );
+  assertTestErrored(path.join('tests', 'RuntimeException', testToRun));
 });
 
 shell.echo('');

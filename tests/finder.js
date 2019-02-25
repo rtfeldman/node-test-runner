@@ -7,7 +7,9 @@ const { fixturesDir } = require('./util');
 describe('finder', function() {
   it('should initialize okay twice in a row', done => {
     finder
-      .readExposing(path.join(fixturesDir, 'tests', 'Failing', 'SeveralWithComments.elm'))
+      .readExposing(
+        path.join(fixturesDir, 'tests', 'Failing', 'SeveralWithComments.elm')
+      )
       .then(exposedFunctions => {
         assert.deepEqual(exposedFunctions, [
           'testExpectations',

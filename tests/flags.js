@@ -167,7 +167,10 @@ describe('flags', () => {
   describe('--report', () => {
     it('Should be able to report json lines', () => {
       console.log('cwd', process.cwd());
-      const runResult = execElmTest(['--report=json', path.join('tests','Passing','One.elm')]);
+      const runResult = execElmTest([
+        '--report=json',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
 
       let linesReceived = 0;
 
@@ -184,7 +187,10 @@ describe('flags', () => {
     }).timeout(60000);
 
     it('Should be able to report passing junit xml', done => {
-      const runResult = execElmTest(['--report=junit', path.join('tests','Passing','One.elm')]);
+      const runResult = execElmTest([
+        '--report=junit',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
 
       xml2js.parseString(runResult.stdout, (err, data) => {
         if (err) throw err;
@@ -197,14 +203,17 @@ describe('flags', () => {
     it('Should be able to report compilation errors', () => {
       const runResult = execElmTest([
         '--report=junit',
-        path.join('tests','CompileError','InvalidSyntax.elm'),
+        path.join('tests', 'CompileError', 'InvalidSyntax.elm'),
       ]);
 
       assert.ok(runResult.stderr.match(/PARSE ERROR/));
     }).timeout(60000);
 
     it('Should be able to report failing junit xml', done => {
-      const runResult = execElmTest(['--report=junit', path.join('tests','Failing','One.elm')]);
+      const runResult = execElmTest([
+        '--report=junit',
+        path.join('tests', 'Failing', 'One.elm'),
+      ]);
 
       xml2js.parseString(runResult.stdout, (err, data) => {
         if (err) throw err;
@@ -220,7 +229,7 @@ describe('flags', () => {
       const runResult = execElmTest([
         '--report=json',
         '--seed=12345',
-        path.join('tests','Passing','One.elm'),
+        path.join('tests', 'Passing', 'One.elm'),
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
@@ -230,7 +239,10 @@ describe('flags', () => {
 
   describe('--fuzz', () => {
     it('Should default to 100', () => {
-      const runResult = execElmTest(['--report=json', path.join('tests','Passing','One.elm')]);
+      const runResult = execElmTest([
+        '--report=json',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
       assert.equal('100', firstOutput.fuzzRuns);
@@ -240,7 +252,7 @@ describe('flags', () => {
       const runResult = execElmTest([
         '--fuzz=5',
         '--report=json',
-        path.join('tests','Passing','One.elm'),
+        path.join('tests', 'Passing', 'One.elm'),
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
@@ -253,7 +265,7 @@ describe('flags', () => {
       const runResult = execElmTest([
         'elm-test',
         '--compiler=foobar',
-        path.join('tests','Passing','One.elm'),
+        path.join('tests', 'Passing', 'One.elm'),
       ]);
 
       assert.notEqual(0, runResult.code);
@@ -264,7 +276,7 @@ describe('flags', () => {
     it('Should re-run tests if a test file is touched', done => {
       const child = spawn(
         elmTestPath,
-        ['--report=json', '--watch', path.join('tests','Passing','One.elm')],
+        ['--report=json', '--watch', path.join('tests', 'Passing', 'One.elm')],
         spawnOpts
       );
 
@@ -285,7 +297,7 @@ describe('flags', () => {
           const parsedLine = JSON.parse(json);
           if (parsedLine.event !== 'runComplete') return;
           if (!hasRetriggered) {
-            shell.touch(path.join('tests','Passing','One.elm'));
+            shell.touch(path.join('tests', 'Passing', 'One.elm'));
             hasRetriggered = true;
           } else {
             child.kill();

@@ -1,4 +1,3 @@
-
 const path = require('path');
 
 const fixturesDir = path.join(__dirname, 'fixtures');
@@ -11,7 +10,6 @@ const spawnOpts = {
 };
 
 module.exports = {
-    fixturesDir,
-    spawnOpts,
-}
-
+  fixturesDir,
+  spawnOpts,
+};
