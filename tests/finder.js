@@ -1,10 +1,13 @@
 const assert = require('assert');
+const path = require('path');
+
 const finder = require('../lib/finder.js');
+const { fixturesDir } = require('./util');
 
 describe('finder', function() {
   it('should initialize okay twice in a row', done => {
     finder
-      .readExposing(__dirname + '/SeveralWithCommentsFailing.elm')
+      .readExposing(path.join(fixturesDir, 'tests', 'Failing', 'SeveralWithComments.elm'))
       .then(exposedFunctions => {
         assert.deepEqual(exposedFunctions, [
           'testExpectations',

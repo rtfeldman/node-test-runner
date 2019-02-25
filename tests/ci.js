@@ -3,15 +3,10 @@ var _ = require('lodash');
 var fs = require('fs-extra');
 var path = require('path');
 var spawn = require('cross-spawn');
+const { fixturesDir, spawnOpts } = require('./util');
 
 var filename = __filename.replace(__dirname + '/', '');
 var elmTest = 'elm-test';
-const fixturesDir =  path.join(__dirname, 'fixtures');
-const elmHome = path.join(fixturesDir, 'elm-home');
-const spawnOpts = {
-  silent: true,
-  env: Object.assign({ ELM_HOME: elmHome }, process.env),
-};
 
 function run(testFile) {
   console.log('\nClearing elm-stuff prior to run');
