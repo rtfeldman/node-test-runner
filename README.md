@@ -94,46 +94,14 @@ elm-test --watch
 
 #### `--help`
 
-Displays all the available options and commands.
+Displays all th available options and commands.
 
 ### Travis CI
 
-If you want to run your tests on Travis CI, here's a good starter `.travis.yml`:
+If you want to run your tests on Travis CI, [here's a good starter `.travis.yml`](https://docs.travis-ci.com/user/languages/elm/):
 
 ```yml
-sudo: false
-
-language: node_js
-node_js: node
-
-cache:
-  directories:
-    - elm-stuff/build-artifacts
-    - elm-stuff/packages
-    - sysconfcpus
-os:
-  - linux
-
-env: ELM_VERSION=0.19.0
-
-before_install:
-  - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
-
-install:
-  - node --version
-  - npm --version
-  - npm install -g elm@$ELM_VERSION elm-test
-  # Faster compile on Travis.
-  - |
-    if [ ! -d sysconfcpus/bin ];
-    then
-      git clone https://github.com/obmarg/libsysconfcpus.git;
-      cd libsysconfcpus;
-      ./configure --prefix=$TRAVIS_BUILD_DIR/sysconfcpus;
-      make && make install;
-      cd ..;
-    fi
-
-script:
-  - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 1 elm-test
+language: elm
+elm:
+  - 0.19.0
 ```
