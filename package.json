@@ -8,7 +8,7 @@
   },
   "scripts": {
     "flow": "flow",
-    "test": "flow check && npm run prettier:check && mocha tests",
+    "test": "flow check && npm run prettier:check && mocha tests && cd elm && node ../bin/elm-test",
     "prettier:check": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --list-different",
     "prettier:write": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --write"
   },
