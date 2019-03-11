@@ -1,6 +1,6 @@
 {
   "name": "elm-test",
-  "version": "0.19.0-rev5",
+  "version": "0.19.0-rev6",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
@@ -32,7 +32,7 @@
   "homepage": "https://github.com/rtfeldman/node-test-runner#readme",
   "dependencies": {
     "chalk": "2.1.0",
-    "chokidar": "1.7.0",
+    "chokidar": "2.1.2",
     "cross-spawn": "4.0.0",
     "elmi-to-json": "0.19.1",
     "find-parent-dir": "^0.3.0",
