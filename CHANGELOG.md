@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors major Elm versions. So version 0.18.* of this project will
 be compatible with Elm 0.18.*.
 
+## 0.19.0-rev6
+
+### Fixed
+
+- `npm audit` complaints on versions of chokidar and node-elm-compiler
+
 ## 0.19.0-rev5
 
 ### Fixed
