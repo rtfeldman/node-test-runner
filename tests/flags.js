@@ -289,6 +289,6 @@ describe('flags', () => {
           console.warn('Unexpected non-json output: ' + line);
         }
       });
-    }).timeout(60000);
+    }).timeout(100000);
   });
 });
