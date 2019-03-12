@@ -94,7 +94,7 @@ elm-test --watch
 
 #### `--help`
 
-Displays all th available options and commands.
+Displays all the available options and commands.
 
 ### Travis CI
 
