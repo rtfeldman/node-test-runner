@@ -9,8 +9,8 @@
   "scripts": {
     "flow": "flow",
     "test": "flow check && npm run prettier:check && mocha tests && cd elm && node ../bin/elm-test",
-    "prettier:check": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --list-different",
-    "prettier:write": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --write"
+    "prettier:check": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --list-different --parser flow",
+    "prettier:write": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --parser flow --write"
   },
   "repository": {
     "type": "git",
