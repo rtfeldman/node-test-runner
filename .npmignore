@@ -44,6 +44,7 @@ example-application/
 example-application-no-tests/
 example-package/
 example-package-no-tests/
+example-package-no-core/
 
 README.md
 CHANGELOG.md
