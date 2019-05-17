@@ -50,7 +50,7 @@
     "xmlbuilder": "^8.2.2"
   },
   "optionalDependencies": {
-    "fsevents": "1.2.4"
+    "fsevents": "^1.2.8"
   },
   "devDependencies": {
     "byline": "^5.0.0",
