@@ -1,7 +1,7 @@
 # node-test-runner [![Version](https://img.shields.io/npm/v/elm-test.svg)](https://www.npmjs.com/package/elm-test) [![Travis build Status](https://travis-ci.org/rtfeldman/node-test-runner.svg?branch=master)](http://travis-ci.org/rtfeldman/node-test-runner) [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/f2qymrpgdfsad62w/branch/master?svg=true)](https://ci.appveyor.com/project/rtfeldman/node-test-runner/branch/master)
 
 
-Runs [elm-test](https://github.com/elm-community/elm-test) suites from Node.js
+Runs [elm-test](https://package.elm-lang.org/packages/elm-explorations/test/latest) suites from Node.js
 
 ## Installation
 
@@ -98,42 +98,10 @@ Displays all the available options and commands.
 
 ### Travis CI
 
-If you want to run your tests on Travis CI, here's a good starter `.travis.yml`:
+If you want to run your tests on Travis CI, [here's a good starter `.travis.yml`](https://docs.travis-ci.com/user/languages/elm/):
 
 ```yml
-sudo: false
-
-language: node_js
-node_js: node
-
-cache:
-  directories:
-    - elm-stuff/build-artifacts
-    - elm-stuff/packages
-    - sysconfcpus
-os:
-  - linux
-
-env: ELM_VERSION=0.19.0
-
-before_install:
-  - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
-
-install:
-  - node --version
-  - npm --version
-  - npm install -g elm@$ELM_VERSION elm-test
-  # Faster compile on Travis.
-  - |
-    if [ ! -d sysconfcpus/bin ];
-    then
-      git clone https://github.com/obmarg/libsysconfcpus.git;
-      cd libsysconfcpus;
-      ./configure --prefix=$TRAVIS_BUILD_DIR/sysconfcpus;
-      make && make install;
-      cd ..;
-    fi
-
-script:
-  - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 1 elm-test
+language: elm
+elm:
+  - 0.19.0
 ```
