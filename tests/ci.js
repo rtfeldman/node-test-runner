@@ -111,6 +111,8 @@ if (interfaceExitCode !== 0) {
 shell.echo(filename + ': Verifying installed elm-test version...');
 run('--version');
 
+/* Test examples */
+
 shell.echo('### Testing elm-test on example-application/');
 
 shell.cd('example-application');
@@ -129,7 +131,25 @@ assertTestSuccess(path.join('tests', '*Pass*.elm'));
 assertTestFailure(path.join('tests', '*Fail*.elm'));
 assertTestFailure();
 
+shell.cd('../');
+
+shell.echo('### Testing elm-test on example-application-no-tests');
+
+shell.cd('example-application-no-tests');
+
+assertTestFailure();
+
+shell.cd('../');
+
+shell.echo('### Testing elm-test on example-package-no-core');
+
+shell.cd('example-package-no-core');
+
+assertTestSuccess();
+
 shell.cd(fixturesDir);
+
+/* ci tests on single elm files */
 
 shell.ls('tests/Passing/').forEach(function(testToRun) {
   shell.echo('\n### Testing ' + testToRun + ' (expecting it to pass)\n');
