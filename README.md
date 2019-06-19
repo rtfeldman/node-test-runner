@@ -18,7 +18,7 @@ elm-test                 # Run all exposed Test values in *.elm files in tests/
 elm-test Foo.elm         # Run all exposed Test values in Foo.elm
 ```
 
-### Configuration
+### Comand Line Arguments
 
 #### `install`
 
