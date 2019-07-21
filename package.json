@@ -9,8 +9,8 @@
   "scripts": {
     "flow": "flow",
     "test": "flow check && npm run prettier:check && mocha tests && cd elm && node ../bin/elm-test",
-    "prettier:check": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --list-different",
-    "prettier:write": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --write"
+    "prettier:check": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --list-different --parser flow",
+    "prettier:write": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --parser flow --write"
   },
   "repository": {
     "type": "git",
@@ -53,7 +53,7 @@
   "devDependencies": {
     "byline": "^5.0.0",
     "elm": "0.19.0-bugfix6",
-    "flow-bin": "0.48.0",
+    "flow-bin": "0.94.0",
     "mocha": "6.2.0",
     "prettier": "^1.18.2",
     "shelljs": "0.8.3",
