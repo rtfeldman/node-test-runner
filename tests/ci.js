@@ -15,7 +15,7 @@ const spawnOpts = {
 var elmTestVersion = packageInfo.version;
 
 function run(testFile) {
-  console.log('\nClearing elm-stuff prior to run');
+  console.log('\nClearing ' + path.join(process.cwd(), 'elm-stuff') + ' prior to run');
   shell.rm('-rf', 'elm-stuff');
 
   if (!testFile) {
@@ -99,7 +99,7 @@ shell.exec('npm link --ignore-scripts=false');
 
 var interfacePath = require('elmi-to-json').paths['elmi-to-json'];
 
-shell.echo(filename + ': Verifying installed elmi-to-json...');
+shell.echo(filename + ': Verifying elmi-to-json is installed...');
 var interfaceResult = spawn.sync(interfacePath, ['--help']);
 var interfaceExitCode = interfaceResult.status;
 
