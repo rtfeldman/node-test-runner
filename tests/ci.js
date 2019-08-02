@@ -3,14 +3,10 @@ var _ = require('lodash');
 var fs = require('fs-extra');
 var path = require('path');
 var spawn = require('cross-spawn');
+const { fixturesDir, spawnOpts } = require('./util');
 
 var filename = __filename.replace(__dirname + '/', '');
 var elmTest = 'elm-test';
-const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
-const spawnOpts = {
-  silent: true,
-  env: Object.assign({ ELM_HOME: elmHome }, process.env),
-};
 
 function run(testFile) {
   console.log('\nClearing elm-stuff prior to run');
@@ -151,35 +147,27 @@ shell.cd('example-package-no-core');
 
 assertTestSuccess();
 
-shell.cd('../');
+shell.cd(fixturesDir);
 
 /* ci tests on single elm files */
 
-shell.ls('tests/*.elm').forEach(function(testToRun) {
-  if (/Passing\.elm$/.test(testToRun)) {
-    shell.echo('\n### Testing ' + testToRun + ' (expecting it to pass)\n');
-    assertTestSuccess(testToRun);
-  } else if (/Failing\.elm$/.test(testToRun)) {
-    shell.echo('\n### Testing ' + testToRun + ' (expecting it to fail)\n');
-    assertTestFailure(testToRun);
-  } else if (/PortRuntimeException\.elm$/.test(testToRun)) {
-    shell.echo(
-      '\n### Testing ' +
-        testToRun +
-        ' (expecting it to error with a runtime exception)\n'
-    );
-    assertTestErrored(testToRun);
-  } else if (/Port\d\.elm$/.test(testToRun)) {
-    shell.echo('\n### Skipping ' + testToRun + ' (helper file)\n');
-    return;
-  } else {
-    shell.echo(
-      'Tried to run ' +
-        testToRun +
-        ' but it has an invalid filename; node-test-runner tests should fit the pattern "*Passing.elm" or "*Failing.elm"'
-    );
-    shell.exit(1);
-  }
+shell.ls('tests/Passing/').forEach(function(testToRun) {
+  shell.echo('\n### Testing ' + testToRun + ' (expecting it to pass)\n');
+  assertTestSuccess(path.join('tests', 'Passing', testToRun));
+});
+
+shell.ls('tests/Failing').forEach(function(testToRun) {
+  shell.echo('\n### Testing ' + testToRun + ' (expecting it to fail)\n');
+  assertTestFailure(path.join('tests', 'Failing', testToRun));
+});
+
+shell.ls('tests/RuntimeException').forEach(function(testToRun) {
+  shell.echo(
+    '\n### Testing ' +
+      testToRun +
+      ' (expecting it to error with a runtime exception)\n'
+  );
+  assertTestErrored(path.join('tests', 'RuntimeException', testToRun));
 });
 
 shell.echo('');
