@@ -5,8 +5,11 @@ var path = require('path');
 var spawn = require('cross-spawn');
 const { fixturesDir, spawnOpts } = require('./util');
 
+var packageInfo = require('../package.json');
 var filename = __filename.replace(__dirname + '/', '');
 var elmTest = 'elm-test';
+
+var elmTestVersion = packageInfo.version;
 
 function run(testFile) {
   console.log('\nClearing elm-stuff prior to run');
@@ -108,8 +111,21 @@ if (interfaceExitCode !== 0) {
   shell.exit(1);
 }
 
+shell.exec('npm link --ignore-scripts=false');
+
 shell.echo(filename + ': Verifying installed elm-test version...');
-run('--version');
+var versionRun = shell.exec('elm-test --version');
+
+if (versionRun.code !== 0) {
+  shell.exec("echo Expected elm-test --version to exit with exit code 0, but it was " + versionRun.code);
+  shell.exit(1);
+}
+
+if (versionRun.stdout.trim() !== elmTestVersion) {
+  shell.exec("echo Expected elm-test --version to output " + elmTestVersion + ", but it was " + versionRun.stdout.trim());
+  shell.exit(1);
+}
+
 
 /* Test examples */
 
