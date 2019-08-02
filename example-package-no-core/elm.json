@@ -1,9 +1,11 @@
 {
   "type": "package",
-  "name": "example ",
+  "name": "example/package",
   "summary": "SSCCE on replicating issue 273",
   "version": "4.0.1",
   "elm-version": "0.19.0 <= v < 0.20.0",
+  "license": "BSD-3-Clause",
+  "exposed-modules": [],
   "dependencies": {
     "elm/http": "2.0.0 <= v < 3.0.0"
   },
