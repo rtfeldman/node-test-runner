@@ -132,6 +132,7 @@ describe('flags', () => {
 
       const runResult = execElmTest(['install', 'elm/regex']);
 
+      assert.ok(Number.isInteger(runResult.status));
       assert.notEqual(runResult.status, 0);
     }).timeout(60000);
 
@@ -268,7 +269,8 @@ describe('flags', () => {
         path.join('tests', 'Passing', 'One.elm'),
       ]);
 
-      assert.notEqual(0, runResult.status);
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notEqual(runResult.status, 0);
     }).timeout(5000); // This sometimes needs more time to run on Travis.
   });
 
