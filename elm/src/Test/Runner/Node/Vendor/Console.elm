@@ -1,4 +1,4 @@
-module Test.Runner.Node.Vendor.Console exposing (..)
+module Test.Runner.Node.Vendor.Console exposing (bgBlack, bgBlue, bgCyan, bgGreen, bgMagenta, bgRed, bgWhite, bgYellow, black, blue, bold, colorsInverted, cyan, dark, green, magenta, plain, red, underline, white, yellow)
 
 {-| -}
 
@@ -56,8 +56,8 @@ This can be used with other text modifiers, such as color.
 
     import Console exposing (dark, green)
 
-    -- "Hello, dark green world!" with "dark green" in dark green
 
+    -- "Hello, dark green world!" with "dark green" in dark green
     greeting : String
     greeting =
         "Hello, " ++ (dark << green) "dark green" ++ " world!"
@@ -76,8 +76,8 @@ This can be used with other text modifiers, such as color.
 
     import Console exposing (blue, bold)
 
-    -- "Hello, bold blue world!" with "bold blue" in bold and blue
 
+    -- "Hello, bold blue world!" with "bold blue" in bold and blue
     greeting : String
     greeting =
         "Hello, " ++ (bold << blue) "bold blue" ++ " world!"
@@ -96,8 +96,8 @@ This can be used with other text modifiers, such as color.
 
     import Console exposing (underline)
 
-    -- "This will look like a hyperlink" with "hyperlink" underlined
 
+    -- "This will look like a hyperlink" with "hyperlink" underlined
     example : String
     example =
         "This will look like a " ++ underline "hyperlink"

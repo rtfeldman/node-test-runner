@@ -1,13 +1,12 @@
-module Test.Reporter.TestResults
-    exposing
-        ( Failure
-        , Outcome(..)
-        , SummaryInfo
-        , TestResult
-        , isFailure
-        , isTodo
-        , outcomesFromExpectations
-        )
+module Test.Reporter.TestResults exposing
+    ( Failure
+    , Outcome(..)
+    , SummaryInfo
+    , TestResult
+    , isFailure
+    , isTodo
+    , outcomesFromExpectations
+    )
 
 import Expect exposing (Expectation)
 import Test.Runner

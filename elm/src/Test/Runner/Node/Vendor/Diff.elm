@@ -1,4 +1,7 @@
-module Test.Runner.Node.Vendor.Diff exposing (Change(..), diff, diffLines)
+module Test.Runner.Node.Vendor.Diff exposing
+    ( Change(..)
+    , diff, diffLines
+    )
 
 {-| Compares two list and returns how they have changed.
 Each function internally uses Wu's [O(NP) algorithm](http://myerslab.mpi-cbg.de/wp-content/uploads/2014/06/np_diff.pdf).
@@ -110,7 +113,7 @@ diffLines a b =
 
 {-| Compares general lists.
 
-    diff [1, 3] [2, 3] == [Removed 1, Added 2, NoChange 3] -- True
+    diff [ 1, 3 ] [ 2, 3 ] == [ Removed 1, Added 2, NoChange 3 ] -- True
 
 -}
 diff : List a -> List a -> List (Change a)
@@ -219,6 +222,7 @@ makeChangesHelp changes getA getB ( x, y ) path =
 
                 Ok c ->
                     makeChangesHelp (c :: changes) getA getB ( prevX, prevY ) tail
+
 
 
 -- Wu's O(NP) algorithm (http://myerslab.mpi-cbg.de/wp-content/uploads/2014/06/np_diff.pdf)

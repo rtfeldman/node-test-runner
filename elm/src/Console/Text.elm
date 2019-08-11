@@ -1,27 +1,26 @@
-module Console.Text
-    exposing
-        ( Color
-        , ColorModifier
-        , Style
-        , Text
-        , UseColor(..)
-        , black
-        , blue
-        , bold
-        , concat
-        , cyan
-        , dark
-        , default
-        , green
-        , inverted
-        , magenta
-        , plain
-        , red
-        , render
-        , underline
-        , white
-        , yellow
-        )
+module Console.Text exposing
+    ( Color
+    , ColorModifier
+    , Style
+    , Text
+    , UseColor(..)
+    , black
+    , blue
+    , bold
+    , concat
+    , cyan
+    , dark
+    , default
+    , green
+    , inverted
+    , magenta
+    , plain
+    , red
+    , render
+    , underline
+    , white
+    , yellow
+    )
 
 import Test.Runner.Node.Vendor.Console as Console
 
@@ -204,6 +203,7 @@ bgWhite =
 
 
 -- STYLES --
+
 
 bold : Text -> Text
 bold txt =

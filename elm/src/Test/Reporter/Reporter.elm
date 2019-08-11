@@ -1,4 +1,4 @@
-module Test.Reporter.Reporter exposing (..)
+module Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
 
 import Console.Text exposing (UseColor)
 import Json.Encode exposing (Value)
