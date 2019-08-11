@@ -13,12 +13,11 @@ passed and 2 if any failed. Returns 1 if something went wrong.
 -}
 
 import Dict exposing (Dict)
-import Expect exposing (Expectation)
-import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode exposing (Value)
+import Json.Decode as Decode
+import Json.Encode as Encode
 import Platform
 import Random
-import Task exposing (Task)
+import Task
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, outcomesFromExpectations)
@@ -77,15 +76,6 @@ type Msg
 
 
 port send : String -> Cmd msg
-
-
-warn : String -> a -> a
-warn str result =
-    let
-        _ =
-            Debug.log str
-    in
-    result
 
 
 dispatch : Model -> Posix -> Cmd Msg
@@ -213,16 +203,6 @@ update msg ({ testReporter } as model) =
                 )
 
 
-countFailures : ( TestId, TestResult ) -> Int -> Int
-countFailures ( _, { outcome } ) failures =
-    case outcome of
-        Failed _ ->
-            failures + 1
-
-        _ ->
-            failures
-
-
 sendResults : Bool -> TestReporter -> List ( TestId, TestResult ) -> Cmd msg
 sendResults isFinished testReporter results =
     let
@@ -271,11 +251,8 @@ sendBegin model =
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, paths, fuzzRuns, initialSeed, report, runners } startTimeMs =
+init { processes, paths, fuzzRuns, initialSeed, report, runners } _ =
     let
-        startTime =
-            Time.millisToPosix startTimeMs
-
         { indexedRunners, autoFail } =
             case runners of
                 Plain runnerList ->

@@ -205,17 +205,6 @@ bgWhite =
 
 -- STYLES --
 
-
-normal : Text -> Text
-normal txt =
-    case txt of
-        Text styles str ->
-            Text { styles | style = Normal } str
-
-        Texts texts ->
-            Texts (List.map dark texts)
-
-
 bold : Text -> Text
 bold txt =
     case txt of

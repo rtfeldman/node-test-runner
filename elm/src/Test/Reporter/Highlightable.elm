@@ -38,7 +38,7 @@ map transform highlightable =
 fromDiff : Change a -> List (Highlightable a)
 fromDiff diff =
     case diff of
-        Added char ->
+        Added _ ->
             []
 
         Removed char ->

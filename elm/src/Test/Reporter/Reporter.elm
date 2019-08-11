@@ -1,7 +1,7 @@
 module Test.Reporter.Reporter exposing (..)
 
 import Console.Text exposing (UseColor)
-import Json.Encode as Encode exposing (Value)
+import Json.Encode exposing (Value)
 import Test.Reporter.Console as ConsoleReporter
 import Test.Reporter.JUnit as JUnitReporter
 import Test.Reporter.Json as JsonReporter

@@ -79,7 +79,7 @@ outcomesFromExpectations expectations =
                     else
                         [ Failed [ failure ] ]
 
-        first :: rest ->
+        _ :: _ ->
             let
                 builder =
                     List.foldl outcomesFromExpectationsHelp
@@ -105,7 +105,10 @@ outcomesFromExpectations expectations =
 
 
 type alias OutcomeBuilder =
-    { passes : Int, todos : List String, failures : List Failure }
+    { passes : Int
+    , todos : List String
+    , failures : List Failure
+    }
 
 
 outcomesFromExpectationsHelp : Expectation -> OutcomeBuilder -> OutcomeBuilder

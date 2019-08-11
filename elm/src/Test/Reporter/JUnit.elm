@@ -1,7 +1,7 @@
 module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
-import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo, TestResult, isFailure)
+import Test.Reporter.TestResults exposing (Failure, Outcome(..), SummaryInfo, TestResult)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
 
@@ -81,12 +81,12 @@ reportComplete { labels, duration, outcome } =
 
 
 encodeExtraFailure : String -> Value
-encodeExtraFailure failure =
+encodeExtraFailure _ =
     reportComplete { labels = [], duration = 0, outcome = Failed [] }
 
 
 reportSummary : SummaryInfo -> Maybe String -> Value
-reportSummary { testCount, duration, passed, failed, todos } autoFail =
+reportSummary { testCount, duration, failed } autoFail =
     let
         -- JUnit doesn't have a notion of "everything passed, but you left
         -- a Test.only in there, so it's a failure overall." In that case

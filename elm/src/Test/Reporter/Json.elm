@@ -1,7 +1,7 @@
 module Test.Reporter.Json exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
-import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo, isFailure)
+import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
 
@@ -68,7 +68,7 @@ encodeLabels labels =
 
 
 reportSummary : SummaryInfo -> Maybe String -> Value
-reportSummary { duration, passed, failed, todos, testCount } autoFail =
+reportSummary { duration, passed, failed } autoFail =
     Encode.object
         [ ( "event", Encode.string "runComplete" )
         , ( "passed", Encode.string <| String.fromInt passed )
