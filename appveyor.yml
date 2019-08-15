@@ -16,7 +16,7 @@ install:
   - node --version
   - npm --version
   - npm install
-  - timeout 5 # A five second wait to work around a bug in the elm no-deps installer
+  - start-sleep -s 5 # A five second wait to work around a bug in the elm no-deps installer
 
 test_script:
   - npm test
