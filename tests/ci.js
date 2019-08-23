@@ -8,7 +8,7 @@ var filename = __filename.replace(__dirname + '/', '');
 var elmTest = 'elm-test';
 const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
 const spawnOpts = {
-  silent: true,
+  silent: false,
   env: Object.assign({ ELM_HOME: elmHome }, process.env),
 };
 
@@ -65,6 +65,8 @@ function assertTestIncomplete(testfile) {
 
 function assertTestFailure(testfile) {
   var code = run(testfile);
+
+  console.log("assertTestFailure(" + testfile + ") ==> ", code);
   if (code < 2) {
     shell.exec(
       'echo ' +
