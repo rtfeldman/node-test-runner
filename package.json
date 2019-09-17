@@ -32,7 +32,7 @@
   "homepage": "https://github.com/rtfeldman/node-test-runner#readme",
   "dependencies": {
     "chalk": "2.4.2",
-    "chokidar": "3.0.2",
+    "chokidar": "3.1.0",
     "cross-spawn": "6.0.5",
     "elmi-to-json": "0.19.6",
     "find-parent-dir": "^0.3.0",
