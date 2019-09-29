@@ -32,8 +32,8 @@
   "homepage": "https://github.com/rtfeldman/node-test-runner#readme",
   "dependencies": {
     "chalk": "2.4.2",
-    "chokidar": "3.0.2",
-    "cross-spawn": "6.0.5",
+    "chokidar": "3.1.0",
+    "cross-spawn": "7.0.0",
     "elmi-to-json": "0.19.6",
     "find-parent-dir": "^0.3.0",
     "firstline": "2.0.2",
@@ -53,11 +53,11 @@
   "devDependencies": {
     "byline": "^5.0.0",
     "elm": "0.19.0-bugfix6",
-    "flow-bin": "0.103.0",
+    "flow-bin": "0.107.0",
     "mocha": "6.2.0",
     "prettier": "^1.18.2",
     "shelljs": "0.8.3",
     "strip-ansi": "^5.2.0",
-    "xml2js": "0.4.19"
+    "xml2js": "0.4.22"
   }
 }
