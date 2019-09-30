@@ -54,7 +54,7 @@
     "byline": "^5.0.0",
     "elm": "0.19.0-bugfix6",
     "flow-bin": "0.108.0",
-    "mocha": "6.2.0",
+    "mocha": "6.2.1",
     "prettier": "^1.18.2",
     "shelljs": "0.8.3",
     "strip-ansi": "^5.2.0",
