@@ -70,7 +70,6 @@ function assertTestIncomplete(testfile) {
 function assertTestFailure(testfile) {
   var code = run(testfile);
 
-  console.log('assertTestFailure(' + testfile + ') ==> ', code);
   if (code < 2) {
     shell.exec(
       'echo ' +
