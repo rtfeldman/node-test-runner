@@ -8,11 +8,18 @@ const { fixturesDir, spawnOpts } = require('./util');
 var packageInfo = require('../package.json');
 var filename = __filename.replace(__dirname + '/', '');
 var elmTest = 'elm-test';
+const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
+const spawnOpts = {
+  silent: false,
+  env: Object.assign({ ELM_HOME: elmHome }, process.env),
+};
 
 var elmTestVersion = packageInfo.version;
 
 function run(testFile) {
-  console.log('\nClearing ' + path.join(process.cwd(), 'elm-stuff') + ' prior to run');
+  console.log(
+    '\nClearing ' + path.join(process.cwd(), 'elm-stuff') + ' prior to run'
+  );
   shell.rm('-rf', 'elm-stuff');
 
   if (!testFile) {
@@ -62,6 +69,8 @@ function assertTestIncomplete(testfile) {
 
 function assertTestFailure(testfile) {
   var code = run(testfile);
+
+  console.log('assertTestFailure(' + testfile + ') ==> ', code);
   if (code < 2) {
     shell.exec(
       'echo ' +
@@ -117,15 +126,22 @@ shell.echo(filename + ': Verifying installed elm-test version...');
 var versionRun = shell.exec('elm-test --version');
 
 if (versionRun.code !== 0) {
-  shell.exec("echo Expected elm-test --version to exit with exit code 0, but it was " + versionRun.code);
+  shell.exec(
+    'echo Expected elm-test --version to exit with exit code 0, but it was ' +
+      versionRun.code
+  );
   shell.exit(1);
 }
 
 if (versionRun.stdout.trim() !== elmTestVersion) {
-  shell.exec("echo Expected elm-test --version to output " + elmTestVersion + ", but it was " + versionRun.stdout.trim());
+  shell.exec(
+    'echo Expected elm-test --version to output ' +
+      elmTestVersion +
+      ', but it was ' +
+      versionRun.stdout.trim()
+  );
   shell.exit(1);
 }
-
 
 /* Test examples */
 
