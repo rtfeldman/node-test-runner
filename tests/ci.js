@@ -1,20 +1,15 @@
 const shell = require('shelljs');
-var _ = require('lodash');
-var fs = require('fs-extra');
-var path = require('path');
-var spawn = require('cross-spawn');
+const _ = require('lodash');
+const fs = require('fs-extra');
+const path = require('path');
+const spawn = require('cross-spawn');
 const { fixturesDir, spawnOpts } = require('./util');
 
-var packageInfo = require('../package.json');
-var filename = __filename.replace(__dirname + '/', '');
-var elmTest = 'elm-test';
+const packageInfo = require('../package.json');
+const filename = __filename.replace(__dirname + '/', '');
+const elmTest = 'elm-test';
 const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
-const spawnOpts = {
-  silent: false,
-  env: Object.assign({ ELM_HOME: elmHome }, process.env),
-};
-
-var elmTestVersion = packageInfo.version;
+const elmTestVersion = packageInfo.version;
 
 function run(testFile) {
   console.log(
