@@ -207,7 +207,7 @@ describe('flags', () => {
         path.join('tests', 'CompileError', 'InvalidSyntax.elm'),
       ]);
 
-      assert.ok(runResult.stderr.match(/PARSE ERROR/));
+      assert.ok(runResult.stderr.match(/ENDLESS COMMENT/));
     }).timeout(60000);
 
     it('Should be able to report failing junit xml', done => {
