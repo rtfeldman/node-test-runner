@@ -34,7 +34,7 @@
     "chalk": "2.4.2",
     "chokidar": "3.2.0",
     "cross-spawn": "7.0.0",
-    "elmi-to-json": "1.1.0",
+    "elmi-to-json": "1.2.0",
     "find-parent-dir": "^0.3.0",
     "firstline": "2.0.2",
     "fs-extra": "8.1.0",
