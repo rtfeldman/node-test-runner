@@ -33,7 +33,7 @@
   "dependencies": {
     "chalk": "2.4.2",
     "chokidar": "3.2.2",
-    "cross-spawn": "7.0.0",
+    "cross-spawn": "7.0.1",
     "elmi-to-json": "0.19.6",
     "find-parent-dir": "^0.3.0",
     "firstline": "2.0.2",
