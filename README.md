@@ -79,7 +79,7 @@ Displays the version of the current elm-test.
 
 ```shell
 $ elm-test --version
-0.19.0
+0.19.1
 ```
 
 #### `--watch`
@@ -103,5 +103,5 @@ If you want to run your tests on Travis CI, [here's a good starter `.travis.yml`
 ```yml
 language: elm
 elm:
-  - 0.19.0
+  - 0.19.1
 ```

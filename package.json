@@ -1,6 +1,6 @@
 {
   "name": "elm-test",
-  "version": "0.19.0-rev6",
+  "version": "0.19.1",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
@@ -34,7 +34,7 @@
     "chalk": "2.4.2",
     "chokidar": "3.2.2",
     "cross-spawn": "7.0.1",
-    "elmi-to-json": "0.19.6",
+    "elmi-to-json": "1.2.0",
     "find-parent-dir": "^0.3.0",
     "firstline": "2.0.2",
     "fs-extra": "8.1.0",
@@ -52,7 +52,7 @@
   "optionalDependencies": {},
   "devDependencies": {
     "byline": "^5.0.0",
-    "elm": "0.19.0-bugfix6",
+    "elm": "0.19.1-1",
     "flow-bin": "0.109.0",
     "mocha": "6.2.1",
     "prettier": "^1.18.2",
