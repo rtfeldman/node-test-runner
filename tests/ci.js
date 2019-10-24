@@ -1,15 +1,20 @@
 const shell = require('shelljs');
-var _ = require('lodash');
-var fs = require('fs-extra');
-var path = require('path');
-var spawn = require('cross-spawn');
+const _ = require('lodash');
+const fs = require('fs-extra');
+const path = require('path');
+const spawn = require('cross-spawn');
 const { fixturesDir, spawnOpts } = require('./util');
 
-var filename = __filename.replace(__dirname + '/', '');
-var elmTest = 'elm-test';
+const packageInfo = require('../package.json');
+const filename = __filename.replace(__dirname + '/', '');
+const elmTest = 'elm-test';
+const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
+const elmTestVersion = packageInfo.version;
 
 function run(testFile) {
-  console.log('\nClearing elm-stuff prior to run');
+  console.log(
+    '\nClearing ' + path.join(process.cwd(), 'elm-stuff') + ' prior to run'
+  );
   shell.rm('-rf', 'elm-stuff');
 
   if (!testFile) {
@@ -59,6 +64,7 @@ function assertTestIncomplete(testfile) {
 
 function assertTestFailure(testfile) {
   var code = run(testfile);
+
   if (code < 2) {
     shell.exec(
       'echo ' +
@@ -93,7 +99,7 @@ shell.exec('npm link --ignore-scripts=false');
 
 var interfacePath = require('elmi-to-json').paths['elmi-to-json'];
 
-shell.echo(filename + ': Verifying installed elmi-to-json...');
+shell.echo(filename + ': Verifying elmi-to-json is installed...');
 var interfaceResult = spawn.sync(interfacePath, ['--help']);
 var interfaceExitCode = interfaceResult.status;
 
@@ -108,8 +114,28 @@ if (interfaceExitCode !== 0) {
   shell.exit(1);
 }
 
+shell.exec('npm link --ignore-scripts=false');
+
 shell.echo(filename + ': Verifying installed elm-test version...');
-run('--version');
+var versionRun = shell.exec('elm-test --version');
+
+if (versionRun.code !== 0) {
+  shell.exec(
+    'echo Expected elm-test --version to exit with exit code 0, but it was ' +
+      versionRun.code
+  );
+  shell.exit(1);
+}
+
+if (versionRun.stdout.trim() !== elmTestVersion) {
+  shell.exec(
+    'echo Expected elm-test --version to output ' +
+      elmTestVersion +
+      ', but it was ' +
+      versionRun.stdout.trim()
+  );
+  shell.exit(1);
+}
 
 /* Test examples */
 

@@ -132,7 +132,8 @@ describe('flags', () => {
 
       const runResult = execElmTest(['install', 'elm/regex']);
 
-      assert.notEqual(runResult.code, 0);
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notEqual(runResult.status, 0);
     }).timeout(60000);
 
     it('should not allow command injection', () => {
@@ -158,9 +159,9 @@ describe('flags', () => {
       assert.ok(runResult.stdout.length > 0);
     }).timeout(60000);
 
-    it('Should exit indicating failure', () => {
+    it('Should exit indicating success (see #359)', () => {
       const runResult = execElmTest(['--help']);
-      assert.notEqual(0, runResult.code);
+      assert.strictEqual(0, runResult.status);
     }).timeout(60000);
   });
 
@@ -206,7 +207,7 @@ describe('flags', () => {
         path.join('tests', 'CompileError', 'InvalidSyntax.elm'),
       ]);
 
-      assert.ok(runResult.stderr.match(/PARSE ERROR/));
+      assert.ok(runResult.stderr.match(/ENDLESS COMMENT/));
     }).timeout(60000);
 
     it('Should be able to report failing junit xml', done => {
@@ -268,7 +269,8 @@ describe('flags', () => {
         path.join('tests', 'Passing', 'One.elm'),
       ]);
 
-      assert.notEqual(0, runResult.code);
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notEqual(runResult.status, 0);
     }).timeout(5000); // This sometimes needs more time to run on Travis.
   });
 
