@@ -38,7 +38,7 @@
     "find-parent-dir": "^0.3.0",
     "firstline": "2.0.2",
     "fs-extra": "8.1.0",
-    "glob": "7.1.4",
+    "glob": "7.1.6",
     "lodash": "4.17.15",
     "minimist": "^1.2.0",
     "murmur-hash-js": "1.0.0",
