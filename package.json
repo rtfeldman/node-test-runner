@@ -45,7 +45,7 @@
     "node-elm-compiler": "5.0.4",
     "split": "1.0.1",
     "supports-color": "7.1.0",
-    "temp": "0.9.0",
+    "temp": "0.9.1",
     "which": "2.0.1",
     "xmlbuilder": "^13.0.2"
   },
