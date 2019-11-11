@@ -18,6 +18,6 @@ install:
   - npm install
 
 test_script:
-  - npm test
+  - npm test -or npm test
 
 build: off
