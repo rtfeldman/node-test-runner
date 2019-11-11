@@ -234,7 +234,7 @@ describe('flags', () => {
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
-      assert.equal('12345', firstOutput.initialSeed);
+      assert.equal('12345', firstOutput.initialSeed, runResult.stdout);
     }).timeout(60000);
   });
 
@@ -246,7 +246,7 @@ describe('flags', () => {
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
-      assert.equal('100', firstOutput.fuzzRuns);
+      assert.equal('100', firstOutput.fuzzRuns, runResult.stdout);
     }).timeout(60000);
 
     it('Should use the provided value', () => {
@@ -257,7 +257,7 @@ describe('flags', () => {
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
-      assert.equal('5', firstOutput.fuzzRuns);
+      assert.equal('5', firstOutput.fuzzRuns, runResult.stdout);
     }).timeout(60000);
   });
 
