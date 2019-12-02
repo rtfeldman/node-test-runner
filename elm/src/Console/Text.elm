@@ -1,27 +1,26 @@
-module Console.Text
-    exposing
-        ( Color
-        , ColorModifier
-        , Style
-        , Text
-        , UseColor(..)
-        , black
-        , blue
-        , bold
-        , concat
-        , cyan
-        , dark
-        , default
-        , green
-        , inverted
-        , magenta
-        , plain
-        , red
-        , render
-        , underline
-        , white
-        , yellow
-        )
+module Console.Text exposing
+    ( Color
+    , ColorModifier
+    , Style
+    , Text
+    , UseColor(..)
+    , black
+    , blue
+    , bold
+    , concat
+    , cyan
+    , dark
+    , default
+    , green
+    , inverted
+    , magenta
+    , plain
+    , red
+    , render
+    , underline
+    , white
+    , yellow
+    )
 
 import Test.Runner.Node.Vendor.Console as Console
 
@@ -204,16 +203,6 @@ bgWhite =
 
 
 -- STYLES --
-
-
-normal : Text -> Text
-normal txt =
-    case txt of
-        Text styles str ->
-            Text { styles | style = Normal } str
-
-        Texts texts ->
-            Texts (List.map dark texts)
 
 
 bold : Text -> Text

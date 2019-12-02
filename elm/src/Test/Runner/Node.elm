@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (TestProgram, run)
+port module Test.Runner.Node exposing (run, TestProgram)
 
 {-|
 
@@ -13,18 +13,18 @@ passed and 2 if any failed. Returns 1 if something went wrong.
 -}
 
 import Dict exposing (Dict)
-import Expect exposing (Expectation)
-import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode exposing (Value)
+import Json.Decode as Decode
+import Json.Encode as Encode
 import Platform
 import Random
-import Task exposing (Task)
+import Task
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, outcomesFromExpectations)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Time exposing (Posix)
+
 
 
 -- TYPES
@@ -79,15 +79,6 @@ type Msg
 port send : String -> Cmd msg
 
 
-warn : String -> a -> a
-warn str result =
-    let
-        _ =
-            Debug.log str
-    in
-    result
-
-
 dispatch : Model -> Posix -> Cmd Msg
 dispatch model startTime =
     case Dict.get model.nextTestToRun model.available of
@@ -128,8 +119,10 @@ update msg ({ testReporter } as model) =
                         exitCode =
                             if failed > 0 then
                                 2
+
                             else if model.autoFail == Nothing && List.isEmpty todos then
                                 0
+
                             else
                                 3
 
@@ -153,6 +146,7 @@ update msg ({ testReporter } as model) =
                         ( { model | nextTestToRun = index + model.processes }
                         , Cmd.batch [ cmd, sendBegin model ]
                         )
+
                     else
                         ( { model | nextTestToRun = index }, cmd )
 
@@ -199,6 +193,7 @@ update msg ({ testReporter } as model) =
                 if isFinished then
                     -- Don't bother updating the model, since we're done
                     ( model, cmd )
+
                 else
                     -- Clear out the results, now that we've flushed them.
                     ( { model | nextTestToRun = nextTestToRun, results = [] }
@@ -207,20 +202,11 @@ update msg ({ testReporter } as model) =
                         , Task.perform Dispatch Time.now
                         ]
                     )
+
             else
                 ( { model | nextTestToRun = nextTestToRun, results = results }
                 , Task.perform Dispatch Time.now
                 )
-
-
-countFailures : ( TestId, TestResult ) -> Int -> Int
-countFailures ( _, { outcome } ) failures =
-    case outcome of
-        Failed _ ->
-            failures + 1
-
-        _ ->
-            failures
 
 
 sendResults : Bool -> TestReporter -> List ( TestId, TestResult ) -> Cmd msg
@@ -229,6 +215,7 @@ sendResults isFinished testReporter results =
         typeStr =
             if isFinished then
                 "FINISHED"
+
             else
                 "RESULTS"
 
@@ -271,11 +258,8 @@ sendBegin model =
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, paths, fuzzRuns, initialSeed, report, runners } startTimeMs =
+init { processes, paths, fuzzRuns, initialSeed, report, runners } _ =
     let
-        startTime =
-            Time.millisToPosix startTimeMs
-
         { indexedRunners, autoFail } =
             case runners of
                 Plain runnerList ->

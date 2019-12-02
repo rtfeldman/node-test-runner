@@ -1,4 +1,7 @@
-module Test.Runner.Node.Vendor.Diff exposing (Change(..), diff, diffLines)
+module Test.Runner.Node.Vendor.Diff exposing
+    ( Change(..)
+    , diff, diffLines
+    )
 
 {-| Compares two list and returns how they have changed.
 Each function internally uses Wu's [O(NP) algorithm](http://myerslab.mpi-cbg.de/wp-content/uploads/2014/06/np_diff.pdf).
@@ -110,7 +113,7 @@ diffLines a b =
 
 {-| Compares general lists.
 
-    diff [1, 3] [2, 3] == [Removed 1, Added 2, NoChange 3] -- True
+    diff [ 1, 3 ] [ 2, 3 ] == [ Removed 1, Added 2, NoChange 3 ] -- True
 
 -}
 diff : List a -> List a -> List (Change a)
@@ -219,39 +222,6 @@ makeChangesHelp changes getA getB ( x, y ) path =
 
                 Ok c ->
                     makeChangesHelp (c :: changes) getA getB ( prevX, prevY ) tail
-
-
-
--- Myers's O(ND) algorithm (http://www.xmailserver.org/diff2.pdf)
-
-
-ond : (Int -> Maybe a) -> (Int -> Maybe a) -> Int -> Int -> List ( Int, Int )
-ond getA getB m n =
-    let
-        v =
-            Array.initialize (m + n + 1) (always [])
-    in
-    ondLoopDK (snake getA getB) m 0 0 v
-
-
-ondLoopDK :
-    (Int -> Int -> List ( Int, Int ) -> ( List ( Int, Int ), Bool ))
-    -> Int
-    -> Int
-    -> Int
-    -> Array (List ( Int, Int ))
-    -> List ( Int, Int )
-ondLoopDK snake_ offset d k v =
-    if k > d then
-        ondLoopDK snake_ offset (d + 1) (-d - 1) v
-
-    else
-        case step snake_ offset k v of
-            Found path ->
-                path
-
-            Continue v_ ->
-                ondLoopDK snake_ offset d (k + 2) v_
 
 
 

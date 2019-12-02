@@ -1,4 +1,4 @@
-module Test.Reporter.Highlightable exposing (Highlightable, fromDiff, diffLists, map, resolve)
+module Test.Reporter.Highlightable exposing (Highlightable, diffLists, fromDiff, map, resolve)
 
 import Test.Runner.Node.Vendor.Diff as Diff exposing (Change(..))
 
@@ -38,7 +38,7 @@ map transform highlightable =
 fromDiff : Change a -> List (Highlightable a)
 fromDiff diff =
     case diff of
-        Added char ->
+        Added _ ->
             []
 
         Removed char ->

@@ -5,7 +5,7 @@ import Json.Encode as Encode exposing (Value)
 import Test.Reporter.Console.Format exposing (format)
 import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
-import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo, TestResult, isTodo)
+import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo)
 import Test.Runner exposing (formatLabels)
 
 
@@ -110,7 +110,7 @@ reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
 
 
 reportComplete : UseColor -> Results.TestResult -> Value
-reportComplete useColor { duration, labels, outcome } =
+reportComplete useColor { labels, outcome } =
     case outcome of
         Passed ->
             -- No failures of any kind.

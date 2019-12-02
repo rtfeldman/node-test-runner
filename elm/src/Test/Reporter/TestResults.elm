@@ -1,13 +1,12 @@
-module Test.Reporter.TestResults
-    exposing
-        ( Failure
-        , Outcome(..)
-        , SummaryInfo
-        , TestResult
-        , isFailure
-        , isTodo
-        , outcomesFromExpectations
-        )
+module Test.Reporter.TestResults exposing
+    ( Failure
+    , Outcome(..)
+    , SummaryInfo
+    , TestResult
+    , isFailure
+    , isTodo
+    , outcomesFromExpectations
+    )
 
 import Expect exposing (Expectation)
 import Test.Runner
@@ -79,7 +78,7 @@ outcomesFromExpectations expectations =
                     else
                         [ Failed [ failure ] ]
 
-        first :: rest ->
+        _ :: _ ->
             let
                 builder =
                     List.foldl outcomesFromExpectationsHelp
@@ -105,7 +104,10 @@ outcomesFromExpectations expectations =
 
 
 type alias OutcomeBuilder =
-    { passes : Int, todos : List String, failures : List Failure }
+    { passes : Int
+    , todos : List String
+    , failures : List Failure
+    }
 
 
 outcomesFromExpectationsHelp : Expectation -> OutcomeBuilder -> OutcomeBuilder
