@@ -8,9 +8,6 @@ environment:
 platform:
   - x64
 
-matrix:
-  fast_finish: true
-
 install:
   - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version) $env:Platform
   - node --version
