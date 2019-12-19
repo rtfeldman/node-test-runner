@@ -6,13 +6,31 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors major Elm versions. So version 0.18.* of this project will
 be compatible with Elm 0.18.*.
 
-## 0.19.0-rev6
+## 0.19.1-revision2 - 2019-10-22
+
+### Performance
+
+- Update elmi-to-json and use `--for-elm-test` to optimise collection of tests (#396)
+
+## 0.19.1 - 2019-12-04
+
+### Breaking
+
+- drop support for elm 0.19.0
+- `elm-test --help` now exits with code `0`.
+
+### Added
+
+- `elm-test` supports [elm 0.19.1](https://elm-lang.org/news/the-syntax-cliff).
+- Node 12.
+
+## 0.19.0-rev6 - 2019-03-10
 
 ### Fixed
 
 - `npm audit` complaints on versions of chokidar and node-elm-compiler
 
-## 0.19.0-rev5
+## 0.19.0-rev5 - 2019-02-22
 
 ### Fixed
 
