@@ -117,7 +117,7 @@ if (interfaceExitCode !== 0) {
 shell.exec('npm link --ignore-scripts=false');
 
 shell.echo(filename + ': Verifying installed elm-test version...');
-var versionRun = shell.exec('elm-test --version');
+var versionRun = shell.exec(elmTest + ' --version');
 
 if (versionRun.code !== 0) {
   shell.exec(
