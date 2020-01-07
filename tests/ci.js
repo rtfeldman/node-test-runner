@@ -11,11 +11,13 @@ const elmTest = 'elm-test';
 const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
 const elmTestVersion = packageInfo.version;
 
-function run(testFile) {
-  console.log(
-    '\nClearing ' + path.join(process.cwd(), 'elm-stuff') + ' prior to run'
-  );
-  shell.rm('-rf', 'elm-stuff');
+function run(testFile, clearCache) {
+  if (clearCache !== false) {
+    console.log(
+      '\nClearing ' + path.join(process.cwd(), 'elm-stuff') + ' prior to run'
+    );
+    shell.rm('-rf', 'elm-stuff');
+  }
 
   if (!testFile) {
     var cmd = [elmTest, '--color'].join(' ');
@@ -30,8 +32,8 @@ function run(testFile) {
   }
 }
 
-function assertTestErrored(testfile) {
-  var code = run(testfile);
+function assertTestErrored(testfile, clearCache) {
+  var code = run(testfile, clearCache);
   if (code !== 1) {
     shell.exec(
       'echo ' +
@@ -46,8 +48,8 @@ function assertTestErrored(testfile) {
   }
 }
 
-function assertTestIncomplete(testfile) {
-  var code = run(testfile);
+function assertTestIncomplete(testfile, clearCache) {
+  var code = run(testfile, clearCache);
   if (code !== 3) {
     shell.exec(
       'echo ' +
@@ -62,8 +64,8 @@ function assertTestIncomplete(testfile) {
   }
 }
 
-function assertTestFailure(testfile) {
-  var code = run(testfile);
+function assertTestFailure(testfile, clearCache) {
+  var code = run(testfile, clearCache);
 
   if (code < 2) {
     shell.exec(
@@ -77,8 +79,8 @@ function assertTestFailure(testfile) {
   }
 }
 
-function assertTestSuccess(testFile) {
-  var code = run(testFile);
+function assertTestSuccess(testFile, clearCache) {
+  var code = run(testFile, clearCache);
   if (code !== 0) {
     shell.exec(
       'echo ' +
@@ -117,7 +119,7 @@ if (interfaceExitCode !== 0) {
 shell.exec('npm link --ignore-scripts=false');
 
 shell.echo(filename + ': Verifying installed elm-test version...');
-var versionRun = shell.exec('elm-test --version');
+var versionRun = shell.exec(elmTest + ' --version');
 
 if (versionRun.code !== 0) {
   shell.exec(
@@ -144,7 +146,7 @@ shell.echo('### Testing elm-test on example-application/');
 shell.cd('example-application');
 
 assertTestFailure();
-assertTestSuccess(path.join('tests', '*Pass*.elm'));
+assertTestSuccess(path.join('tests', '*Pass*.elm'), false);
 assertTestFailure(path.join('tests', '*Fail*.elm'));
 
 shell.cd('../');
