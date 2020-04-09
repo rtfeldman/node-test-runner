@@ -10,10 +10,13 @@ os:
   - linux
   - osx
 
-install:
-  - node --version
-  - npm --version
-  - npm install
-
 script:
-  - travis_retry npm test
+  - travis_retry npm run test-only
+
+
+jobs:
+  include:
+    - stage: other
+      script: npm run format:check
+      node_js: lts/*
+      name: Lint

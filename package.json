@@ -8,7 +8,8 @@
   },
   "scripts": {
     "flow": "flow",
-    "test": "flow check && npm run format:check && mocha tests && cd elm && node ../bin/elm-test",
+    "test-only": "mocha tests && cd elm && node ../bin/elm-test",
+    "test": "flow check && npm run format:check && npm run test-only",
     "format:check": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --list-different --parser flow && elm-format elm --validate",
     "format:write": "prettier \"lib/**/*.js\" \"tests/**/*.js\" --parser flow --write && elm-format elm --yes"
   },
