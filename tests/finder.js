@@ -4,13 +4,13 @@ const path = require('path');
 const finder = require('../lib/finder.js');
 const { fixturesDir } = require('./util');
 
-describe('finder', function() {
-  it('should initialize okay twice in a row', done => {
+describe('finder', function () {
+  it('should initialize okay twice in a row', (done) => {
     finder
       .readExposing(
         path.join(fixturesDir, 'tests', 'Failing', 'SeveralWithComments.elm')
       )
-      .then(exposedFunctions => {
+      .then((exposedFunctions) => {
         assert.deepEqual(exposedFunctions, [
           'testExpectations',
           'testFailingFuzzTests',
@@ -19,14 +19,14 @@ describe('finder', function() {
         ]);
         done();
       })
-      .catch(err => {
+      .catch((err) => {
         done(err);
       });
   });
 });
 
 describe('strip comments', () => {
-  it('should strip a comment on the same line', done => {
+  it('should strip a comment on the same line', (done) => {
     var stripped = finder.stripComments(
       `module A exposing {- hello -} (f)`,
       false
@@ -35,7 +35,7 @@ describe('strip comments', () => {
     done();
   });
 
-  it('should strip multiple comments on the same line', done => {
+  it('should strip multiple comments on the same line', (done) => {
     var stripped = finder.stripComments(
       `module A {- woop woop -} exposing {- hello -} (f)`,
       false
@@ -44,37 +44,37 @@ describe('strip comments', () => {
     done();
   });
 
-  it('should return everything up to the end of a comment', done => {
+  it('should return everything up to the end of a comment', (done) => {
     var stripped = finder.stripComments(`module A exposing {- (f)`, false);
     assert.equal(stripped.line, 'module A exposing ');
     done();
   });
 
-  it('should return everything after the end of a comment', done => {
+  it('should return everything after the end of a comment', (done) => {
     var stripped = finder.stripComments(`module A exposing -} (f)`, true);
     assert.equal(stripped.line, ' (f)');
     done();
   });
 
-  it('should return nothing if in a comment and no comments inside', done => {
+  it('should return nothing if in a comment and no comments inside', (done) => {
     var stripped = finder.stripComments(`module A exposing (f)`, true);
     assert.equal(stripped.line, '');
     done();
   });
 
-  it('should return nothing if line starts with single-line comment', done => {
+  it('should return nothing if line starts with single-line comment', (done) => {
     var stripped = finder.stripComments(`--module A exposing (f)`, false);
     assert.equal(stripped.line, '');
     done();
   });
 
-  it('should return nothing if line starts with single-line comment and in comment', done => {
+  it('should return nothing if line starts with single-line comment and in comment', (done) => {
     var stripped = finder.stripComments(`--module A exposing (f)`, true);
     assert.equal(stripped.line, '');
     done();
   });
 
-  it('should return parts if line ends with single-line comment', done => {
+  it('should return parts if line ends with single-line comment', (done) => {
     var stripped = finder.stripComments(`module A exposing --(f)`, false);
     assert.equal(stripped.line, 'module A exposing ');
     done();
@@ -82,7 +82,7 @@ describe('strip comments', () => {
 });
 
 describe('Parser', () => {
-  it('should only read up to imports', done => {
+  it('should only read up to imports', (done) => {
     var lines = ['module A exposing (..)', 'import Html', 'f = 4'];
 
     var parser = new finder.Parser();
@@ -93,7 +93,7 @@ describe('Parser', () => {
     done();
   });
 
-  it('should list all exposed functions', done => {
+  it('should list all exposed functions', (done) => {
     var lines = [
       'module A exposing (hello, {- just a little comment -} goodbye)',
       'import Html',
@@ -110,7 +110,7 @@ describe('Parser', () => {
     done();
   });
 
-  it('should not get confused by a missing module decl', done => {
+  it('should not get confused by a missing module decl', (done) => {
     var lines = ['import Html', '-- hello', 'hello = 4', 'goodbye = 5'];
 
     var parser = new finder.Parser();
@@ -121,7 +121,7 @@ describe('Parser', () => {
     done();
   });
 
-  it('should not get confused by constructors being exposed', done => {
+  it('should not get confused by constructors being exposed', (done) => {
     var lines = [
       'module A exposing (Foo(..), Bar(G, F), goat)',
       'import Html',
@@ -138,7 +138,7 @@ describe('Parser', () => {
     done();
   });
 
-  it('should not get confused by multiline comments', done => {
+  it('should not get confused by multiline comments', (done) => {
     var lines = [
       'module A exposing (Foo(..),',
       ' Bar(G,',
@@ -159,7 +159,7 @@ describe('Parser', () => {
     done();
   });
 
-  it('should not get confused by lacking exposing', done => {
+  it('should not get confused by lacking exposing', (done) => {
     var lines = [
       'module A',
       ' Bar(G,',
@@ -180,7 +180,7 @@ describe('Parser', () => {
     done();
   });
 
-  it('should not get confused by exposing across multiple lines', done => {
+  it('should not get confused by exposing across multiple lines', (done) => {
     var lines = [
       'module',
       'Abananan',
@@ -203,7 +203,7 @@ describe('Parser', () => {
     done();
   });
 
-  it('should not be confused by exposing across multiple lines like #138', done => {
+  it('should not be confused by exposing across multiple lines like #138', (done) => {
     var lines = [
       'module A',
       '  exposing',
