@@ -179,17 +179,17 @@ shell.cd(fixturesDir);
 
 /* ci tests on single elm files */
 
-shell.ls('tests/Passing/').forEach(function(testToRun) {
+shell.ls('tests/Passing/').forEach(function (testToRun) {
   shell.echo('\n### Testing ' + testToRun + ' (expecting it to pass)\n');
   assertTestSuccess(path.join('tests', 'Passing', testToRun));
 });
 
-shell.ls('tests/Failing').forEach(function(testToRun) {
+shell.ls('tests/Failing').forEach(function (testToRun) {
   shell.echo('\n### Testing ' + testToRun + ' (expecting it to fail)\n');
   assertTestFailure(path.join('tests', 'Failing', testToRun));
 });
 
-shell.ls('tests/RuntimeException').forEach(function(testToRun) {
+shell.ls('tests/RuntimeException').forEach(function (testToRun) {
   shell.echo(
     '\n### Testing ' +
       testToRun +

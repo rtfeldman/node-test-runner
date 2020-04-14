@@ -24,7 +24,7 @@ function elmTestWithYes(args, callback) {
   child.stdin.setEncoding('utf-8');
   child.stdin.write(os.EOL);
   child.stdin.end();
-  child.on('exit', code => {
+  child.on('exit', (code) => {
     callback(code);
   });
 }
@@ -63,7 +63,7 @@ describe('flags', () => {
         );
       });
 
-      it('Adds elm-explorations/test', done => {
+      it('Adds elm-explorations/test', (done) => {
         var json = JSON.parse(
           fs.readFileSync('elm.json', { encoding: 'utf-8' })
         );
@@ -72,7 +72,7 @@ describe('flags', () => {
           'undefined'
         );
 
-        elmTestWithYes(['init'], code => {
+        elmTestWithYes(['init'], (code) => {
           assert.equal(code, 0);
 
           json = JSON.parse(fs.readFileSync('elm.json', { encoding: 'utf-8' }));
@@ -94,7 +94,7 @@ describe('flags', () => {
         );
       });
 
-      it('Adds elm-explorations/test', done => {
+      it('Adds elm-explorations/test', (done) => {
         var json = JSON.parse(
           fs.readFileSync('elm.json', { encoding: 'utf-8' })
         );
@@ -103,7 +103,7 @@ describe('flags', () => {
           'undefined'
         );
 
-        elmTestWithYes(['init'], code => {
+        elmTestWithYes(['init'], (code) => {
           assert.equal(code, 0);
 
           json = JSON.parse(fs.readFileSync('elm.json', { encoding: 'utf-8' }));
@@ -175,7 +175,7 @@ describe('flags', () => {
 
       let linesReceived = 0;
 
-      runResult.stdout.split('\n').forEach(line => {
+      runResult.stdout.split('\n').forEach((line) => {
         if (line.length === 0) {
           return;
         }
@@ -187,7 +187,7 @@ describe('flags', () => {
       assert.ok(linesReceived > 0);
     }).timeout(60000);
 
-    it('Should be able to report passing junit xml', done => {
+    it('Should be able to report passing junit xml', (done) => {
       const runResult = execElmTest([
         '--report=junit',
         path.join('tests', 'Passing', 'One.elm'),
@@ -210,7 +210,7 @@ describe('flags', () => {
       assert.ok(runResult.stderr.match(/ENDLESS COMMENT/));
     }).timeout(60000);
 
-    it('Should be able to report failing junit xml', done => {
+    it('Should be able to report failing junit xml', (done) => {
       const runResult = execElmTest([
         '--report=junit',
         path.join('tests', 'Failing', 'One.elm'),
@@ -275,7 +275,7 @@ describe('flags', () => {
   });
 
   describe('--watch', () => {
-    it('Should re-run tests if a test file is touched', done => {
+    it('Should re-run tests if a test file is touched', (done) => {
       const child = spawn(
         elmTestPath,
         ['--report=json', '--watch', path.join('tests', 'Passing', 'One.elm')],
@@ -291,7 +291,7 @@ describe('flags', () => {
         }
       });
 
-      byline(child.stdout).on('data', line => {
+      byline(child.stdout).on('data', (line) => {
         try {
           const json = stripAnsi('' + line);
           // skip expected non-json
