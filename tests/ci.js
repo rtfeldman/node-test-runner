@@ -142,39 +142,34 @@ if (versionRun.stdout.trim() !== elmTestVersion) {
 /* Test examples */
 
 shell.echo('### Testing elm-test on example-application/');
-
 shell.cd('example-application');
-
 assertTestFailure();
 assertTestSuccess(path.join('tests', '*Pass*.elm'), false);
 assertTestFailure(path.join('tests', '*Fail*.elm'));
-
 shell.cd('../');
 
 shell.echo('### Testing elm-test on example-package/');
-
 shell.cd('example-package');
-
 assertTestSuccess(path.join('tests', '*Pass*.elm'));
 assertTestFailure(path.join('tests', '*Fail*.elm'));
 assertTestFailure();
-
 shell.cd('../');
 
 shell.echo('### Testing elm-test on example-application-no-tests');
-
 shell.cd('example-application-no-tests');
-
 assertTestFailure();
-
 shell.cd('../');
 
 shell.echo('### Testing elm-test on example-package-no-core');
-
 shell.cd('example-package-no-core');
-
 assertTestSuccess();
+shell.cd('../');
 
+shell.echo('### Testing elm-test on example-application-lots-of-files/');
+shell.cd('example-application-lots-of-files');
+shell.echo('Creating a lot of tests..');
+shell.exec('./create_tests.sh');
+assertTestSuccess();
 shell.cd(fixturesDir);
 
 /* ci tests on single elm files */
