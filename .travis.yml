@@ -2,9 +2,9 @@ sudo: false
 
 language: node_js
 node_js:
-    - "8"
-    - "10"
-    - "12"
+  - '8'
+  - '10'
+  - '12'
 
 os:
   - linux
@@ -12,7 +12,6 @@ os:
 
 script:
   - travis_retry npm run test-only
-
 
 jobs:
   include:
