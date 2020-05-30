@@ -1,6 +1,4 @@
 const shell = require('shelljs');
-const _ = require('lodash');
-const fs = require('fs-extra');
 const path = require('path');
 const spawn = require('cross-spawn');
 const { fixturesDir, spawnOpts } = require('./util');
@@ -8,7 +6,6 @@ const { fixturesDir, spawnOpts } = require('./util');
 const packageInfo = require('../package.json');
 const filename = __filename.replace(__dirname + '/', '');
 const elmTest = 'elm-test';
-const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
 const elmTestVersion = packageInfo.version;
 
 function run(testFile, clearCache) {
@@ -20,12 +17,12 @@ function run(testFile, clearCache) {
   }
 
   if (!testFile) {
-    var cmd = [elmTest, '--color'].join(' ');
+    let cmd = [elmTest, '--color'].join(' ');
 
     shell.echo('Running: ' + cmd);
     return shell.exec(cmd, spawnOpts).code;
   } else {
-    var cmd = [elmTest, testFile, '--color'].join(' ');
+    let cmd = [elmTest, testFile, '--color'].join(' ');
 
     shell.echo('Running: ' + cmd);
     return shell.exec(cmd, spawnOpts).code;
@@ -41,22 +38,6 @@ function assertTestErrored(testfile, clearCache) {
         ': error: ' +
         (testfile ? testfile + ': ' : '') +
         'expected tests to exit with ERROR exit code, not exit code' +
-        code +
-        ' >&2'
-    );
-    shell.exit(1);
-  }
-}
-
-function assertTestIncomplete(testfile, clearCache) {
-  var code = run(testfile, clearCache);
-  if (code !== 3) {
-    shell.exec(
-      'echo ' +
-        filename +
-        ': error: ' +
-        (testfile ? testfile + ': ' : '') +
-        'expected tests to exit with INCOMPLETE exit code, not exit code' +
         code +
         ' >&2'
     );

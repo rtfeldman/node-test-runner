@@ -7,6 +7,10 @@
     "parserOptions": {
         "ecmaVersion": 6
     },
+    "rules": {
+        "no-inner-declarations": "off",
+        "no-prototype-builtins": "off"
+    },
     "overrides": [
         {
             "files": ["tests/*"],
