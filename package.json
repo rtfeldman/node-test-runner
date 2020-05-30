@@ -21,7 +21,7 @@
   "bin": {
     "elm-test": "bin/elm-test"
   },
-  "files": ["bin", "lib", "templates"],
+  "files": ["bin", "lib", "templates", "elm/elm.json", "elm/src"],
   "keywords": [
     "elm",
     "elm-test",
