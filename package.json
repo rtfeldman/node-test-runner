@@ -21,7 +21,13 @@
   "bin": {
     "elm-test": "bin/elm-test"
   },
-  "files": ["bin", "lib", "templates", "elm/elm.json", "elm/src"],
+  "files": [
+    "bin",
+    "lib",
+    "templates",
+    "elm/elm.json",
+    "elm/src"
+  ],
   "keywords": [
     "elm",
     "elm-test",
@@ -42,7 +48,6 @@
     "firstline": "2.0.2",
     "fs-extra": "8.1.0",
     "glob": "7.1.6",
-    "lodash": "4.17.15",
     "minimist": "1.2.5",
     "murmur-hash-js": "1.0.0",
     "node-elm-compiler": "5.0.4",
