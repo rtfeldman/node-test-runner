@@ -12,7 +12,7 @@ os:
   - osx
 
 script:
-  - travis_retry npm run test-only
+  - npm run test-only
 
 jobs:
   include:
