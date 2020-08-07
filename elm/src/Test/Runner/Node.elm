@@ -37,6 +37,7 @@ type alias TestId =
 type alias InitArgs =
     { initialSeed : Int
     , processes : Int
+    , globs : List String
     , paths : List String
     , fuzzRuns : Int
     , runners : SeededRunners
@@ -48,6 +49,7 @@ type alias RunnerOptions =
     { seed : Int
     , runs : Maybe Int
     , report : Report
+    , globs : List String
     , paths : List String
     , processes : Int
     }
@@ -258,7 +260,7 @@ sendBegin model =
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, paths, fuzzRuns, initialSeed, report, runners } _ =
+init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
     let
         { indexedRunners, autoFail } =
             case runners of
@@ -292,6 +294,7 @@ init { processes, paths, fuzzRuns, initialSeed, report, runners } _ =
             { available = Dict.fromList indexedRunners
             , runInfo =
                 { testCount = testCount
+                , globs = globs
                 , paths = paths
                 , fuzzRuns = fuzzRuns
                 , initialSeed = initialSeed
@@ -309,7 +312,7 @@ init { processes, paths, fuzzRuns, initialSeed, report, runners } _ =
 {-| Run the tests.
 -}
 run : RunnerOptions -> Test -> Program Int Model Msg
-run { runs, seed, report, paths, processes } test =
+run { runs, seed, report, globs, paths, processes } test =
     let
         fuzzRuns =
             Maybe.withDefault defaultRunCount runs
@@ -321,6 +324,7 @@ run { runs, seed, report, paths, processes } test =
             init
                 { initialSeed = seed
                 , processes = processes
+                , globs = globs
                 , paths = paths
                 , fuzzRuns = fuzzRuns
                 , runners = runners

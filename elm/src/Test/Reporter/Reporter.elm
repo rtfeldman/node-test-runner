@@ -23,7 +23,8 @@ type alias TestReporter =
 
 
 type alias RunInfo =
-    { paths : List String
+    { globs : List String
+    , paths : List String
     , fuzzRuns : Int
     , testCount : Int
     , initialSeed : Int
