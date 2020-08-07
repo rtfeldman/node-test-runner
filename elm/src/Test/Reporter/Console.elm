@@ -92,8 +92,8 @@ textToValue useColor txt =
         |> Encode.string
 
 
-reportBegin : UseColor -> { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
+reportBegin : UseColor -> { r | globs : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin useColor { globs, fuzzRuns, testCount, initialSeed } =
     let
         prefix =
             "Running "
@@ -103,7 +103,7 @@ reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
                 ++ " --seed "
                 ++ String.fromInt initialSeed
     in
-    (String.join " " (prefix :: paths) ++ "\n")
+    (String.join " " (prefix :: globs) ++ "\n")
         |> plain
         |> textToValue useColor
         |> Just
