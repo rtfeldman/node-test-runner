@@ -5,7 +5,7 @@ import Test.Reporter.TestResults exposing (Failure, Outcome(..), SummaryInfo, Te
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
 
-reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin : runInfo -> Maybe Value
 reportBegin _ =
     Nothing
 
