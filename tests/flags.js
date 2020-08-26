@@ -7,7 +7,7 @@ const spawn = require('cross-spawn');
 const fs = require('fs-extra');
 const os = require('os');
 const xml2js = require('xml2js');
-const byline = require('byline');
+const readline = require('readline');
 const stripAnsi = require('strip-ansi');
 
 const { fixturesDir, spawnOpts } = require('./util');
@@ -294,8 +294,8 @@ describe('flags', () => {
           done(new Error('elm-test --watch exited with status code: ' + code));
         }
       });
-
-      byline(child.stdout).on('data', (line) => {
+      const reader = readline.createInterface({ input: child.stdout });
+      reader.on('line', (line) => {
         try {
           const json = stripAnsi('' + line);
           // skip expected non-json
