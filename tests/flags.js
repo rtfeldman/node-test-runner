@@ -7,14 +7,10 @@ const spawn = require('cross-spawn');
 const fs = require('fs-extra');
 const os = require('os');
 const xml2js = require('xml2js');
-const temp = require('temp');
 const byline = require('byline');
 const stripAnsi = require('strip-ansi');
 
 const { fixturesDir, spawnOpts } = require('./util');
-
-// Automatically track and cleanup files at exit
-temp.track();
 
 const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
 
@@ -47,12 +43,16 @@ describe('flags', () => {
   });
 
   describe('elm-test init', () => {
+    const scratchDir = path.join('fixturesDir', 'scratch');
+
     beforeEach(() => {
-      shell.pushd(temp.mkdirSync('elm-test-tests-'));
+      fs.ensureDirSync(scratchDir);
+      shell.pushd(scratchDir);
     });
 
     afterEach(() => {
       shell.popd();
+      fs.removeSync(scratchDir);
     });
 
     describe('for a PACKAGE', () => {
@@ -118,12 +118,16 @@ describe('flags', () => {
     });
   });
   describe('elm-test install', () => {
+    const scratchDir = path.join('fixturesDir', 'scratch');
+
     beforeEach(() => {
-      shell.pushd(temp.mkdirSync('elm-test-tests-'));
+      fs.ensureDirSync(scratchDir);
+      shell.pushd(scratchDir);
     });
 
     afterEach(() => {
       shell.popd();
+      fs.removeSync(scratchDir);
     });
 
     it('should fail if the current directory does not contain an elm.json', () => {
