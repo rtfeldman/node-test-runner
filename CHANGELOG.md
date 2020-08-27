@@ -6,11 +6,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors major Elm versions. So version 0.18.\* of this project will
 be compatible with Elm 0.18.\*.
 
+## 0.19.1-revision3 - 2021-01-10
+
+### Fixed
+
+- Pointing to specific test files sometimes failed (see issue [#391](https://github.com/rtfeldman/node-test-runner/issues/391) and fix [#404](https://github.com/rtfeldman/node-test-runner/pull/404)).
+
 ## 0.19.1-revision2 - 2019-10-22
 
 ### Performance
 
-- Update elmi-to-json and use `--for-elm-test` to optimise collection of tests (#396)
+- Update elmi-to-json and use `--for-elm-test` to optimise collection of tests (#396).
 
 ## 0.19.1 - 2019-12-04
 
