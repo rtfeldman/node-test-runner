@@ -8,7 +8,7 @@ const dummyBinPath = path.join(fixturesDir, 'dummy-bin');
 const spawnOpts = {
   silent: true,
   env: Object.assign({ ELM_HOME: elmHome }, process.env, {
-    PATH: process.env.PATH + ':' + dummyBinPath,
+    PATH: process.env.PATH + path.delimiter + dummyBinPath,
   }),
 };
 
