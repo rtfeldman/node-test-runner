@@ -16,6 +16,6 @@ install:
   - npm install
 
 test_script:
-  - npm run test-only
+  - appveyor-retry npm run test-only
 
 build: off
