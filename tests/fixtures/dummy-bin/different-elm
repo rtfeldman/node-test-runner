@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+
+const child_process = require('child_process')
+const which = require('which');
+
+const args = process.argv.slice(2);
+
+try {
+    child_process.execFileSync(which.sync('elm'), args, {
+        stdio: 'inherit'
+    });
+} catch(e) {
+    process.exitCode = e.status;
+}

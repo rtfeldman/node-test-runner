@@ -276,6 +276,24 @@ describe('flags', () => {
       assert.ok(Number.isInteger(runResult.status));
       assert.notEqual(runResult.status, 0);
     }).timeout(5000); // This sometimes needs more time to run on Travis.
+    it('Should work with different elm on PATH', () => {
+      const runResult = execElmTest([
+        'elm-test',
+        '--compiler=different-elm',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.equal(runResult.status, 0);
+    });
+    it('Should work with local different elm', () => {
+      const runResult = execElmTest([
+        'elm-test',
+        '--compiler=./dummy-bin/different-elm',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.equal(runResult.status, 0);
+    });
   });
 
   describe('--watch', () => {
