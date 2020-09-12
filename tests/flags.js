@@ -4,13 +4,14 @@ const assert = require('assert');
 const path = require('path');
 const shell = require('shelljs');
 const spawn = require('cross-spawn');
+const which = require('which');
 const fs = require('fs-extra');
 const os = require('os');
 const xml2js = require('xml2js');
 const readline = require('readline');
 const stripAnsi = require('strip-ansi');
 
-const { fixturesDir, spawnOpts } = require('./util');
+const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
 const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
 
@@ -265,7 +266,15 @@ describe('flags', () => {
     }).timeout(60000);
   });
 
-  describe('--compiler', () => {
+  describe.only('--compiler', () => {
+    before(() => {
+      shell.mkdir('-p', dummyBinPath);
+      shell.cp(
+        which.sync('elm'),
+        path.join(dummyBinPath, 'different-elm')
+      );
+    })
+
     it("Should fail if the given compiler can't be executed", () => {
       const runResult = execElmTest([
         'elm-test',
@@ -276,6 +285,7 @@ describe('flags', () => {
       assert.ok(Number.isInteger(runResult.status));
       assert.notEqual(runResult.status, 0);
     }).timeout(5000); // This sometimes needs more time to run on Travis.
+
     it('Should work with different elm on PATH', () => {
       const runResult = execElmTest([
         'elm-test',
@@ -285,6 +295,7 @@ describe('flags', () => {
 
       assert.equal(runResult.status, 0);
     });
+
     it('Should work with local different elm', () => {
       const runResult = execElmTest([
         'elm-test',

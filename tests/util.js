@@ -15,4 +15,5 @@ const spawnOpts = {
 module.exports = {
   fixturesDir,
   spawnOpts,
+  dummyBinPath
 };
