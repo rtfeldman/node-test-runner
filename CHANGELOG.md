@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors major Elm versions. So version 0.18.\* of this project will
 be compatible with Elm 0.18.\*.
 
+## 0.19.1-revision4 - 2020-09-18
+
+### Fixed
+
+- The `--compiler` command line flag now correctly finds elm executables on your PATH (see [#438](https://github.com/rtfeldman/node-test-runner/pull/438)).
+- We have hugely slimmed down the reproduction instructions so that the test runner no longer prints hundreds of test file paths to the console (see issue [#431](https://github.com/rtfeldman/node-test-runner/issues/431) and fix [#432](https://github.com/rtfeldman/node-test-runner/pull/432)).
+
+### Performance
+
+- A whole host of spring cleaning that streamlines the test runner. (see [#425](https://github.com/rtfeldman/node-test-runner/pull/425)).
+
 ## 0.19.1-revision3 - 2021-01-10
 
 ### Fixed
