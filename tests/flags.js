@@ -10,7 +10,7 @@ const xml2js = require('xml2js');
 const readline = require('readline');
 const stripAnsi = require('strip-ansi');
 
-const { fixturesDir, spawnOpts } = require('./util');
+const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
 const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
 
@@ -265,7 +265,16 @@ describe('flags', () => {
     }).timeout(60000);
   });
 
-  describe('--compiler', () => {
+  describe.only('--compiler', () => {
+    before(() => {
+      // Warning: this assumes the directory structure of the elm npm module.
+      //          It may break with new npm versions of elm.
+      const ext = process.platform === 'win32' ? '.exe' : '';
+      const elmExe = require.resolve('elm/bin/elm' + ext);
+      shell.mkdir('-p', dummyBinPath);
+      shell.cp(elmExe, path.join(dummyBinPath, 'different-elm' + ext));
+    });
+
     it("Should fail if the given compiler can't be executed", () => {
       const runResult = execElmTest([
         'elm-test',
@@ -275,7 +284,27 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notEqual(runResult.status, 0);
-    }).timeout(5000); // This sometimes needs more time to run on Travis.
+    }).timeout(5000);
+
+    it('Should work with different elm on PATH', () => {
+      const runResult = execElmTest([
+        'elm-test',
+        '--compiler=different-elm',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.equal(runResult.status, 0);
+    });
+
+    it('Should work with local different elm', () => {
+      const runResult = execElmTest([
+        'elm-test',
+        '--compiler=./dummy-bin/different-elm',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.equal(runResult.status, 0);
+    }).timeout(5000);
   });
 
   describe('--watch', () => {
