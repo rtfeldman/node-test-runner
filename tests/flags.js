@@ -4,7 +4,6 @@ const assert = require('assert');
 const path = require('path');
 const shell = require('shelljs');
 const spawn = require('cross-spawn');
-const which = require('which');
 const fs = require('fs-extra');
 const os = require('os');
 const xml2js = require('xml2js');
@@ -268,12 +267,13 @@ describe('flags', () => {
 
   describe.only('--compiler', () => {
     before(() => {
+      // Warning: this assumes the directory structure of the elm npm module.
+      //          It may break with new npm versions of elm.
+      const ext = process.platform === 'win32' ? '.exe' : '';
+      const elmExe = require.resolve('elm/bin/elm' + ext);
       shell.mkdir('-p', dummyBinPath);
-      shell.cp(
-        which.sync('elm'),
-        path.join(dummyBinPath, 'different-elm')
-      );
-    })
+      shell.cp(elmExe, path.join(dummyBinPath, 'different-elm' + ext));
+    });
 
     it("Should fail if the given compiler can't be executed", () => {
       const runResult = execElmTest([
@@ -284,7 +284,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notEqual(runResult.status, 0);
-    }).timeout(5000); // This sometimes needs more time to run on Travis.
+    }).timeout(5000);
 
     it('Should work with different elm on PATH', () => {
       const runResult = execElmTest([
@@ -304,7 +304,7 @@ describe('flags', () => {
       ]);
 
       assert.equal(runResult.status, 0);
-    });
+    }).timeout(5000);
   });
 
   describe('--watch', () => {
