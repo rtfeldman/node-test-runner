@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors major Elm versions. So version 0.18.\* of this project will
 be compatible with Elm 0.18.\*.
 
-## 0.19.1-revision4 - 2020-09-18
+## 0.19.1-revision4 - 2020-09-21
 
 ### Fixed
 
