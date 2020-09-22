@@ -17,7 +17,7 @@ be compatible with Elm 0.18.\*.
 
 - A whole host of spring cleaning that streamlines the test runner. (see [#425](https://github.com/rtfeldman/node-test-runner/pull/425)).
 
-## 0.19.1-revision3 - 2021-01-10
+## 0.19.1-revision3 - 2020-01-10
 
 ### Fixed
 
