@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (run, TestProgram)
+port module Test.Runner.Node exposing (check, run, TestProgram)
 
 {-|
 
@@ -8,7 +8,7 @@ port module Test.Runner.Node exposing (run, TestProgram)
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs run, TestProgram
+@docs check, run, TestProgram
 
 -}
 
@@ -309,11 +309,49 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
     ( model, Cmd.none )
 
 
+{-| The implementation of this function will be replaced in the generated JS
+with a version that returns `Just value` if `value` is a `Test`.
+-}
+check : a -> Maybe Test
+check value =
+    Nothing
+
+
 {-| Run the tests.
 -}
-run : RunnerOptions -> Test -> Program Int Model Msg
-run { runs, seed, report, globs, paths, processes } test =
+run : RunnerOptions -> List ( String, List (Maybe Test) ) -> Program Int Model Msg
+run { runs, seed, report, globs, paths, processes } maybeTests =
     let
+        tests =
+            maybeTests
+                |> List.filterMap
+                    (\( moduleName, maybeModuleTests ) ->
+                        let
+                            moduleTests =
+                                List.filterMap identity maybeModuleTests
+                        in
+                        if List.isEmpty moduleTests then
+                            Nothing
+
+                        else
+                            Just (Test.describe moduleName moduleTests)
+                    )
+
+        test =
+            if List.isEmpty tests then
+                Test.todo
+                    (if List.isEmpty paths then
+                        "I couldn't find any exposed values of type Test in any *.elm files in the tests/ directory of your project's root directory.\n\nTo generate some initial tests to get things going, run elm-test init"
+
+                     else
+                        "I couldn't find any exposed values of type Test in files matching:\n"
+                            ++ String.join "\n" paths
+                            ++ "\n\nMaybe try running elm-test with no arguments?"
+                    )
+
+            else
+                Test.concat tests
+
         fuzzRuns =
             Maybe.withDefault defaultRunCount runs
 
