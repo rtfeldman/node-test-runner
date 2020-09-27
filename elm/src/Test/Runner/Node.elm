@@ -320,10 +320,10 @@ check value =
 {-| Run the tests.
 -}
 run : RunnerOptions -> List ( String, List (Maybe Test) ) -> Program Int Model Msg
-run { runs, seed, report, globs, paths, processes } maybeTests =
+run { runs, seed, report, globs, paths, processes } possiblyTests =
     let
         tests =
-            maybeTests
+            possiblyTests
                 |> List.filterMap
                     (\( moduleName, maybeModuleTests ) ->
                         let
