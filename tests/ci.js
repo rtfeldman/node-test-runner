@@ -144,7 +144,7 @@ shell.echo('\n### Testing elm-test on example-package-no-core');
 
 shell.cd('example-package-no-core');
 
-assertTestSuccess();
+assertTestErrored();
 
 shell.cd(fixturesDir);
 
