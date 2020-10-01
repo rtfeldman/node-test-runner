@@ -59,7 +59,7 @@
     "eslint": "7.10.0",
     "flow-bin": "0.135.0",
     "mocha": "7.2.0",
-    "prettier": "2.1.1",
+    "prettier": "2.1.2",
     "shelljs": "0.8.4",
     "strip-ansi": "6.0.0",
     "xml2js": "0.4.23"
