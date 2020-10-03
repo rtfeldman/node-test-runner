@@ -123,5 +123,8 @@ One = 1
 `,
         []
       ));
+
+    it('does not treat strings as comments', () =>
+      test('module "string" Main exposing (one)', []));
   });
 });
