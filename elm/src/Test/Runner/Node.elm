@@ -311,6 +311,9 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
 
 {-| The implementation of this function will be replaced in the generated JS
 with a version that returns `Just value` if `value` is a `Test`.
+
+If you rename this function you also need to update the regex that looks for it.
+
 -}
 check : a -> Maybe Test
 check value =
