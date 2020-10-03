@@ -18,6 +18,23 @@ describe('Parser', () => {
   describe('valid Elm code', () => {
     it('handles a basic module definition', () =>
       test('module Main exposing (one, two)', ['one', 'two']));
+
+    it('handles a module definition with comments', () =>
+      test(
+        `
+module{--}Main {-
+    {{-}-}-
+-}exposing--{-
+
+ ({--}one{--}
+    ,
+    -- notExport
+  two{-{-{-{--}-}{--}-}{-{--}-}-},Type{--}({--}..{--}){--}
+  ,    three
+  )--
+`,
+        ['one', 'two', 'three']
+      ));
   });
 
   // Note: It doesn’t matter much what the actual return array looks like. The
