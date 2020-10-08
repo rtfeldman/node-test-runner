@@ -148,12 +148,6 @@ assertTestFailure();
 
 shell.cd('../');
 
-shell.echo('\n### Testing elm-test on example-package-no-core');
-
-shell.cd('example-package-no-core');
-
-assertTestErrored();
-
 shell.cd(fixturesDir);
 
 /* ci tests on single elm files */
