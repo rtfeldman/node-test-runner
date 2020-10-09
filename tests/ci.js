@@ -105,27 +105,27 @@ describe('--help', () => {
   it('Should exit indicating success', () => {
     const runResult = execElmiToJSON(['--help']);
     assert.strictEqual(0, runResult.status);
-  }.timeout(60000);
+  }).timeout(60000);
 
   it('Should print the usage', () => {
     const runResult = execElmiToJSON(['--help']);
     // ensure we have a non-empty output
     assert.ok(runResult.stdout.length > 0);
-  }.timeout(60000);
-}
+  }).timeout(60000);
+});
 
 // shell.exec('npm link --ignore-scripts=false');
 describe('--version', () => {
   it('Should exit indicating success', () => {
     const runResult = execElmTest(['--version']);
     assert.strictEqual(0, runResult.status);
-  }.timeout(60000);
+  }).timeout(60000);
 
   it('Should print the usage', () => {
     const runResult = execElmTest(['--version']);
     assert.strictEqual(elmTestVersion, runResult.stdout.trim());
-  }.timeout(60000);
-}
+  }).timeout(60000);
+});
 
 /* Test examples */
 
@@ -134,13 +134,13 @@ describe('Testing an example application', () => {
   it('Should pass successful tests', () => {
     const runResult = execElmTest(path.join('tests', '*Pass*.elm'), false);
     assert.strictEqual(0, runResult.status);
-  }.timeout(60000);
+  }).timeout(60000);
 
   it('Should fail for failing tests', () => {
     const runResult = execElmTest(path.join('tests', '*Fail*.elm'), false);
     assert.strictEqual(1, runResult.status);
-  }.timeout(60000);
-}
+  }).timeout(60000);
+});
 
 /*
 shell.echo('\n### Testing elm-test on example-application/');
@@ -158,13 +158,13 @@ describe('Testing an example package', () => {
   it('Should pass successful tests', () => {
     const runResult = execElmTest(path.join('tests', '*Pass*.elm'), false);
     assert.strictEqual(0, runResult.status);
-  }.timeout(60000);
+  }).timeout(60000);
 
   it('Should fail for failing tests', () => {
     const runResult = execElmTest(path.join('tests', '*Fail*.elm'), false);
     assert.strictEqual(1, runResult.status);
-  }.timeout(60000);
-}
+  }).timeout(60000);
+});
 /* 
 shell.echo('\n### Testing elm-test on example-package/');
 
@@ -183,8 +183,8 @@ describe('Testing an application with no tests', () => {
   it('Should fail due to missing tests', () => {
     const runResult = execElmTest();
     assert.strictEqual(1, runResult.status);
-  }.timeout(60000);
-}
+  }).timeout(60000);
+});
 /*
 shell.echo('\n### Testing elm-test on example-application-no-tests');
 
@@ -200,8 +200,8 @@ describe('Testing a package with no core', () => {
   it('Should succeed', () => {
     const runResult = execElmTest();
     assert.strictEqual(0, runResult.status);
-  }.timeout(60000);
-}
+  }).timeout(60000);
+});
 /*
 shell.echo('\n### Testing elm-test on example-package-no-core');
 
@@ -222,14 +222,14 @@ describe('Testing single Elm files', () => {
             const runResult = execElmTest(path.join('tests', 'Passing', testToRun));
             assert.strictEqual(0, runResult.status);
 					});
-  }.timeout(60000);
+  }).timeout(60000);
   
   it('Should fail for the failing tests', () => {
 					shell.ls('tests/Failing').forEach(function (testToRun) {
             const runResult = execElmTest(path.join('tests', 'Failing', testToRun));
             assert.strictEqual(1, runResult.status);
 					});
-	}.timeout(60000);
+  }).timeout(60000);
   
   it('Should raise a runtime exception if appropriate', () => {
     shell.ls('tests/RuntimeException').forEach(function (testToRun) {
@@ -237,8 +237,8 @@ describe('Testing single Elm files', () => {
       assert.strictEqual(1, runResult.status);
       //assertTestErrored(path.join('tests', 'RuntimeException', testToRun));
     });
-	}.timeout(60000);
-}
+  }).timeout(60000);
+});
 
 /*
 shell.ls('tests/Passing/').forEach(function (testToRun) {
