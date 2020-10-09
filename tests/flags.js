@@ -265,7 +265,7 @@ describe('flags', () => {
     }).timeout(60000);
   });
 
-  describe.only('--compiler', () => {
+  describe('--compiler', () => {
     before(() => {
       // Warning: this assumes the directory structure of the elm npm module.
       //          It may break with new npm versions of elm.
