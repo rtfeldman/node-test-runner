@@ -122,6 +122,14 @@ assertTestFailure(path.join('tests', '*Fail*.elm'));
 
 shell.cd('../');
 
+shell.echo('\n### Testing elm-test on example-application-src/');
+
+shell.cd('example-application-src');
+
+assertTestSuccess('src');
+
+shell.cd('../');
+
 shell.echo('\n### Testing elm-test on example-package/');
 
 shell.cd('example-package');
