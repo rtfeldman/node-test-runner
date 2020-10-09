@@ -23,10 +23,10 @@ function execElm(args, cwd) {
   );
 }
 
+let examples = glob.sync(path.join(__dirname, '..', 'example*'));
+
 describe('examples quality', () => {
   describe('Each example has valid json', () => {
-    let examples = glob.sync(path.join(__dirname, '..', 'example*'));
-
     for (const example of examples) {
       it(`${path.basename(example)}`, () => {
         assert.strictEqual(execElmJson(['tree'], example).status, 0);
