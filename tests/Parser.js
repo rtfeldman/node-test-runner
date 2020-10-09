@@ -126,5 +126,16 @@ One = 1
 
     it('does not treat strings as comments', () =>
       test('module "string" Main exposing (one)', []));
+
+    it('treats `effect module` as a critical error', () =>
+      test(
+        'effect module Example where { subscription = MySub } exposing (..)',
+        ['should', 'not', 'succeed']
+      ).catch((error) => {
+        assert.strictEqual(
+          error.message,
+          'This file is problematic:\n\nSomeFile.elm\n\nIt starts with `effect module`. Effect modules can only exist inside src/ in elm and elm-explorations packages. They cannot contain tests.'
+        );
+      }));
   });
 });
