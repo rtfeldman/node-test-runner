@@ -137,6 +137,7 @@ shell.cd('example-package');
 assertTestSuccess(path.join('tests', '*Pass*.elm'));
 assertTestFailure(path.join('tests', '*Fail*.elm'));
 assertTestFailure();
+assertTestSuccess('src');
 
 shell.cd('../');
 
