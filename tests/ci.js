@@ -137,6 +137,7 @@ shell.cd('example-package');
 assertTestSuccess(path.join('tests', '*Pass*.elm'));
 assertTestFailure(path.join('tests', '*Fail*.elm'));
 assertTestFailure();
+assertTestSuccess('src');
 
 shell.cd('../');
 
@@ -147,12 +148,6 @@ shell.cd('example-application-no-tests');
 assertTestFailure();
 
 shell.cd('../');
-
-shell.echo('\n### Testing elm-test on example-package-no-core');
-
-shell.cd('example-package-no-core');
-
-assertTestErrored();
 
 shell.cd(fixturesDir);
 

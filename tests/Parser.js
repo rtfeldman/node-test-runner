@@ -4,7 +4,7 @@ const assert = require('assert');
 const stream = require('stream');
 const Parser = require('../lib/Parser');
 
-function test(elmCode, expectedExposedNames) {
+function testParser(elmCode, expectedExposedNames) {
   return Parser.extractExposedPossiblyTests('SomeFile.elm', (_, options) => {
     const readable = stream.Readable.from(elmCode, options);
     readable.close = readable.destroy;
@@ -17,13 +17,17 @@ function test(elmCode, expectedExposedNames) {
 describe('Parser', () => {
   describe('valid Elm code', () => {
     it('handles a basic module definition', () =>
-      test('module Main exposing (one, two)', ['one', 'two']));
+      testParser('module Main exposing (one, two)', ['one', 'two']));
 
     it('handles unicode', () =>
-      test('module Main exposing (åäö, Åä, π, ᾀ_5Ϡ)', ['åäö', 'π', 'ᾀ_5Ϡ']));
+      testParser('module Main exposing (åäö, Åä, π, ᾀ_5Ϡ)', [
+        'åäö',
+        'π',
+        'ᾀ_5Ϡ',
+      ]));
 
     it('handles a module definition with comments', () =>
-      test(
+      testParser(
         `
 module{--}Main {-
     {{-}-}-
@@ -40,7 +44,7 @@ module{--}Main {-
       ));
 
     it('is not fooled by strings, chars and comments', () =>
-      test(
+      testParser(
         `
 module Main exposing ( ..)
 
@@ -63,7 +67,7 @@ five = something
       ));
 
     it('is not fooled by imports, ports, types and let-in', () =>
-      test(
+      testParser(
         `
 port module Main exposing (..--
         ){-
@@ -99,10 +103,10 @@ user
   // test failures if the output changes, to help evaluate what a change in the
   // parser might cause.
   describe('invalid Elm code', () => {
-    it('handles the empty string', () => test('', []));
+    it('handles the empty string', () => testParser('', []));
 
     it('handles a malformed module declaration', () =>
-      test(
+      testParser(
         `
 module Main
 
@@ -112,10 +116,10 @@ import X exposing (one, two)
       ));
 
     it('handles lowercase type', () =>
-      test('module A.BBB.Circle exposing (one, circle (..))', []));
+      testParser('module A.BBB.Circle exposing (one, circle (..))', []));
 
     it('handles uppercase declaration', () =>
-      test(
+      testParser(
         `
 module Main exposing (..)
 
@@ -125,10 +129,10 @@ One = 1
       ));
 
     it('does not treat strings as comments', () =>
-      test('module "string" Main exposing (one)', []));
+      testParser('module "string" Main exposing (one)', []));
 
     it('treats `effect module` as a critical error', () =>
-      test(
+      testParser(
         'effect module Example where { subscription = MySub } exposing (..)',
         ['should', 'not', 'succeed']
       ).catch((error) => {
