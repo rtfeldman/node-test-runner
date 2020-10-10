@@ -130,7 +130,14 @@ describe('--version', () => {
 /* Test examples */
 
 describe('Testing an example application', () => {
-  shell.cd('example-application');
+  before(() => {
+	      shell.pushd('example-application');
+  });
+
+  after(() => {
+   shell.popd();
+  });
+
   it('Should pass successful tests', () => {
     const runResult = execElmTest(path.join('tests', '*Pass*.elm'), false);
     assert.strictEqual(0, runResult.status);
