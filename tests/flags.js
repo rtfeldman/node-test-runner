@@ -13,6 +13,7 @@ const stripAnsi = require('strip-ansi');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
 const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
+const scratchDir = path.join('fixturesDir', 'scratch');
 
 function elmTestWithYes(args, callback) {
   const child = spawn(elmTestPath, args, spawnOpts);
@@ -43,8 +44,6 @@ describe('flags', () => {
   });
 
   describe('elm-test init', () => {
-    const scratchDir = path.join('fixturesDir', 'scratch');
-
     beforeEach(() => {
       fs.ensureDirSync(scratchDir);
       shell.pushd(scratchDir);
@@ -118,8 +117,6 @@ describe('flags', () => {
     });
   });
   describe('elm-test install', () => {
-    const scratchDir = path.join('fixturesDir', 'scratch');
-
     beforeEach(() => {
       fs.ensureDirSync(scratchDir);
       shell.pushd(scratchDir);
@@ -265,7 +262,7 @@ describe('flags', () => {
     }).timeout(60000);
   });
 
-  describe.only('--compiler', () => {
+  describe('--compiler', () => {
     before(() => {
       // Warning: this assumes the directory structure of the elm npm module.
       //          It may break with new npm versions of elm.
