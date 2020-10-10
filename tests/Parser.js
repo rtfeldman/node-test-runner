@@ -6,7 +6,10 @@ const Parser = require('../lib/Parser');
 
 function testParser(elmCode, expectedExposedNames) {
   return Parser.extractExposedPossiblyTests('SomeFile.elm', (_, options) => {
-    const readable = stream.Readable.from(elmCode, options);
+    const readable = stream.Readable.from(elmCode, {
+      ...options,
+      autoDestroy: true,
+    });
     readable.close = readable.destroy;
     return readable;
   }).then((exposed) => {
