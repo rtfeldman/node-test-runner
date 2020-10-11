@@ -288,7 +288,7 @@ describe('flags', () => {
         'elm-test',
         '--compiler=different-elm',
         path.join('tests', 'Passing', 'One.elm'),
-      ]);
+      ]).timeout(5000);
 
       assert.equal(runResult.status, 0);
     });
