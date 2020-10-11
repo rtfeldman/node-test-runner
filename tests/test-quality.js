@@ -33,7 +33,7 @@ describe('examples quality', () => {
         if (require(path.join(example, 'elm.json')).type === 'package') {
           assert.strictEqual(execElm(['make'], example).status, 0);
         }
-      });
+      }).timeout(5000);
     }
   });
 });

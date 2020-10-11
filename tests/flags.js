@@ -291,7 +291,7 @@ describe('flags', () => {
       ]);
 
       assert.equal(runResult.status, 0);
-    });
+    }).timeout(5000);
 
     it('Should work with local different elm', () => {
       const runResult = execElmTest([
