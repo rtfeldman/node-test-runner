@@ -7,19 +7,13 @@ const spawn = require('cross-spawn');
 const fs = require('fs-extra');
 const os = require('os');
 const xml2js = require('xml2js');
-const temp = require('temp');
-const byline = require('byline');
+const readline = require('readline');
 const stripAnsi = require('strip-ansi');
 
-// Automatically track and cleanup files at exit
-temp.track();
+const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
 const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
-const elmHome = path.join(__dirname, '..', 'fixtures', 'elm-home');
-const spawnOpts = {
-  silent: true,
-  env: Object.assign({ ELM_HOME: elmHome }, process.env),
-};
+const scratchDir = path.join('fixturesDir', 'scratch');
 
 function elmTestWithYes(args, callback) {
   const child = spawn(elmTestPath, args, spawnOpts);
@@ -27,7 +21,7 @@ function elmTestWithYes(args, callback) {
   child.stdin.setEncoding('utf-8');
   child.stdin.write(os.EOL);
   child.stdin.end();
-  child.on('exit', code => {
+  child.on('exit', (code) => {
     callback(code);
   });
 }
@@ -41,24 +35,34 @@ function execElmTest(args) {
 }
 
 describe('flags', () => {
+  before(() => {
+    shell.pushd(fixturesDir);
+  });
+
+  after(() => {
+    shell.popd();
+  });
+
   describe('elm-test init', () => {
     beforeEach(() => {
-      shell.pushd(temp.mkdirSync('elm-test-tests-'));
+      fs.ensureDirSync(scratchDir);
+      shell.pushd(scratchDir);
     });
 
     afterEach(() => {
       shell.popd();
+      fs.removeSync(scratchDir);
     });
 
     describe('for a PACKAGE', () => {
       beforeEach(() => {
         shell.cp(
-          path.join(__dirname, 'templates', 'package', 'elm.json'),
+          path.join(fixturesDir, 'templates', 'package', 'elm.json'),
           'elm.json'
         );
       });
 
-      it('Adds elm-explorations/test', done => {
+      it('Adds elm-explorations/test', (done) => {
         var json = JSON.parse(
           fs.readFileSync('elm.json', { encoding: 'utf-8' })
         );
@@ -67,7 +71,7 @@ describe('flags', () => {
           'undefined'
         );
 
-        elmTestWithYes(['init'], code => {
+        elmTestWithYes(['init'], (code) => {
           assert.equal(code, 0);
 
           json = JSON.parse(fs.readFileSync('elm.json', { encoding: 'utf-8' }));
@@ -84,12 +88,12 @@ describe('flags', () => {
     describe('for an APPLICATION', () => {
       beforeEach(() => {
         shell.cp(
-          path.join(__dirname, 'templates', 'application', 'elm.json'),
+          path.join(fixturesDir, 'templates', 'application', 'elm.json'),
           'elm.json'
         );
       });
 
-      it('Adds elm-explorations/test', done => {
+      it('Adds elm-explorations/test', (done) => {
         var json = JSON.parse(
           fs.readFileSync('elm.json', { encoding: 'utf-8' })
         );
@@ -98,7 +102,7 @@ describe('flags', () => {
           'undefined'
         );
 
-        elmTestWithYes(['init'], code => {
+        elmTestWithYes(['init'], (code) => {
           assert.equal(code, 0);
 
           json = JSON.parse(fs.readFileSync('elm.json', { encoding: 'utf-8' }));
@@ -114,25 +118,28 @@ describe('flags', () => {
   });
   describe('elm-test install', () => {
     beforeEach(() => {
-      shell.pushd(temp.mkdirSync('elm-test-tests-'));
+      fs.ensureDirSync(scratchDir);
+      shell.pushd(scratchDir);
     });
 
     afterEach(() => {
       shell.popd();
+      fs.removeSync(scratchDir);
     });
 
     it('should fail if the current directory does not contain an elm.json', () => {
-      shell.cp('-R', path.join(__dirname, 'install', '*', '.'));
+      shell.cp('-R', path.join(fixturesDir, 'install', '*', '.'));
       shell.rm('-f', 'elm.json');
 
       const runResult = execElmTest(['install', 'elm/regex']);
 
-      assert.notEqual(runResult.code, 0);
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notEqual(runResult.status, 0);
     }).timeout(60000);
 
     it('should not allow command injection', () => {
       shell.cp(
-        path.join(__dirname, 'templates', 'application', 'elm.json'),
+        path.join(fixturesDir, 'templates', 'application', 'elm.json'),
         'elm.json'
       );
       const runResult = spawn.sync(
@@ -153,19 +160,23 @@ describe('flags', () => {
       assert.ok(runResult.stdout.length > 0);
     }).timeout(60000);
 
-    it('Should exit indicating failure', () => {
+    it('Should exit indicating success (see #359)', () => {
       const runResult = execElmTest(['--help']);
-      assert.notEqual(0, runResult.code);
+      assert.strictEqual(0, runResult.status);
     }).timeout(60000);
   });
 
   describe('--report', () => {
     it('Should be able to report json lines', () => {
-      const runResult = execElmTest(['--report=json', 'tests/OnePassing.elm']);
+      console.log('cwd', process.cwd());
+      const runResult = execElmTest([
+        '--report=json',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
 
       let linesReceived = 0;
 
-      runResult.stdout.split('\n').forEach(line => {
+      runResult.stdout.split('\n').forEach((line) => {
         if (line.length === 0) {
           return;
         }
@@ -177,8 +188,11 @@ describe('flags', () => {
       assert.ok(linesReceived > 0);
     }).timeout(60000);
 
-    it('Should be able to report passing junit xml', done => {
-      const runResult = execElmTest(['--report=junit', 'tests/OnePassing.elm']);
+    it('Should be able to report passing junit xml', (done) => {
+      const runResult = execElmTest([
+        '--report=junit',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
 
       xml2js.parseString(runResult.stdout, (err, data) => {
         if (err) throw err;
@@ -191,14 +205,17 @@ describe('flags', () => {
     it('Should be able to report compilation errors', () => {
       const runResult = execElmTest([
         '--report=junit',
-        'tests/compile-error-test/InvalidSyntax.elm',
+        path.join('tests', 'CompileError', 'InvalidSyntax.elm'),
       ]);
 
-      assert.ok(runResult.stderr.match(/PARSE ERROR/));
+      assert.ok(runResult.stderr.match(/ENDLESS COMMENT/));
     }).timeout(60000);
 
-    it('Should be able to report failing junit xml', done => {
-      const runResult = execElmTest(['--report=junit', 'tests/OneFailing.elm']);
+    it('Should be able to report failing junit xml', (done) => {
+      const runResult = execElmTest([
+        '--report=junit',
+        path.join('tests', 'Failing', 'One.elm'),
+      ]);
 
       xml2js.parseString(runResult.stdout, (err, data) => {
         if (err) throw err;
@@ -214,7 +231,7 @@ describe('flags', () => {
       const runResult = execElmTest([
         '--report=json',
         '--seed=12345',
-        'tests/OnePassing.elm',
+        path.join('tests', 'Passing', 'One.elm'),
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
@@ -224,7 +241,10 @@ describe('flags', () => {
 
   describe('--fuzz', () => {
     it('Should default to 100', () => {
-      const runResult = execElmTest(['--report=json', 'tests/OnePassing.elm']);
+      const runResult = execElmTest([
+        '--report=json',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
       assert.equal('100', firstOutput.fuzzRuns);
@@ -234,7 +254,7 @@ describe('flags', () => {
       const runResult = execElmTest([
         '--fuzz=5',
         '--report=json',
-        'tests/OnePassing.elm',
+        path.join('tests', 'Passing', 'One.elm'),
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
@@ -243,22 +263,52 @@ describe('flags', () => {
   });
 
   describe('--compiler', () => {
+    before(() => {
+      // Warning: this assumes the directory structure of the elm npm module.
+      //          It may break with new npm versions of elm.
+      const ext = process.platform === 'win32' ? '.exe' : '';
+      const elmExe = require.resolve('elm/bin/elm' + ext);
+      shell.mkdir('-p', dummyBinPath);
+      shell.cp(elmExe, path.join(dummyBinPath, 'different-elm' + ext));
+    });
+
     it("Should fail if the given compiler can't be executed", () => {
       const runResult = execElmTest([
         'elm-test',
         '--compiler=foobar',
-        'tests/OnePassing.elm',
+        path.join('tests', 'Passing', 'One.elm'),
       ]);
 
-      assert.notEqual(0, runResult.code);
-    }).timeout(5000); // This sometimes needs more time to run on Travis.
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notEqual(runResult.status, 0);
+    }).timeout(5000);
+
+    it('Should work with different elm on PATH', () => {
+      const runResult = execElmTest([
+        'elm-test',
+        '--compiler=different-elm',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.equal(runResult.status, 0);
+    }).timeout(5000);
+
+    it('Should work with local different elm', () => {
+      const runResult = execElmTest([
+        'elm-test',
+        '--compiler=./dummy-bin/different-elm',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.equal(runResult.status, 0);
+    }).timeout(5000);
   });
 
   describe('--watch', () => {
-    it('Should re-run tests if a test file is touched', done => {
+    it('Should re-run tests if a test file is touched', (done) => {
       const child = spawn(
         elmTestPath,
-        ['--report=json', '--watch', 'tests/OnePassing.elm'],
+        ['--report=json', '--watch', path.join('tests', 'Passing', 'One.elm')],
         spawnOpts
       );
 
@@ -270,8 +320,8 @@ describe('flags', () => {
           done(new Error('elm-test --watch exited with status code: ' + code));
         }
       });
-
-      byline(child.stdout).on('data', line => {
+      const reader = readline.createInterface({ input: child.stdout });
+      reader.on('line', (line) => {
         try {
           const json = stripAnsi('' + line);
           // skip expected non-json
@@ -279,7 +329,7 @@ describe('flags', () => {
           const parsedLine = JSON.parse(json);
           if (parsedLine.event !== 'runComplete') return;
           if (!hasRetriggered) {
-            shell.touch('tests/OnePassing.elm');
+            shell.touch(path.join('tests', 'Passing', 'One.elm'));
             hasRetriggered = true;
           } else {
             child.kill();

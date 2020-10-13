@@ -1,7 +1,7 @@
-module Test.Reporter.Reporter exposing (..)
+module Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
 
 import Console.Text exposing (UseColor)
-import Json.Encode as Encode exposing (Value)
+import Json.Encode exposing (Value)
 import Test.Reporter.Console as ConsoleReporter
 import Test.Reporter.JUnit as JUnitReporter
 import Test.Reporter.Json as JsonReporter
@@ -23,7 +23,8 @@ type alias TestReporter =
 
 
 type alias RunInfo =
-    { paths : List String
+    { globs : List String
+    , paths : List String
     , fuzzRuns : Int
     , testCount : Int
     , initialSeed : Int

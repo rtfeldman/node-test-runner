@@ -1,0 +1,36 @@
+{
+    "extends": "eslint:recommended",
+    "env": {
+        "es6": true,
+        "node": true
+    },
+    "parserOptions": {
+        "ecmaVersion": 6
+    },
+    "rules": {
+        "no-inner-declarations": "off",
+        "no-prototype-builtins": "off"
+    },
+    "overrides": [
+        {
+            "files": [
+                "tests/*"
+            ],
+            "plugins": [
+                "mocha"
+            ],
+            "env": {
+                "mocha": true
+            },
+            "rules": {
+                "mocha/handle-done-callback": "error",
+                "mocha/no-exclusive-tests": "error",
+                "mocha/no-exports": "error",
+                "mocha/no-identical-title": "error",
+                "mocha/no-nested-tests": "error",
+                "mocha/no-setup-in-describe": "error",
+                "mocha/no-skipped-tests": "error"
+            }
+        }
+    ]
+}

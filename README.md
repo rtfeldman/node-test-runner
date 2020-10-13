@@ -1,6 +1,5 @@
 # node-test-runner [![Version](https://img.shields.io/npm/v/elm-test.svg)](https://www.npmjs.com/package/elm-test) [![Travis build Status](https://travis-ci.org/rtfeldman/node-test-runner.svg?branch=master)](http://travis-ci.org/rtfeldman/node-test-runner) [![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/f2qymrpgdfsad62w/branch/master?svg=true)](https://ci.appveyor.com/project/rtfeldman/node-test-runner/branch/master)
 
-
 Runs [elm-test](https://package.elm-lang.org/packages/elm-explorations/test/latest) suites from Node.js
 
 ## Installation
@@ -18,7 +17,7 @@ elm-test                 # Run all exposed Test values in *.elm files in tests/
 elm-test Foo.elm         # Run all exposed Test values in Foo.elm
 ```
 
-### Comand Line Arguments
+### Command Line Arguments
 
 #### `install`
 
@@ -79,7 +78,7 @@ Displays the version of the current elm-test.
 
 ```shell
 $ elm-test --version
-0.19.0
+0.19.1
 ```
 
 #### `--watch`
@@ -103,5 +102,5 @@ If you want to run your tests on Travis CI, [here's a good starter `.travis.yml`
 ```yml
 language: elm
 elm:
-  - 0.19.0
+  - 0.19.1
 ```

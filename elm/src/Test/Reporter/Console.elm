@@ -5,7 +5,7 @@ import Json.Encode as Encode exposing (Value)
 import Test.Reporter.Console.Format exposing (format)
 import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
-import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo, TestResult, isTodo)
+import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo)
 import Test.Runner exposing (formatLabels)
 
 
@@ -92,8 +92,8 @@ textToValue useColor txt =
         |> Encode.string
 
 
-reportBegin : UseColor -> { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
+reportBegin : UseColor -> { r | globs : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin useColor { globs, fuzzRuns, testCount, initialSeed } =
     let
         prefix =
             "Running "
@@ -103,14 +103,14 @@ reportBegin useColor { paths, fuzzRuns, testCount, initialSeed } =
                 ++ " --seed "
                 ++ String.fromInt initialSeed
     in
-    (String.join " " (prefix :: paths) ++ "\n")
+    (String.join " " (prefix :: globs) ++ "\n")
         |> plain
         |> textToValue useColor
         |> Just
 
 
 reportComplete : UseColor -> Results.TestResult -> Value
-reportComplete useColor { duration, labels, outcome } =
+reportComplete useColor { labels, outcome } =
     case outcome of
         Passed ->
             -- No failures of any kind.

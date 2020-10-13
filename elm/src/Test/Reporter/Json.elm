@@ -1,16 +1,17 @@
 module Test.Reporter.Json exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
-import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo, isFailure)
+import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
 
-reportBegin : { paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
-reportBegin { paths, fuzzRuns, testCount, initialSeed } =
+reportBegin : { globs : List String, paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin { globs, paths, fuzzRuns, testCount, initialSeed } =
     Encode.object
         [ ( "event", Encode.string "runStart" )
         , ( "testCount", Encode.string <| String.fromInt testCount )
         , ( "fuzzRuns", Encode.string <| String.fromInt fuzzRuns )
+        , ( "globs", Encode.list Encode.string globs )
         , ( "paths", Encode.list Encode.string paths )
         , ( "initialSeed", Encode.string <| String.fromInt initialSeed )
         ]
@@ -68,7 +69,7 @@ encodeLabels labels =
 
 
 reportSummary : SummaryInfo -> Maybe String -> Value
-reportSummary { duration, passed, failed, todos, testCount } autoFail =
+reportSummary { duration, passed, failed } autoFail =
     Encode.object
         [ ( "event", Encode.string "runComplete" )
         , ( "passed", Encode.string <| String.fromInt passed )
