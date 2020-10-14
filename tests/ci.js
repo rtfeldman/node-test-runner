@@ -1,6 +1,5 @@
 const shell = require('shelljs');
 const path = require('path');
-const spawn = require('cross-spawn');
 const { fixturesDir, spawnOpts } = require('./util');
 
 const packageInfo = require('../package.json');
@@ -69,23 +68,6 @@ shell.exec('npm remove --ignore-scripts=false --global ' + elmTest);
 
 shell.echo(filename + ': Installing elm-test...');
 shell.exec('npm link --ignore-scripts=false');
-
-var interfacePath = require('elmi-to-json').paths['elmi-to-json'];
-
-shell.echo(filename + ': Verifying elmi-to-json is installed...');
-var interfaceResult = spawn.sync(interfacePath, ['--help']);
-var interfaceExitCode = interfaceResult.status;
-
-if (interfaceExitCode !== 0) {
-  shell.echo(
-    filename +
-      ': Failed because `elmi-to-json` is present, but `elmi-to-json --help` returned with exit code ' +
-      interfaceExitCode
-  );
-  shell.echo(interfaceResult.stdout.toString());
-  shell.echo(interfaceResult.stderr.toString());
-  shell.exit(1);
-}
 
 shell.exec('npm link --ignore-scripts=false');
 
