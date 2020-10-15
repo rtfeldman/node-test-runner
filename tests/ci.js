@@ -26,7 +26,6 @@ const resultSuccess = 0;
 const resultErrored = 1;
 const resultFailureThreshold = 2;
 
-
 function execElmiToJSON(args) {
   return spawn.sync(
     elmiToJSONPath,
@@ -44,22 +43,53 @@ function execElmTest(args) {
 }
 
 function getDetailedMessage(message, runResult) {
-  return message + '\n\n' + 'STDOUT\n' + runResult.stdout + '\n\n' + 'STDERR\n' + runResult.stderr;
+  return (
+    message +
+    '\n\n' +
+    'STDOUT\n' +
+    runResult.stdout +
+    '\n\n' +
+    'STDERR\n' +
+    runResult.stderr
+  );
 }
 
 function assertTestSuccess(runResult) {
-  const msg = 'Expected success (exit code ' + resultSuccess + '), but got ' + runResult.status;
-  assert.strictEqual(resultSuccess, runResult.status, getDetailedMessage(msg, runResult));  
+  const msg =
+    'Expected success (exit code ' +
+    resultSuccess +
+    '), but got ' +
+    runResult.status;
+  assert.strictEqual(
+    resultSuccess,
+    runResult.status,
+    getDetailedMessage(msg, runResult)
+  );
 }
 
 function assertTestErrored(runResult) {
-  const msg = 'Expected error (exit code ' + resultErrored + '), but got ' + runResult.status;
-  assert.strictEqual(resultErrored, runResult.status, getDetailedMessage(msg, runResult));  
+  const msg =
+    'Expected error (exit code ' +
+    resultErrored +
+    '), but got ' +
+    runResult.status;
+  assert.strictEqual(
+    resultErrored,
+    runResult.status,
+    getDetailedMessage(msg, runResult)
+  );
 }
 
 function assertTestFailure(runResult) {
-  const msg = 'Expected failure (exit code >= ' + resultFailureThreshold + '), but got ' + runResult.status;
-  assert.ok(runResult.status >= resultFailureThreshold, getDetailedMessage(msg, runResult));  
+  const msg =
+    'Expected failure (exit code >= ' +
+    resultFailureThreshold +
+    '), but got ' +
+    runResult.status;
+  assert.ok(
+    runResult.status >= resultFailureThreshold,
+    getDetailedMessage(msg, runResult)
+  );
 }
 
 describe('--help', () => {
@@ -92,11 +122,11 @@ describe('--version', () => {
 
 describe('Testing elm-test on an example application', () => {
   before(() => {
-	  shell.pushd('example-application');
+    shell.pushd('example-application');
   });
 
   after(() => {
-   shell.popd();
+    shell.popd();
   });
 
   it('Should pass for successful tests', () => {
@@ -111,7 +141,6 @@ describe('Testing elm-test on an example application', () => {
     assertTestFailure(runResult);
   }).timeout(60000);
 });
-
 
 describe('Testing elm-test on an example package', () => {
   before(() => {
@@ -135,7 +164,6 @@ describe('Testing elm-test on an example package', () => {
   }).timeout(60000);
 });
 
-
 describe('Testing elm-test on example-application-src', () => {
   before(() => {
     shell.pushd('example-application-src');
@@ -150,7 +178,6 @@ describe('Testing elm-test on example-application-src', () => {
     assertTestSuccess(runResult);
   }).timeout(60000);
 });
-
 
 describe('Testing elm-test on an application with no tests', () => {
   before(() => {
@@ -167,7 +194,6 @@ describe('Testing elm-test on an application with no tests', () => {
   }).timeout(60000);
 });
 
-
 /* ci tests on single elm files */
 describe('Testing elm-test on single Elm files', () => {
   before(() => {
@@ -177,7 +203,7 @@ describe('Testing elm-test on single Elm files', () => {
   after(() => {
     shell.popd();
   });
-  
+
   it('Should succeed for the passing tests', () => {
     shell.ls('tests/Passing/').forEach(function (testToRun) {
       const itsPath = path.join('tests', 'Passing', testToRun);
@@ -185,7 +211,7 @@ describe('Testing elm-test on single Elm files', () => {
       assertTestSuccess(runResult);
     });
   }).timeout(60000);
-  
+
   it('Should fail for the failing tests', () => {
     shell.ls('tests/Failing').forEach(function (testToRun) {
       const itsPath = path.join('tests', 'Failing', testToRun);
@@ -193,7 +219,7 @@ describe('Testing elm-test on single Elm files', () => {
       assertTestFailure(runResult);
     });
   }).timeout(60000);
-  
+
   it('Should raise a runtime exception if appropriate', () => {
     shell.ls('tests/RuntimeException').forEach(function (testToRun) {
       const itsPath = path.join('tests', 'RuntimeException', testToRun);
