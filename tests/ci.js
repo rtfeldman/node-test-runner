@@ -16,6 +16,7 @@ const elmiToJSONPath = require('elmi-to-json').paths['elmi-to-json'];
 const elmtestPath = path.join(__dirname, '..', 'bin', 'elm-test');
 
 const packageInfo = require('../package.json');
+const { fail } = require('assert');
 const filename = __filename.replace(__dirname + '/', '');
 const elmTest = 'elm-test';
 const elmTestVersion = packageInfo.version;
@@ -42,10 +43,29 @@ function execElmTest(args) {
   );
 }
 
+function getDetailedMessage(message, runResult) {
+  return message + '\n\n' + 'STDOUT\n' + runResult.stdout + '\n\n' + 'STDERR\n' + runResult.stderr;
+}
+
+function assertTestSuccess(runResult) {
+  const msg = 'Expected success (exit code ' + resultSuccess + '), but got ' + runResult.status;
+  assert.strictEqual(resultSuccess, runResult.status, getDetailedMessage(msg, runResult));  
+}
+
+function assertTestErrored(runResult) {
+  const msg = 'Expected error (exit code ' + resultErrored + '), but got ' + runResult.status;
+  assert.strictEqual(resultErrored, runResult.status, getDetailedMessage(msg, runResult));  
+}
+
+function assertTestFailure(runResult) {
+  const msg = 'Expected failure (exit code >= ' + resultFailureThreshold + '), but got ' + runResult.status;
+  assert.ok(runResult.status >= resultFailureThreshold, getDetailedMessage(msg, runResult));  
+}
+
 describe('--help', () => {
   it('Should exit indicating success', () => {
     const runResult = execElmiToJSON(['--help']);
-    assert.strictEqual(resultSuccess, runResult.status);
+    assertTestSuccess(runResult);
   }).timeout(60000);
 
   it('Should print the usage', () => {
@@ -59,7 +79,7 @@ describe('--help', () => {
 describe('--version', () => {
   it('Should exit indicating success', () => {
     const runResult = execElmTest(['--version']);
-    assert.strictEqual(resultSuccess, runResult.status);
+    assertTestSuccess(runResult);
   }).timeout(60000);
 
   it('Should print the usage', () => {
@@ -82,13 +102,13 @@ describe('Testing elm-test on an example application', () => {
   it('Should pass for successful tests', () => {
     const args = path.join('tests', '*Pass*.elm');
     const runResult = execElmTest([args], false);
-    assert.strictEqual(resultSuccess, runResult.status);
+    assertTestSuccess(runResult);
   }).timeout(60000);
 
   it('Should fail for failing tests', () => {
     const args = path.join('tests', '*Fail*.elm');
     const runResult = execElmTest([args], false);
-    assert.ok(runResult.status >= resultFailureThreshold);
+    assertTestFailure(runResult);
   }).timeout(60000);
 });
 
@@ -105,13 +125,13 @@ describe('Testing elm-test on an example package', () => {
   it('Should pass for successful tests', () => {
     const args = path.join('tests', '*Pass*.elm');
     const runResult = execElmTest([args], false);
-    assert.strictEqual(resultSuccess, runResult.status);
+    assertTestSuccess(runResult);
   }).timeout(60000);
 
   it('Should fail for failing tests', () => {
     const args = path.join('tests', '*Fail*.elm');
     const runResult = execElmTest([args], false);
-    assert.ok(runResult.status >= resultFailureThreshold);
+    assertTestFailure(runResult);
   }).timeout(60000);
 });
 
@@ -127,7 +147,7 @@ describe('Testing elm-test on example-application-src', () => {
 
   it('Should pass successfully', () => {
     const runResult = execElmTest(['src'], false);
-    assert.strictEqual(resultSuccess, runResult.status);
+    assertTestSuccess(runResult);
   }).timeout(60000);
 });
 
@@ -143,7 +163,7 @@ describe('Testing elm-test on an application with no tests', () => {
 
   it('Should fail due to missing tests', () => {
     const runResult = execElmTest();
-    assert.notStrictEqual(resultSuccess, runResult.status);
+    assertTestFailure(runResult);
   }).timeout(60000);
 });
 
@@ -158,20 +178,19 @@ describe('Testing elm-test on single Elm files', () => {
     shell.popd();
   });
   
-  // shell.cd(fixturesDir);
   it('Should succeed for the passing tests', () => {
     shell.ls('tests/Passing/').forEach(function (testToRun) {
       const itsPath = path.join('tests', 'Passing', testToRun);
       const runResult = execElmTest([itsPath]);
-      assert.strictEqual(resultSuccess, runResult.status);
+      assertTestSuccess(runResult);
     });
-}).timeout(60000);
+  }).timeout(60000);
   
   it('Should fail for the failing tests', () => {
     shell.ls('tests/Failing').forEach(function (testToRun) {
       const itsPath = path.join('tests', 'Failing', testToRun);
       const runResult = execElmTest([itsPath]);
-      assert.ok(runResult.status >= resultFailureThreshold);
+      assertTestFailure(runResult);
     });
   }).timeout(60000);
   
@@ -179,7 +198,7 @@ describe('Testing elm-test on single Elm files', () => {
     shell.ls('tests/RuntimeException').forEach(function (testToRun) {
       const itsPath = path.join('tests', 'RuntimeException', testToRun);
       const runResult = execElmTest([itsPath]);
-      assert.strictEqual(resultErrored, runResult.status);
+      assertTestErrored(runResult);
     });
   }).timeout(60000);
 });
