@@ -1,8 +1,8 @@
 module Something exposing (main, ultimateAnswer)
 
--- `import VirtualDom` to ./VirtualDom.elm, not the VirtualDom package, which is
--- an indirect dependency (of Html). This tests that we’re not breaking stuff
--- when constructing the elm.json used for running the test.
+-- `import VirtualDom` refers to ./VirtualDom.elm, not the VirtualDom package,
+-- which is an indirect dependency (of Html). This tests that we’re not breaking
+-- stuff when constructing the elm.json used for running the test.
 
 import Html
 import VirtualDom
