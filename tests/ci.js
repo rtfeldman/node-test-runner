@@ -105,17 +105,12 @@ describe('--help', () => {
   }).timeout(60000);
 });
 
-// shell.exec('npm link --ignore-scripts=false');
 describe('--version', () => {
-  it('Should exit indicating success', () => {
+  it('Should print the version and exit indicating success', () => {
     const runResult = execElmTest(['--version']);
     assertTestSuccess(runResult);
-  }).timeout(60000);
-
-  it('Should print the usage', () => {
-    const runResult = execElmTest(['--version']);
     assert.strictEqual(elmTestVersion, runResult.stdout.trim());
-  }).timeout(60000);
+  }).timeout(5000);
 });
 
 /* Test examples */
