@@ -4,35 +4,18 @@ const assert = require('assert');
 const path = require('path');
 const shell = require('shelljs');
 const spawn = require('cross-spawn');
-const fs = require('fs-extra');
-const os = require('os');
-const xml2js = require('xml2js');
-const readline = require('readline');
-const stripAnsi = require('strip-ansi');
 
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
-const elmiToJSONPath = require('elmi-to-json').paths['elmi-to-json'];
 const elmtestPath = path.join(__dirname, '..', 'bin', 'elm-test');
 
 const packageInfo = require('../package.json');
-const { fail } = require('assert');
-const filename = __filename.replace(__dirname + '/', '');
-const elmTest = 'elm-test';
 const elmTestVersion = packageInfo.version;
 
 // exit codes
 const resultSuccess = 0;
 const resultErrored = 1;
 const resultFailureThreshold = 2;
-
-function execElmiToJSON(args) {
-  return spawn.sync(
-    elmiToJSONPath,
-    args,
-    Object.assign({ encoding: 'utf-8' }, spawnOpts)
-  );
-}
 
 function execElmTest(args) {
   return spawn.sync(
@@ -93,13 +76,9 @@ function assertTestFailure(runResult) {
 }
 
 describe('--help', () => {
-  it('Should exit indicating success', () => {
-    const runResult = execElmiToJSON(['--help']);
+  it('Should print the usage and exit indicating success', () => {
+    const runResult = execElmTest(['--help']);
     assertTestSuccess(runResult);
-  }).timeout(60000);
-
-  it('Should print the usage', () => {
-    const runResult = execElmiToJSON(['--help']);
     // ensure we have a non-empty output
     assert.ok(runResult.stdout.length > 0);
   }).timeout(60000);
