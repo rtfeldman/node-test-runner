@@ -1,9 +1,9 @@
 module Test.Tuple exposing (tests)
 
 import Basics exposing (..)
-import Tuple exposing (..)
-import Test exposing (..)
 import Expect
+import Test exposing (..)
+import Tuple exposing (..)
 
 
 tests : Test

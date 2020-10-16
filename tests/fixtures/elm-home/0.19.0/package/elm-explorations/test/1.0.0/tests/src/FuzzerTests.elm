@@ -255,7 +255,7 @@ whitespaceTest =
 
 whitespace : Fuzzer String
 whitespace =
-    [ ' ', ' ', '\t', '\n' ]
+    [ ' ', '\u{00A0}', '\t', '\n' ]
         |> List.map Fuzz.constant
         |> Fuzz.oneOf
         |> Fuzz.list
@@ -280,7 +280,7 @@ email =
 
 whitespace : Fuzzer String
 whitespace =
-    [ ' ', ' ', '\t', '\n' ]
+    [ ' ', '\u{00A0}', '\t', '\n' ]
         |> List.map Fuzz.constant
         |> Fuzz.oneOf
         |> Fuzz.list

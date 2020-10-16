@@ -1,10 +1,9 @@
 module Test.CodeGen exposing (tests)
 
 import Basics exposing (..)
-import Test exposing (..)
 import Expect
-import Maybe
 import Maybe exposing (..)
+import Test exposing (..)
 
 
 type Wrapper a
@@ -37,7 +36,7 @@ letQualified =
         (Wrapper x) =
             Wrapper 42
     in
-        x
+    x
 
 
 caseQualified : number
@@ -101,9 +100,9 @@ tests =
                             |> Expect.equal 0
                 ]
     in
-        describe "CodeGen"
-            [ underscores
-            , qualifiedPatterns
-            , scope
-            , hex
-            ]
+    describe "CodeGen"
+        [ underscores
+        , qualifiedPatterns
+        , scope
+        , hex
+        ]

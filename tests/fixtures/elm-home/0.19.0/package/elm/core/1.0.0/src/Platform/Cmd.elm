@@ -1,14 +1,12 @@
 module Platform.Cmd exposing
-  ( Cmd
-  , none
-  , batch
-  , map
-  )
+    ( Cmd, none, batch
+    , map
+    )
 
 {-|
 
 > **Note:** Elm has **managed effects**, meaning that things like HTTP
-> requests or writing to disk are all treated as *data* in Elm. When this
+> requests or writing to disk are all treated as _data_ in Elm. When this
 > data is given to the Elm runtime system, it can do some “query optimization”
 > before actually performing the effect. Perhaps unexpectedly, this managed
 > effects idea is the heart of why Elm is so nice for testing, reuse,
@@ -16,10 +14,14 @@ module Platform.Cmd exposing
 >
 > Elm has two kinds of managed effects: commands and subscriptions.
 
+
 # Commands
+
 @docs Cmd, none, batch
 
+
 # Fancy Stuff
+
 @docs map
 
 -}
@@ -43,16 +45,17 @@ messages that will come back into your application.
 ever, commands will make more sense as you work through [the Elm Architecture
 Tutorial](https://guide.elm-lang.org/architecture/) and see how they
 fit into a real application!
+
 -}
-type Cmd msg = Cmd
+type Cmd msg
+    = Cmd
 
 
 {-| Tell the runtime that there are no commands.
-
 -}
 none : Cmd msg
 none =
-  batch []
+    batch []
 
 
 {-| When you need the runtime system to perform a couple commands, you
@@ -62,10 +65,11 @@ no ordering guarantees about the results.
 
 **Note:** `Cmd.none` and `Cmd.batch [ Cmd.none, Cmd.none ]` and `Cmd.batch []`
 all do the same thing.
+
 -}
 batch : List (Cmd msg) -> Cmd msg
 batch =
-  Elm.Kernel.Platform.batch
+    Elm.Kernel.Platform.batch
 
 
 
@@ -76,13 +80,12 @@ batch =
 Very similar to [`Html.map`](/packages/elm/html/latest/Html#map).
 
 This is very rarely useful in well-structured Elm code, so definitely read the
-sections on [reuse][] and [modularity][] in the guide before reaching for this!
+sections on [reuse] and [modularity] in the guide before reaching for this!
 
 [reuse]: https://guide.elm-lang.org/reuse/
 [modularity]: https://guide.elm-lang.org/modularity/
+
 -}
 map : (a -> msg) -> Cmd a -> Cmd msg
 map =
-  Elm.Kernel.Platform.map
-
-
+    Elm.Kernel.Platform.map

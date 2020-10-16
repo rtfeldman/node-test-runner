@@ -2,8 +2,8 @@ module Test.Bitwise exposing (tests)
 
 import Basics exposing (..)
 import Bitwise
-import Test exposing (..)
 import Expect
+import Test exposing (..)
 
 
 tests : Test

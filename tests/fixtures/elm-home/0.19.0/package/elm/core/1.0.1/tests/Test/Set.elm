@@ -1,10 +1,10 @@
 module Test.Set exposing (tests)
 
 import Basics exposing (..)
-import Set exposing (Set)
-import List exposing ((::))
-import Test exposing (..)
 import Expect
+import List exposing ((::))
+import Set exposing (Set)
+import Test exposing (..)
 
 
 tests : Test
@@ -271,5 +271,5 @@ fromListTests =
     , test "returns singleton set for singleton list" <|
         \() -> Expect.equal set42 (Set.fromList [ 42 ])
     , test "returns set with unique list elements" <|
-        \() -> Expect.equal set1To100 (Set.fromList (1 :: (List.range 1 100)))
+        \() -> Expect.equal set1To100 (Set.fromList (1 :: List.range 1 100))
     ]

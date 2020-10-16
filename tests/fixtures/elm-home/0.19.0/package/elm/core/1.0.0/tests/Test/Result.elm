@@ -1,16 +1,16 @@
 module Test.Result exposing (tests)
 
 import Basics exposing (..)
-import Result
+import Expect
 import Result exposing (Result(..))
 import String
 import Test exposing (..)
-import Expect
 
 
 isEven n =
     if n % 2 == 0 then
         Ok n
+
     else
         Err "number is odd"
 
@@ -50,7 +50,7 @@ tests =
 
         andThenTests =
             describe "andThen Tests"
-                [ test "andThen Ok" <| \() -> Expect.equal (Ok 42) ((String.toInt "42") |> Result.andThen isEven)
+                [ test "andThen Ok" <| \() -> Expect.equal (Ok 42) (String.toInt "42" |> Result.andThen isEven)
                 , test "andThen first Err" <|
                     \() ->
                         Expect.equal
@@ -63,8 +63,8 @@ tests =
                             (String.toInt "41" |> Result.andThen isEven)
                 ]
     in
-        describe "Result Tests"
-            [ mapTests
-            , mapNTests
-            , andThenTests
-            ]
+    describe "Result Tests"
+        [ mapTests
+        , mapNTests
+        , andThenTests
+        ]

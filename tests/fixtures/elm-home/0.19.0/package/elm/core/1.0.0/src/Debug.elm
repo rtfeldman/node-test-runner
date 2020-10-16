@@ -1,16 +1,14 @@
-module Debug exposing
-  ( toString
-  , log
-  , todo
-  )
+module Debug exposing (toString, log, todo)
 
 {-| This module can be useful while _developing_ an application. It is not
 available for use in packages or production.
 
-# Debugging
-@docs toString, log, todo
--}
 
+# Debugging
+
+@docs toString, log, todo
+
+-}
 
 import Elm.Kernel.Debug
 import String exposing (String)
@@ -18,9 +16,12 @@ import String exposing (String)
 
 {-| Turn any kind of value into a string.
 
-    toString 42                == "42"
-    toString [1,2]             == "[1,2]"
-    toString ('a', "cat", 13)  == "('a', \"cat\", 13)"
+    toString 42 == "42"
+
+    toString [ 1, 2 ] == "[1,2]"
+
+    toString ( 'a', "cat", 13 ) == "('a', \"cat\", 13)"
+
     toString "he said, \"hi\"" == "\"he said, \\\"hi\\\"\""
 
 Notice that with strings, this is not the `identity` function. It escapes
@@ -32,16 +33,18 @@ for viewing Elm data structures.
 a bunch of runtime metadata. For example, it shortens record field names, and
 we need that info to `toString` the value! As a consequence, packages cannot
 use `toString` because they may be used in `--optimize` mode.
+
 -}
 toString : a -> String
 toString =
-  Elm.Kernel.Debug.toString
+    Elm.Kernel.Debug.toString
 
 
 {-| Log a tagged value on the developer console, and then return the value.
 
-    1 + log "number" 1        -- equals 2, logs "number: 1"
-    length (log "start" [])   -- equals 0, logs "start: []"
+    1 + log "number" 1 -- equals 2, logs "number: 1"
+
+    length (log "start" []) -- equals 0, logs "start: []"
 
 It is often possible to sprinkle this around to see if values are what you
 expect. It is kind of old-school to do it this way, but it works!
@@ -55,10 +58,11 @@ compiler optimizations that move code around.
 use ports for now. That will give you full access to reading and writing in the
 terminal. We may have a package in Elm for this someday, but browser
 applications are the primary focus of platform development for now.
+
 -}
 log : String -> a -> a
 log =
-  Elm.Kernel.Debug.log
+    Elm.Kernel.Debug.log
 
 
 {-| This is a placeholder for code that you will write later.
@@ -90,8 +94,8 @@ exceptions should not appear in the resulting applications.
 **Note:** For the equivalent of try/catch error handling in Elm, use modules
 like [`Maybe`](#Maybe) and [`Result`](#Result) which guarantee that no error
 goes unhandled!
+
 -}
 todo : String -> a
 todo =
-  Elm.Kernel.Debug.todo
-
+    Elm.Kernel.Debug.todo

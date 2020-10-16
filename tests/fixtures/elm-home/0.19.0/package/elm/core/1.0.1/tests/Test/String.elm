@@ -1,12 +1,12 @@
 module Test.String exposing (tests)
 
 import Basics exposing (..)
+import Expect
 import List
 import Maybe exposing (..)
 import Result exposing (Result(..))
 import String
 import Test exposing (..)
-import Expect
 
 
 tests : Test
@@ -15,7 +15,7 @@ tests =
         simpleTests =
             describe "Simple Stuff"
                 [ test "is empty" <| \() -> Expect.equal True (String.isEmpty "")
-                , test "is not empty" <| \() -> Expect.equal True (not (String.isEmpty ("the world")))
+                , test "is not empty" <| \() -> Expect.equal True (not (String.isEmpty "the world"))
                 , test "length" <| \() -> Expect.equal 11 (String.length "innumerable")
                 , test "endsWith" <| \() -> Expect.equal True <| String.endsWith "ship" "spaceship"
                 , test "reverse" <| \() -> Expect.equal "desserts" (String.reverse "stressed")
@@ -66,7 +66,7 @@ tests =
                 , goodFloat "-3.14" -3.14
                 , goodFloat "0.12" 0.12
                 , goodFloat ".12" 0.12
-                , goodFloat "1e-42" 1e-42
+                , goodFloat "1e-42" 1.0e-42
                 , goodFloat "6.022e23" 6.022e23
                 , goodFloat "6.022E23" 6.022e23
                 , goodFloat "6.022e+23" 6.022e23
@@ -81,7 +81,7 @@ tests =
                 , test "reverse 2" <| \() -> Expect.equal "nàm" (String.reverse "màn")
                 , test "reverse 3" <| \() -> Expect.equal "😣ba" (String.reverse "ab😣")
                 , test "filter" <| \() -> Expect.equal "mànabc" (String.filter (\c -> c /= '😣') "màn😣abc")
-                , test "toList" <| \() -> Expect.equal ['𝌆', 'a', '𝌆', 'b', '𝌆'] (String.toList "𝌆a𝌆b𝌆")
+                , test "toList" <| \() -> Expect.equal [ '𝌆', 'a', '𝌆', 'b', '𝌆' ] (String.toList "𝌆a𝌆b𝌆")
                 , test "uncons" <| \() -> Expect.equal (Just ( '😃', "bc" )) (String.uncons "😃bc")
                 , test "map 1" <| \() -> Expect.equal "aaa" (String.map (\_ -> 'a') "😃😃😃")
                 , test "map 2" <| \() -> Expect.equal "😃😃😃" (String.map (\_ -> '😃') "aaa")
@@ -91,7 +91,7 @@ tests =
                 , test "any" <| \() -> Expect.equal True (String.any ((==) '😃') "abc😃123")
                 ]
     in
-        describe "String" [ simpleTests, combiningTests, intTests, floatTests, encodingTests ]
+    describe "String" [ simpleTests, combiningTests, intTests, floatTests, encodingTests ]
 
 
 
@@ -100,27 +100,31 @@ tests =
 
 goodInt : String -> Int -> Test
 goodInt str int =
-    test str <| \_ ->
-        Expect.equal (Ok int) (String.toInt str)
+    test str <|
+        \_ ->
+            Expect.equal (Ok int) (String.toInt str)
 
 
 badInt : String -> Test
 badInt str =
-    test str <| \_ ->
-        Expect.equal
-            (Err ("could not convert string '" ++ str ++ "' to an Int"))
-            (String.toInt str)
+    test str <|
+        \_ ->
+            Expect.equal
+                (Err ("could not convert string '" ++ str ++ "' to an Int"))
+                (String.toInt str)
 
 
 goodFloat : String -> Float -> Test
 goodFloat str float =
-    test str <| \_ ->
-        Expect.equal (Ok float) (String.toFloat str)
+    test str <|
+        \_ ->
+            Expect.equal (Ok float) (String.toFloat str)
 
 
 badFloat : String -> Test
 badFloat str =
-    test str <| \_ ->
-        Expect.equal
-            (Err ("could not convert string '" ++ str ++ "' to a Float"))
-            (String.toFloat str)
+    test str <|
+        \_ ->
+            Expect.equal
+                (Err ("could not convert string '" ++ str ++ "' to a Float"))
+                (String.toFloat str)

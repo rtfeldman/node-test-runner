@@ -1,9 +1,9 @@
 module Test.Equality exposing (tests)
 
 import Basics exposing (..)
+import Expect
 import Maybe exposing (..)
 import Test exposing (..)
-import Expect
 
 
 type Different
@@ -31,4 +31,4 @@ tests =
                 , test "ctor diff, special case" <| \() -> Expect.equal True ({ ctor = Just 3 } /= { ctor = Nothing })
                 ]
     in
-        describe "Equality Tests" [ diffTests, recordTests ]
+    describe "Equality Tests" [ diffTests, recordTests ]

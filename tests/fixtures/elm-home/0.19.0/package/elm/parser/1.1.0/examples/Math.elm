@@ -1,9 +1,8 @@
 module Math exposing
-  ( Expr
-  , evaluate
-  , parse
-  )
-
+    ( Expr
+    , evaluate
+    , parse
+    )
 
 import Html exposing (div, p, text)
 import Parser exposing (..)
@@ -14,15 +13,15 @@ import Parser exposing (..)
 
 
 main =
-  case parse "2 * (3 + 4)" of
-    Err err ->
-      text (Debug.toString err)
+    case parse "2 * (3 + 4)" of
+        Err err ->
+            text (Debug.toString err)
 
-    Ok expr ->
-      div []
-        [ p [] [ text (Debug.toString expr) ]
-        , p [] [ text (String.fromFloat (evaluate expr)) ]
-        ]
+        Ok expr ->
+            div []
+                [ p [] [ text (Debug.toString expr) ]
+                , p [] [ text (String.fromFloat (evaluate expr)) ]
+                ]
 
 
 
@@ -30,31 +29,31 @@ main =
 
 
 type Expr
-  = Integer Int
-  | Floating Float
-  | Add Expr Expr
-  | Mul Expr Expr
+    = Integer Int
+    | Floating Float
+    | Add Expr Expr
+    | Mul Expr Expr
 
 
 evaluate : Expr -> Float
 evaluate expr =
-  case expr of
-    Integer n ->
-      toFloat n
+    case expr of
+        Integer n ->
+            toFloat n
 
-    Floating n ->
-      n
+        Floating n ->
+            n
 
-    Add a b ->
-      evaluate a + evaluate b
+        Add a b ->
+            evaluate a + evaluate b
 
-    Mul a b ->
-      evaluate a * evaluate b
+        Mul a b ->
+            evaluate a * evaluate b
 
 
 parse : String -> Result (List DeadEnd) Expr
 parse string =
-  run expression string
+    run expression string
 
 
 
@@ -81,60 +80,62 @@ like `0o17` and binary numbers like `0b01101100` are not allowed.
 -}
 digits : Parser Expr
 digits =
-  number
-    { int = Just Integer
-    , hex = Just Integer
-    , octal = Nothing
-    , binary = Nothing
-    , float = Just Floating
-    }
+    number
+        { int = Just Integer
+        , hex = Just Integer
+        , octal = Nothing
+        , binary = Nothing
+        , float = Just Floating
+        }
 
 
 term : Parser Expr
 term =
-  oneOf
-    [ digits
-    , succeed identity
-        |. symbol "("
-        |. spaces
-        |= lazy (\_ -> expression)
-        |. spaces
-        |. symbol ")"
-    ]
+    oneOf
+        [ digits
+        , succeed identity
+            |. symbol "("
+            |. spaces
+            |= lazy (\_ -> expression)
+            |. spaces
+            |. symbol ")"
+        ]
 
 
 expression : Parser Expr
 expression =
-  term
-    |> andThen (expressionHelp [])
+    term
+        |> andThen (expressionHelp [])
 
 
 {-| If you want to parse operators with different precedence (like `+` and `*`)
 a good strategy is to go through and create a list of all the operators. From
 there, you can write separate code to sort out the grouping.
 -}
-expressionHelp : List (Expr, Operator) -> Expr -> Parser Expr
+expressionHelp : List ( Expr, Operator ) -> Expr -> Parser Expr
 expressionHelp revOps expr =
-  oneOf
-    [ succeed Tuple.pair
-        |. spaces
-        |= operator
-        |. spaces
-        |= term
-        |> andThen (\(op, newExpr) -> expressionHelp ((expr,op) :: revOps) newExpr)
-    , lazy (\_ -> succeed (finalize revOps expr))
-    ]
+    oneOf
+        [ succeed Tuple.pair
+            |. spaces
+            |= operator
+            |. spaces
+            |= term
+            |> andThen (\( op, newExpr ) -> expressionHelp (( expr, op ) :: revOps) newExpr)
+        , lazy (\_ -> succeed (finalize revOps expr))
+        ]
 
 
-type Operator = AddOp | MulOp
+type Operator
+    = AddOp
+    | MulOp
 
 
 operator : Parser Operator
 operator =
-  oneOf
-    [ map (\_ -> AddOp) (symbol "+")
-    , map (\_ -> MulOp) (symbol "*")
-    ]
+    oneOf
+        [ map (\_ -> AddOp) (symbol "+")
+        , map (\_ -> MulOp) (symbol "*")
+        ]
 
 
 {-| We only have `+` and `*` in this parser. If we see a `MulOp` we can
@@ -144,15 +145,16 @@ until all the multiplies have been taken care of.
 This code is kind of tricky, but it is a baseline for what you would need if
 you wanted to add `/`, `-`, `==`, `&&`, etc. which bring in more complex
 associativity and precedence rules.
+
 -}
-finalize : List (Expr, Operator) -> Expr -> Expr
+finalize : List ( Expr, Operator ) -> Expr -> Expr
 finalize revOps finalExpr =
-  case revOps of
-    [] ->
-      finalExpr
+    case revOps of
+        [] ->
+            finalExpr
 
-    (expr, MulOp) :: otherRevOps ->
-      finalize otherRevOps (Mul expr finalExpr)
+        ( expr, MulOp ) :: otherRevOps ->
+            finalize otherRevOps (Mul expr finalExpr)
 
-    (expr, AddOp) :: otherRevOps ->
-      Add (finalize otherRevOps expr) finalExpr
+        ( expr, AddOp ) :: otherRevOps ->
+            Add (finalize otherRevOps expr) finalExpr

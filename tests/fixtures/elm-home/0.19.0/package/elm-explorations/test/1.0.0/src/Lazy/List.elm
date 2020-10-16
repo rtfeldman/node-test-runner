@@ -275,6 +275,7 @@ take n list =
         \() ->
             if n <= 0 then
                 Nil
+
             else
                 case force list of
                     Nil ->
@@ -297,6 +298,7 @@ takeWhile predicate list =
                 Cons first rest ->
                     if predicate first then
                         Cons first (takeWhile predicate rest)
+
                     else
                         Nil
 
@@ -309,6 +311,7 @@ drop n list =
         \() ->
             if n <= 0 then
                 force list
+
             else
                 case force list of
                     Nil ->
@@ -331,6 +334,7 @@ dropWhile predicate list =
                 Cons first rest ->
                     if predicate first then
                         force (dropWhile predicate rest)
+
                     else
                         force list
 
@@ -370,6 +374,7 @@ unique list =
                 Cons first rest ->
                     if member first rest then
                         force (unique rest)
+
                     else
                         Cons first (unique rest)
 
@@ -387,6 +392,7 @@ keepIf predicate list =
                 Cons first rest ->
                     if predicate first then
                         Cons first (keepIf predicate rest)
+
                     else
                         force (keepIf predicate rest)
 
