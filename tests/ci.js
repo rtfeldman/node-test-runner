@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 const shell = require('shelljs');
 const spawn = require('cross-spawn');
@@ -178,27 +179,65 @@ describe('Testing elm-test on single Elm files', () => {
     shell.popd();
   });
 
-  it('Should succeed for the passing tests', () => {
-    shell.ls('tests/Passing/').forEach(function (testToRun) {
+  // passing tests
+  const passingTestFiles = [
+    'Dependency.elm',
+    'One.elm',
+    'Several.elm',
+    'Unexposed.elm',
+  ];
+
+  for (const testToRun of passingTestFiles) {
+    it(`Should succeed for the passing test: ${testToRun}`, () => {
       const itsPath = path.join('tests', 'Passing', testToRun);
       const runResult = execElmTest([itsPath]);
       assertTestSuccess(runResult);
-    });
-  }).timeout(60000);
+    }).timeout(5000);
+  }
 
-  it('Should fail for the failing tests', () => {
-    shell.ls('tests/Failing').forEach(function (testToRun) {
+  it(`Should run every file in tests/Passing`, () => {
+    const filesFound = fs.readdirSync('tests/Passing/');
+    assert.deepStrictEqual(filesFound, passingTestFiles);
+  });
+
+  // failing tests
+  const failingTestFiles = [
+    'Fuzz.elm',
+    'One.elm',
+    'OneRuntimeException.elm',
+    'OneTodo.elm',
+    'Several.elm',
+    'SeveralTodos.elm',
+    'SeveralWithComments.elm',
+    'SplitSocketMessage.elm',
+  ];
+
+  for (const testToRun of failingTestFiles) {
+    it(`Should fail for the failing test: ${testToRun}`, () => {
       const itsPath = path.join('tests', 'Failing', testToRun);
       const runResult = execElmTest([itsPath]);
       assertTestFailure(runResult);
-    });
-  }).timeout(60000);
+    }).timeout(5000);
+  }
 
-  it('Should raise a runtime exception if appropriate', () => {
-    shell.ls('tests/RuntimeException').forEach(function (testToRun) {
+  it(`Should run every file in tests/Failing`, () => {
+    const filesFound = fs.readdirSync('tests/Failing/');
+    assert.deepStrictEqual(filesFound, failingTestFiles);
+  });
+
+  // tests that raise runtime errors
+  const erroredTestFiles = ['OnePort.elm'];
+
+  for (const testToRun of erroredTestFiles) {
+    it(`Should raise a runtime exception for test: ${testToRun}`, () => {
       const itsPath = path.join('tests', 'RuntimeException', testToRun);
       const runResult = execElmTest([itsPath]);
       assertTestErrored(runResult);
-    });
-  }).timeout(60000);
+    }).timeout(5000);
+  }
+
+  it(`Should run every file in tests/RuntimeException`, () => {
+    const filesFound = fs.readdirSync('tests/RuntimeException/');
+    assert.deepStrictEqual(filesFound, erroredTestFiles);
+  });
 });
