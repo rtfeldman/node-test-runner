@@ -20,3 +20,8 @@ jobs:
       script: npm run format:check
       node_js: lts/*
       name: Lint
+
+cache:
+  npm: true
+  directories:
+    - $HOME/.elm
