@@ -81,7 +81,7 @@ describe('--help', () => {
     assertTestSuccess(runResult);
     // ensure we have a non-empty output
     assert.ok(runResult.stdout.length > 0);
-  }).timeout(60000);
+  }).timeout(5000);
 });
 
 describe('--version', () => {
