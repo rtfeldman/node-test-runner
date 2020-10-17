@@ -10,7 +10,8 @@
     "flow": "flow",
     "lint": "eslint .",
     "test-only": "mocha tests && cd elm && node ../bin/elm-test",
-    "test": "flow check && npm run lint && npm run format:check && npm run test-only",
+    "test": "npm run check && npm run test-only",
+    "check": "flow check && npm run lint && npm run format:check",
     "format:check": "prettier --check . && elm-format elm --validate",
     "format:write": "prettier --write . && elm-format elm --yes"
   },
