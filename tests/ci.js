@@ -5,7 +5,7 @@ const path = require('path');
 const shell = require('shelljs');
 const spawn = require('cross-spawn');
 
-const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
+const { fixturesDir, spawnOpts } = require('./util');
 
 const elmtestPath = path.join(__dirname, '..', 'bin', 'elm-test');
 
