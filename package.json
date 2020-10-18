@@ -9,8 +9,9 @@
   "scripts": {
     "flow": "flow",
     "lint": "eslint .",
+    "review": "cd elm && elm-review",
     "test-only": "mocha tests && cd elm && node ../bin/elm-test",
-    "test": "flow check && npm run lint && npm run format:check && npm run test-only",
+    "test": "flow check && npm run lint && npm run format:check && npm run review && npm run test-only",
     "format:check": "prettier --check . && elm-format elm --validate",
     "format:write": "prettier --write . && elm-format elm --yes"
   },
