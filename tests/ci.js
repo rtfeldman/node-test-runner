@@ -222,6 +222,7 @@ describe('Testing elm-test on single Elm files', () => {
 
   it(`Should run every file in tests/Failing`, () => {
     const filesFound = fs.readdirSync('tests/Failing/');
+    filesFound.sort();
     assert.deepStrictEqual(filesFound, failingTestFiles);
   });
 
