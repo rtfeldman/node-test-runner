@@ -192,11 +192,12 @@ describe('Testing elm-test on single Elm files', () => {
       const itsPath = path.join('tests', 'Passing', testToRun);
       const runResult = execElmTest([itsPath]);
       assertTestSuccess(runResult);
-    }).timeout(5000);
+    }).timeout(10000);
   }
 
   it(`Should run every file in tests/Passing`, () => {
     const filesFound = fs.readdirSync('tests/Passing/');
+    filesFound.sort();
     assert.deepStrictEqual(filesFound, passingTestFiles);
   });
 
@@ -217,7 +218,7 @@ describe('Testing elm-test on single Elm files', () => {
       const itsPath = path.join('tests', 'Failing', testToRun);
       const runResult = execElmTest([itsPath]);
       assertTestFailure(runResult);
-    }).timeout(5000);
+    }).timeout(10000);
   }
 
   it(`Should run every file in tests/Failing`, () => {
@@ -234,11 +235,12 @@ describe('Testing elm-test on single Elm files', () => {
       const itsPath = path.join('tests', 'RuntimeException', testToRun);
       const runResult = execElmTest([itsPath]);
       assertTestErrored(runResult);
-    }).timeout(5000);
+    }).timeout(10000);
   }
 
   it(`Should run every file in tests/RuntimeException`, () => {
     const filesFound = fs.readdirSync('tests/RuntimeException/');
+    filesFound.sort();
     assert.deepStrictEqual(filesFound, erroredTestFiles);
   });
 });
