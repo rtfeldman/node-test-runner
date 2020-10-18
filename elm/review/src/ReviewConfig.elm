@@ -26,15 +26,18 @@ config : List Rule
 config =
     [ NoUnused.Variables.rule
     ]
+
+
+
 {-
-config =
-    [ NoUnused.CustomTypeConstructors.rule []
-    , NoUnused.CustomTypeConstructorArgs.rule
-    , NoUnused.Dependencies.rule
-    , NoUnused.Exports.rule
-    , NoUnused.Modules.rule
-    , NoUnused.Parameters.rule
-    , NoUnused.Patterns.rule
-    , NoUnused.Variables.rule
-    ]
+   config =
+       [ NoUnused.CustomTypeConstructors.rule []
+       , NoUnused.CustomTypeConstructorArgs.rule
+       , NoUnused.Dependencies.rule
+       , NoUnused.Exports.rule
+       , NoUnused.Modules.rule
+       , NoUnused.Parameters.rule
+       , NoUnused.Patterns.rule
+       , NoUnused.Variables.rule
+       ]
 -}
