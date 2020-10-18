@@ -14,7 +14,8 @@
     "review:example-packages": "cd example-package && elm-review && cd ../example-package-no-tests && elm-review",
     "review": "npm run review:elm && npm run review:example-applications && npm run review:example-packages",
     "test-only": "mocha tests && cd elm && node ../bin/elm-test",
-    "test": "flow check && npm run lint && npm run format:check && npm run review && npm run test-only",
+    "test": "npm run check && npm run test-only",
+    "check": "flow check && npm run lint && npm run format:check && npm run review",
     "format:check": "prettier --check . && elm-format elm --validate",
     "format:write": "prettier --write . && elm-format elm --yes"
   },
@@ -47,6 +48,7 @@
     "chalk": "^3.0.0",
     "chokidar": "^3.4.2",
     "cross-spawn": "^7.0.3",
+    "elm-json": "^0.2.8",
     "elmi-to-json": "^1.3.0",
     "fs-extra": "^8.1.0",
     "glob": "^7.1.6",
@@ -60,7 +62,6 @@
   "devDependencies": {
     "elm": "0.19.1-3",
     "elm-format": "0.8.3",
-    "elm-json": "0.2.8",
     "elm-review": "^2.3.3",
     "eslint": "7.10.0",
     "eslint-plugin-mocha": "8.0.0",
