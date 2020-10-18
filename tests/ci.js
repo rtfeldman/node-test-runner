@@ -3,7 +3,6 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const shell = require('shelljs');
 const spawn = require('cross-spawn');
 
 const { fixturesDir, spawnOpts } = require('./util');
@@ -18,11 +17,13 @@ const resultSuccess = 0;
 const resultErrored = 1;
 const resultFailureThreshold = 2;
 
-function execElmTest(args) {
+function execElmTest(args, cwd) {
+  // default: current directory
+  cwd = typeof cwd !== 'undefined' ? cwd : '.';
   return spawn.sync(
     elmtestPath,
     args,
-    Object.assign({ encoding: 'utf-8' }, spawnOpts)
+    Object.assign({ encoding: 'utf-8', cwd: cwd }, spawnOpts)
   );
 }
 
@@ -96,88 +97,58 @@ describe('--version', () => {
 /* Test examples */
 
 describe('Testing elm-test on an example application', () => {
-  before(() => {
-    shell.pushd('example-application');
-  });
-
-  after(() => {
-    shell.popd();
-  });
+  const cwd = 'example-application';
 
   it('Should pass for successful tests', () => {
     const args = path.join('tests', '*Pass*.elm');
-    const runResult = execElmTest([args], false);
+    const runResult = execElmTest([args], cwd);
     assertTestSuccess(runResult);
   }).timeout(60000);
 
   it('Should fail for failing tests', () => {
     const args = path.join('tests', '*Fail*.elm');
-    const runResult = execElmTest([args], false);
+    const runResult = execElmTest([args], cwd);
     assertTestFailure(runResult);
   }).timeout(60000);
 });
 
 describe('Testing elm-test on an example package', () => {
-  before(() => {
-    shell.pushd('example-package');
-  });
-
-  after(() => {
-    shell.popd();
-  });
+  const cwd = 'example-package';
 
   it('Should pass for successful tests', () => {
     const args = path.join('tests', '*Pass*.elm');
-    const runResult = execElmTest([args], false);
+    const runResult = execElmTest([args], cwd);
     assertTestSuccess(runResult);
   }).timeout(60000);
 
   it('Should fail for failing tests', () => {
     const args = path.join('tests', '*Fail*.elm');
-    const runResult = execElmTest([args], false);
+    const runResult = execElmTest([args], cwd);
     assertTestFailure(runResult);
   }).timeout(60000);
 });
 
 describe('Testing elm-test on example-application-src', () => {
-  before(() => {
-    shell.pushd('example-application-src');
-  });
-
-  after(() => {
-    shell.popd();
-  });
+  const cwd = 'example-application-src';
 
   it('Should pass successfully', () => {
-    const runResult = execElmTest(['src'], false);
+    const runResult = execElmTest(['src'], cwd);
     assertTestSuccess(runResult);
   }).timeout(60000);
 });
 
 describe('Testing elm-test on an application with no tests', () => {
-  before(() => {
-    shell.pushd('example-application-no-tests');
-  });
-
-  after(() => {
-    shell.popd();
-  });
+  const cwd = 'example-application-no-tests';
 
   it('Should fail due to missing tests', () => {
-    const runResult = execElmTest();
+    const runResult = execElmTest([], cwd);
     assertTestFailure(runResult);
   }).timeout(60000);
 });
 
 /* ci tests on single elm files */
 describe('Testing elm-test on single Elm files', () => {
-  before(() => {
-    shell.pushd(fixturesDir);
-  });
-
-  after(() => {
-    shell.popd();
-  });
+  const cwd = fixturesDir;
 
   // passing tests
   const passingTestFiles = [
@@ -190,13 +161,13 @@ describe('Testing elm-test on single Elm files', () => {
   for (const testToRun of passingTestFiles) {
     it(`Should succeed for the passing test: ${testToRun}`, () => {
       const itsPath = path.join('tests', 'Passing', testToRun);
-      const runResult = execElmTest([itsPath]);
+      const runResult = execElmTest([itsPath], cwd);
       assertTestSuccess(runResult);
     }).timeout(10000);
   }
 
   it(`Should run every file in tests/Passing`, () => {
-    const filesFound = fs.readdirSync('tests/Passing/');
+    const filesFound = fs.readdirSync(cwd + '/tests/Passing/');
     filesFound.sort();
     assert.deepStrictEqual(filesFound, passingTestFiles);
   });
@@ -216,13 +187,13 @@ describe('Testing elm-test on single Elm files', () => {
   for (const testToRun of failingTestFiles) {
     it(`Should fail for the failing test: ${testToRun}`, () => {
       const itsPath = path.join('tests', 'Failing', testToRun);
-      const runResult = execElmTest([itsPath]);
+      const runResult = execElmTest([itsPath], cwd);
       assertTestFailure(runResult);
     }).timeout(10000);
   }
 
   it(`Should run every file in tests/Failing`, () => {
-    const filesFound = fs.readdirSync('tests/Failing/');
+    const filesFound = fs.readdirSync(cwd + '/tests/Failing/');
     filesFound.sort();
     assert.deepStrictEqual(filesFound, failingTestFiles);
   });
@@ -233,13 +204,13 @@ describe('Testing elm-test on single Elm files', () => {
   for (const testToRun of erroredTestFiles) {
     it(`Should raise a runtime exception for test: ${testToRun}`, () => {
       const itsPath = path.join('tests', 'RuntimeException', testToRun);
-      const runResult = execElmTest([itsPath]);
+      const runResult = execElmTest([itsPath], cwd);
       assertTestErrored(runResult);
     }).timeout(10000);
   }
 
   it(`Should run every file in tests/RuntimeException`, () => {
-    const filesFound = fs.readdirSync('tests/RuntimeException/');
+    const filesFound = fs.readdirSync(cwd + '/tests/RuntimeException/');
     filesFound.sort();
     assert.deepStrictEqual(filesFound, erroredTestFiles);
   });
