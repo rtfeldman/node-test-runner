@@ -310,14 +310,14 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
 
 
 {-| The implementation of this function will be replaced in the generated JS
-with a version that returns `Just value` if `value` is a `Test`.
+with a version that returns `Just value` if `value` is a `Test`, otherwise `Nothing`.
 
-If you rename this function you also need to update the regex that looks for it.
+If you rename or change this function you also need to update the regex that looks for it.
 
 -}
 check : a -> Maybe Test
 check value =
-    Nothing
+    Debug.todo "The regex for replacing this Debug.todo with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 
 {-| Run the tests.
