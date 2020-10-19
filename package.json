@@ -9,10 +9,7 @@
   "scripts": {
     "flow": "flow",
     "lint": "eslint .",
-    "review:elm": "cd elm && elm-review",
-    "review:example-applications": "cd example-application && elm-review && cd ../example-application-no-tests && elm-review && cd ../example-application-src && elm-review",
-    "review:example-packages": "cd example-package && elm-review && cd ../example-package-no-tests && elm-review",
-    "review": "npm run review:elm && npm run review:example-applications && npm run review:example-packages",
+    "review": "cd elm && elm-review",
     "test-only": "mocha tests && cd elm && node ../bin/elm-test",
     "test": "npm run check && npm run test-only",
     "check": "flow check && npm run lint && npm run format:check && npm run review",
