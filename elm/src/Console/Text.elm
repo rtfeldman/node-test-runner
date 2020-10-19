@@ -158,50 +158,6 @@ dark txt =
 
 
 
--- BACKGROUND COLORS --
-
-
-bgRed : String -> Text
-bgRed =
-    Text { foreground = Default, background = Red, style = Normal, modifiers = [] }
-
-
-bgGreen : String -> Text
-bgGreen =
-    Text { foreground = Default, background = Green, style = Normal, modifiers = [] }
-
-
-bgYellow : String -> Text
-bgYellow =
-    Text { foreground = Default, background = Yellow, style = Normal, modifiers = [] }
-
-
-bgBlack : String -> Text
-bgBlack =
-    Text { foreground = Default, background = Black, style = Normal, modifiers = [] }
-
-
-bgBlue : String -> Text
-bgBlue =
-    Text { foreground = Default, background = Blue, style = Normal, modifiers = [] }
-
-
-bgMagenta : String -> Text
-bgMagenta =
-    Text { foreground = Default, background = Magenta, style = Normal, modifiers = [] }
-
-
-bgCyan : String -> Text
-bgCyan =
-    Text { foreground = Default, background = Cyan, style = Normal, modifiers = [] }
-
-
-bgWhite : String -> Text
-bgWhite =
-    Text { foreground = Default, background = White, style = Normal, modifiers = [] }
-
-
-
 -- STYLES --
 
 
