@@ -155,6 +155,7 @@ describe('Testing elm-test on single Elm files', () => {
     'Dependency.elm',
     'One.elm',
     'Several.elm',
+    'TrickyMultilines.elm',
     'Unexposed.elm',
   ];
 
