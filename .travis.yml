@@ -16,6 +16,11 @@ script:
 jobs:
   include:
     - stage: other
-      script: npm run format:check
+      script: npm run check
       node_js: lts/*
-      name: Lint
+      name: Check
+
+cache:
+  npm: true
+  directories:
+    - $HOME/.elm
