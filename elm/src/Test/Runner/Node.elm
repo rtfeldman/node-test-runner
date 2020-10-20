@@ -316,7 +316,12 @@ If you rename or change this function you also need to update the regex that loo
 
 -}
 check : a -> Maybe Test
-check value =
+check =
+    checkHelperReplaceMe___
+
+
+checkHelperReplaceMe___ : a -> b
+checkHelperReplaceMe___ _ =
     Debug.todo "The regex for replacing this Debug.todo with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 

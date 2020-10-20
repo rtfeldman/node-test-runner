@@ -14,14 +14,7 @@ notATest = testTrue
 code : String
 code =
     """
-var $author$project$Test$Runner$Node$check = function (value) {
-  return _Debug_todo(
-    'Test.Runner.Node',
-    {
-      start: {line: 320, column: 5},
-      end: {line: 320, column: 15}
-    })('Long\\nmessage');
-};
+var $author$project$Test$Runner$Node$check = $author$project$Test$Runner$Node$checkHelperReplaceMe___;
 
 var $elm_explorations$test$Test$Internal$Batch = function (a) {
   return {$: 'Batch', a: a};
@@ -35,4 +28,4 @@ testCode =
         \() ->
             code
                 |> Expect.equal
-                    "\nvar $author$project$Test$Runner$Node$check = function (value) {\n  return _Debug_todo(\n    'Test.Runner.Node',\n    {\n      start: {line: 320, column: 5},\n      end: {line: 320, column: 15}\n    })('Long\\nmessage');\n};\n\nvar $elm_explorations$test$Test$Internal$Batch = function (a) {\n  return {$: 'Batch', a: a};\n};\n"
+                    "\nvar $author$project$Test$Runner$Node$check = $author$project$Test$Runner$Node$checkHelperReplaceMe___;\n\nvar $elm_explorations$test$Test$Internal$Batch = function (a) {\n  return {$: 'Batch', a: a};\n};\n"
