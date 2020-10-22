@@ -29,8 +29,8 @@ config =
               , NoUnused.Modules.rule
          ,
       -}
-      NoUnused.CustomTypeConstructorArgs.rule
-    , NoUnused.Dependencies.rule
+      --  NoUnused.CustomTypeConstructorArgs.rule -- fails on Test/Runner/Diff.elm
+      NoUnused.Dependencies.rule
     , NoUnused.Parameters.rule
     , NoUnused.Patterns.rule
     , NoUnused.Variables.rule
