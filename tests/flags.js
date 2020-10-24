@@ -2,7 +2,6 @@
 
 const assert = require('assert');
 const path = require('path');
-const shell = require('shelljs');
 const spawn = require('cross-spawn');
 const fs = require('fs-extra');
 const os = require('os');
@@ -13,10 +12,15 @@ const stripAnsi = require('strip-ansi');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
 const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
-const scratchDir = path.join('fixturesDir', 'scratch');
+const scratchDir = path.join(fixturesDir, 'scratch');
+const scratchElmJsonPath = path.join(scratchDir, 'elm.json');
 
 function elmTestWithYes(args, callback) {
-  const child = spawn(elmTestPath, args, spawnOpts);
+  const child = spawn(
+    elmTestPath,
+    args,
+    Object.assign({ encoding: 'utf-8', cwd: scratchDir }, spawnOpts)
+  );
 
   child.stdin.setEncoding('utf-8');
   child.stdin.write(os.EOL);
@@ -26,57 +30,40 @@ function elmTestWithYes(args, callback) {
   });
 }
 
-function execElmTest(args) {
+function execElmTest(args, cwd = fixturesDir) {
   return spawn.sync(
     elmTestPath,
     args,
-    Object.assign({ encoding: 'utf-8' }, spawnOpts)
+    Object.assign({ encoding: 'utf-8', cwd }, spawnOpts)
   );
 }
 
 describe('flags', () => {
-  before(() => {
-    shell.pushd(fixturesDir);
-  });
-
-  after(() => {
-    shell.popd();
-  });
-
   describe('elm-test init', () => {
     beforeEach(() => {
-      fs.ensureDirSync(scratchDir);
-      shell.pushd(scratchDir);
-    });
-
-    afterEach(() => {
-      shell.popd();
       fs.removeSync(scratchDir);
+      fs.ensureDirSync(scratchDir);
     });
 
     describe('for a PACKAGE', () => {
-      beforeEach(() => {
-        shell.cp(
-          path.join(fixturesDir, 'templates', 'package', 'elm.json'),
-          'elm.json'
-        );
-      });
-
       it('Adds elm-explorations/test', (done) => {
-        var json = JSON.parse(
-          fs.readFileSync('elm.json', { encoding: 'utf-8' })
+        fs.copyFileSync(
+          path.join(fixturesDir, 'templates', 'package', 'elm.json'),
+          scratchElmJsonPath
         );
+
+        const jsonBefore = fs.readJsonSync(scratchElmJsonPath);
         assert.strictEqual(
-          typeof json['test-dependencies']['elm-explorations/test'],
+          typeof jsonBefore['test-dependencies']['elm-explorations/test'],
           'undefined'
         );
 
         elmTestWithYes(['init'], (code) => {
           assert.strictEqual(code, 0);
 
-          json = JSON.parse(fs.readFileSync('elm.json', { encoding: 'utf-8' }));
+          const jsonAfter = fs.readJsonSync(scratchElmJsonPath);
           assert.strictEqual(
-            typeof json['test-dependencies']['elm-explorations/test'],
+            typeof jsonAfter['test-dependencies']['elm-explorations/test'],
             'string'
           );
 
@@ -86,28 +73,28 @@ describe('flags', () => {
     });
 
     describe('for an APPLICATION', () => {
-      beforeEach(() => {
-        shell.cp(
-          path.join(fixturesDir, 'templates', 'application', 'elm.json'),
-          'elm.json'
-        );
-      });
-
       it('Adds elm-explorations/test', (done) => {
-        var json = JSON.parse(
-          fs.readFileSync('elm.json', { encoding: 'utf-8' })
+        fs.copyFileSync(
+          path.join(fixturesDir, 'templates', 'application', 'elm.json'),
+          scratchElmJsonPath
         );
+
+        const jsonBefore = fs.readJsonSync(scratchElmJsonPath);
         assert.strictEqual(
-          typeof json['test-dependencies']['direct']['elm-explorations/test'],
+          typeof jsonBefore['test-dependencies']['direct'][
+            'elm-explorations/test'
+          ],
           'undefined'
         );
 
         elmTestWithYes(['init'], (code) => {
           assert.strictEqual(code, 0);
 
-          json = JSON.parse(fs.readFileSync('elm.json', { encoding: 'utf-8' }));
+          const jsonAfter = fs.readJsonSync(scratchElmJsonPath);
           assert.strictEqual(
-            typeof json['test-dependencies']['direct']['elm-explorations/test'],
+            typeof jsonAfter['test-dependencies']['direct'][
+              'elm-explorations/test'
+            ],
             'string'
           );
 
@@ -119,34 +106,28 @@ describe('flags', () => {
 
   describe('elm-test install', () => {
     beforeEach(() => {
-      fs.ensureDirSync(scratchDir);
-      shell.pushd(scratchDir);
-    });
-
-    afterEach(() => {
-      shell.popd();
       fs.removeSync(scratchDir);
+      fs.ensureDirSync(scratchDir);
     });
 
     it('should fail if the current directory does not contain an elm.json', () => {
-      shell.cp('-R', path.join(fixturesDir, 'install', '*', '.'));
-      shell.rm('-f', 'elm.json');
-
-      const runResult = execElmTest(['install', 'elm/regex']);
-
+      const runResult = execElmTest(['install', 'elm/regex'], scratchDir);
       assert.ok(Number.isInteger(runResult.status));
-      assert.notEqual(runResult.status, 0);
+      assert.notStrictEqual(runResult.status, 0);
     }).timeout(60000);
 
     it('should not allow command injection', () => {
-      shell.cp(
+      fs.copyFileSync(
         path.join(fixturesDir, 'templates', 'application', 'elm.json'),
-        'elm.json'
+        scratchElmJsonPath
       );
       const runResult = spawn.sync(
         elmTestPath,
         ['install', "elm/regex; printf 'FINDME'; printf 'TWICE'"],
-        Object.assign({ encoding: 'utf-8', input: 'y\n' }, spawnOpts)
+        Object.assign(
+          { encoding: 'utf-8', input: 'y\n', cwd: fixturesDir },
+          spawnOpts
+        )
       );
       assert(!runResult.stdout.includes('FINDME'));
       assert(!runResult.stderr.includes('FINDMETWICE'));
@@ -268,8 +249,8 @@ describe('flags', () => {
       //          It may break with new npm versions of elm.
       const ext = process.platform === 'win32' ? '.exe' : '';
       const elmExe = require.resolve('elm/bin/elm' + ext);
-      shell.mkdir('-p', dummyBinPath);
-      shell.cp(elmExe, path.join(dummyBinPath, 'different-elm' + ext));
+      fs.ensureDirSync(dummyBinPath);
+      fs.copyFileSync(elmExe, path.join(dummyBinPath, 'different-elm' + ext));
     });
 
     it("Should fail if the given compiler can't be executed", () => {
@@ -280,7 +261,7 @@ describe('flags', () => {
       ]);
 
       assert.ok(Number.isInteger(runResult.status));
-      assert.notEqual(runResult.status, 0);
+      assert.notStrictEqual(runResult.status, 0);
     }).timeout(5000);
 
     it('Should work with different elm on PATH', () => {
@@ -309,7 +290,7 @@ describe('flags', () => {
       const child = spawn(
         elmTestPath,
         ['--report=json', '--watch', path.join('tests', 'Passing', 'One.elm')],
-        spawnOpts
+        Object.assign({ encoding: 'utf-8', cwd: fixturesDir }, spawnOpts)
       );
 
       let hasRetriggered = false;
@@ -329,14 +310,20 @@ describe('flags', () => {
           const parsedLine = JSON.parse(json);
           if (parsedLine.event !== 'runComplete') return;
           if (!hasRetriggered) {
-            shell.touch(path.join('tests', 'Passing', 'One.elm'));
+            const now = new Date();
+            fs.utimesSync(
+              path.join(fixturesDir, 'tests', 'Passing', 'One.elm'),
+              now,
+              now
+            );
             hasRetriggered = true;
           } else {
             child.kill();
             done();
           }
         } catch (e) {
-          console.warn('Unexpected non-json output: ' + line);
+          child.kill();
+          done(e);
         }
       });
     }).timeout(60000);
