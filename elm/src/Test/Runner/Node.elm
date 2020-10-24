@@ -375,54 +375,66 @@ run { runs, seed, report, globs, paths, processes } possiblyTests =
                         else
                             Just (Test.describe moduleName moduleTests)
                     )
-
-        maybeTest =
-            if List.isEmpty tests then
-                Err
-                    (if List.isEmpty paths then
-                        "I couldn't find any exposed values of type Test in any *.elm files in the tests/ directory of your project's root directory.\n\nTo generate some initial tests to get things going, run elm-test init"
-
-                     else
-                        "I couldn't find any exposed values of type Test in files matching:\n"
-                            ++ String.join "\n" paths
-                            ++ "\n\nMaybe try running elm-test with no arguments?"
-                    )
-
-            else
-                Ok (Test.concat tests)
     in
-    case maybeTest of
-        Ok test ->
-            let
-                fuzzRuns =
-                    Maybe.withDefault defaultRunCount runs
+    if List.isEmpty tests then
+        Platform.worker
+            { init = failInit (noTestsFoundError globs) report
+            , update = \_ model -> ( model, Cmd.none )
+            , subscriptions = \_ -> Sub.none
+            }
 
-                runners =
-                    Test.Runner.fromTest fuzzRuns (Random.initialSeed seed) test
+    else
+        let
+            fuzzRuns =
+                Maybe.withDefault defaultRunCount runs
 
-                wrappedInit =
-                    init
-                        { initialSeed = seed
-                        , processes = processes
-                        , globs = globs
-                        , paths = paths
-                        , fuzzRuns = fuzzRuns
-                        , runners = runners
-                        , report = report
-                        }
-            in
-            Platform.worker
-                { init = wrappedInit
-                , update = update
-                , subscriptions = \_ -> receive Receive
-                }
+            runners =
+                Test.Runner.fromTest fuzzRuns (Random.initialSeed seed) (Test.concat tests)
 
-        Err message ->
-            Platform.worker
-                { init = failInit message report
-                , update = \_ model -> ( model, Cmd.none )
-                , subscriptions = \_ -> Sub.none
-                }
+            wrappedInit =
+                init
+                    { initialSeed = seed
+                    , processes = processes
+                    , globs = globs
+                    , paths = paths
+                    , fuzzRuns = fuzzRuns
+                    , runners = runners
+                    , report = report
+                    }
+        in
+        Platform.worker
+            { init = wrappedInit
+            , update = update
+            , subscriptions = \_ -> receive Receive
+            }
+
+
+noTestsFoundError : List String -> String
+noTestsFoundError globs =
+    if List.isEmpty globs then
+        """
+No exposed values of type Test found in the tests/ directory.
+
+Are there tests in any .elm file in the tests/ directory?
+If not – add some!
+If there are – are they exposed?
+        """
+            |> String.trim
+
+    else
+        """
+No exposed values of type Test found in files matching:
+
+%globs
+
+Are the above patterns correct? Maybe try running elm-test with no arguments?
+
+Are there tests in any of the matched files?
+If not – add some!
+If there are – are they exposed?
+        """
+            |> String.trim
+            |> String.replace "%globs" (String.join "\n" globs)
 
 
 defaultRunCount : Int
