@@ -99,6 +99,30 @@ user
 `,
         ['user']
       ));
+
+    it('handles tokens that look like the start of some other token at the end of a line', () =>
+      testParser(
+        `
+module Main exposing (..)
+
+testFuzz : Test
+testFuzz =
+    fuzz2 string string "empty list etc" <|
+        \name punctuation ->
+            oxfordify "This sentence is empty" "." []
+                |> Expect.equal ""
+                |> Expect.onFail "given an empty list, did not return an empty string"
+testRecord =
+    helper
+        {
+        }
+testSubtraction =
+    helper2 <|
+        2 -
+        1
+`,
+        ['testFuzz', 'testRecord', 'testSubtraction']
+      ));
   });
 
   // Note: It doesn’t matter much what the actual return array looks like. The
