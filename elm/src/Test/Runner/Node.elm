@@ -309,6 +309,37 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
     ( model, Cmd.none )
 
 
+failInit : String -> Report -> Int -> ( Model, Cmd Msg )
+failInit message report _ =
+    let
+        model =
+            { available = Dict.empty
+            , runInfo =
+                { testCount = 0
+                , globs = []
+                , paths = []
+                , fuzzRuns = 0
+                , initialSeed = 0
+                }
+            , processes = 0
+            , nextTestToRun = 0
+            , results = []
+            , testReporter = createReporter report
+            , autoFail = Nothing
+            }
+
+        cmd =
+            Encode.object
+                [ ( "type", Encode.string "SUMMARY" )
+                , ( "exitCode", Encode.int 1 )
+                , ( "message", Encode.string message )
+                ]
+                |> Encode.encode 0
+                |> send
+    in
+    ( model, cmd )
+
+
 {-| The implementation of this function will be replaced in the generated JS
 with a version that returns `Just value` if `value` is a `Test`, otherwise `Nothing`.
 
@@ -345,9 +376,9 @@ run { runs, seed, report, globs, paths, processes } possiblyTests =
                             Just (Test.describe moduleName moduleTests)
                     )
 
-        test =
+        maybeTest =
             if List.isEmpty tests then
-                Test.todo
+                Err
                     (if List.isEmpty paths then
                         "I couldn't find any exposed values of type Test in any *.elm files in the tests/ directory of your project's root directory.\n\nTo generate some initial tests to get things going, run elm-test init"
 
@@ -358,30 +389,40 @@ run { runs, seed, report, globs, paths, processes } possiblyTests =
                     )
 
             else
-                Test.concat tests
-
-        fuzzRuns =
-            Maybe.withDefault defaultRunCount runs
-
-        runners =
-            Test.Runner.fromTest fuzzRuns (Random.initialSeed seed) test
-
-        wrappedInit =
-            init
-                { initialSeed = seed
-                , processes = processes
-                , globs = globs
-                , paths = paths
-                , fuzzRuns = fuzzRuns
-                , runners = runners
-                , report = report
-                }
+                Ok (Test.concat tests)
     in
-    Platform.worker
-        { init = wrappedInit
-        , update = update
-        , subscriptions = \_ -> receive Receive
-        }
+    case maybeTest of
+        Ok test ->
+            let
+                fuzzRuns =
+                    Maybe.withDefault defaultRunCount runs
+
+                runners =
+                    Test.Runner.fromTest fuzzRuns (Random.initialSeed seed) test
+
+                wrappedInit =
+                    init
+                        { initialSeed = seed
+                        , processes = processes
+                        , globs = globs
+                        , paths = paths
+                        , fuzzRuns = fuzzRuns
+                        , runners = runners
+                        , report = report
+                        }
+            in
+            Platform.worker
+                { init = wrappedInit
+                , update = update
+                , subscriptions = \_ -> receive Receive
+                }
+
+        Err message ->
+            Platform.worker
+                { init = failInit message report
+                , update = \_ model -> ( model, Cmd.none )
+                , subscriptions = \_ -> Sub.none
+                }
 
 
 defaultRunCount : Int
