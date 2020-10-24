@@ -66,16 +66,16 @@ describe('flags', () => {
         var json = JSON.parse(
           fs.readFileSync('elm.json', { encoding: 'utf-8' })
         );
-        assert.equal(
+        assert.strictEqual(
           typeof json['test-dependencies']['elm-explorations/test'],
           'undefined'
         );
 
         elmTestWithYes(['init'], (code) => {
-          assert.equal(code, 0);
+          assert.strictEqual(code, 0);
 
           json = JSON.parse(fs.readFileSync('elm.json', { encoding: 'utf-8' }));
-          assert.equal(
+          assert.strictEqual(
             typeof json['test-dependencies']['elm-explorations/test'],
             'string'
           );
@@ -97,16 +97,16 @@ describe('flags', () => {
         var json = JSON.parse(
           fs.readFileSync('elm.json', { encoding: 'utf-8' })
         );
-        assert.equal(
+        assert.strictEqual(
           typeof json['test-dependencies']['direct']['elm-explorations/test'],
           'undefined'
         );
 
         elmTestWithYes(['init'], (code) => {
-          assert.equal(code, 0);
+          assert.strictEqual(code, 0);
 
           json = JSON.parse(fs.readFileSync('elm.json', { encoding: 'utf-8' }));
-          assert.equal(
+          assert.strictEqual(
             typeof json['test-dependencies']['direct']['elm-explorations/test'],
             'string'
           );
@@ -116,6 +116,7 @@ describe('flags', () => {
       }).timeout(60000);
     });
   });
+
   describe('elm-test install', () => {
     beforeEach(() => {
       fs.ensureDirSync(scratchDir);
@@ -234,7 +235,7 @@ describe('flags', () => {
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
-      assert.equal('12345', firstOutput.initialSeed);
+      assert.strictEqual('12345', firstOutput.initialSeed);
     }).timeout(60000);
   });
 
@@ -246,7 +247,7 @@ describe('flags', () => {
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
-      assert.equal('100', firstOutput.fuzzRuns);
+      assert.strictEqual('100', firstOutput.fuzzRuns);
     }).timeout(60000);
 
     it('Should use the provided value', () => {
@@ -257,7 +258,7 @@ describe('flags', () => {
       ]);
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
-      assert.equal('5', firstOutput.fuzzRuns);
+      assert.strictEqual('5', firstOutput.fuzzRuns);
     }).timeout(60000);
   });
 
@@ -289,7 +290,7 @@ describe('flags', () => {
         path.join('tests', 'Passing', 'One.elm'),
       ]);
 
-      assert.equal(runResult.status, 0);
+      assert.strictEqual(runResult.status, 0);
     }).timeout(5000);
 
     it('Should work with local different elm', () => {
@@ -299,7 +300,7 @@ describe('flags', () => {
         path.join('tests', 'Passing', 'One.elm'),
       ]);
 
-      assert.equal(runResult.status, 0);
+      assert.strictEqual(runResult.status, 0);
     }).timeout(5000);
   });
 
