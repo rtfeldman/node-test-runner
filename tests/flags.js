@@ -168,7 +168,6 @@ describe('flags', () => {
 
   describe('--report', () => {
     it('Should be able to report json lines', () => {
-      console.log('cwd', process.cwd());
       const runResult = execElmTest([
         '--report=json',
         path.join('tests', 'Passing', 'One.elm'),
