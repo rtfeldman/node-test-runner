@@ -52,7 +52,6 @@
     "minimist": "^1.2.5",
     "murmur-hash-js": "^1.0.0",
     "split": "^1.0.1",
-    "temp": "^0.9.1",
     "which": "^2.0.2",
     "xmlbuilder": "^15.1.0"
   },
