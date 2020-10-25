@@ -17,13 +17,11 @@ const resultSuccess = 0;
 const resultErrored = 1;
 const resultFailureThreshold = 2;
 
-function execElmTest(args, cwd) {
-  // default: current directory
-  cwd = typeof cwd !== 'undefined' ? cwd : '.';
+function execElmTest(args, cwd = '.') {
   return spawn.sync(
     elmtestPath,
     args,
-    Object.assign({ encoding: 'utf-8', cwd: cwd }, spawnOpts)
+    Object.assign({ encoding: 'utf-8', cwd }, spawnOpts)
   );
 }
 
