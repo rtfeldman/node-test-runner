@@ -35,8 +35,7 @@ config =
             [ "src/Test/Runner/Node/Vendor/Diff.elm"
             , "src/Test/Runner/Node.elm"
             , "src/Test/Runner/Node/Vendor/Console.elm" 
-            , "src/Test/Reporter/TestResults.elm"
-            --, "src/Console/Text.elm"
+            --, "src/Test/Reporter/TestResults.elm" -- isTodo
             ]
     , NoUnused.Modules.rule
     , NoUnused.CustomTypeConstructorArgs.rule
