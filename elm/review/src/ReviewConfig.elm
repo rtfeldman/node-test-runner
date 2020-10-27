@@ -30,7 +30,14 @@ config =
             , "src/Console/Text.elm" -- Monochrome, UseColor are used externally
             ]
 
-    --, NoUnused.Exports.rule
+    , NoUnused.Exports.rule  
+        |> Review.Rule.ignoreErrorsForFiles
+            [ "src/Test/Runner/Node/Vendor/Diff.elm"
+            , "src/Test/Runner/Node.elm"
+            , "src/Test/Runner/Node/Vendor/Console.elm" 
+            , "src/Test/Reporter/TestResults.elm"
+            , "src/Console/Text.elm"
+            ]
     , NoUnused.Modules.rule
     , NoUnused.CustomTypeConstructorArgs.rule
         |> Review.Rule.ignoreErrorsForFiles
