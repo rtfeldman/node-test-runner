@@ -51,7 +51,6 @@
     "minimist": "^1.2.5",
     "murmur-hash-js": "^1.0.0",
     "split": "^1.0.1",
-    "temp": "^0.9.1",
     "which": "^2.0.2",
     "xmlbuilder": "^15.1.0"
   },
@@ -64,7 +63,6 @@
     "flow-bin": "0.135.0",
     "mocha": "7.2.0",
     "prettier": "2.1.2",
-    "shelljs": "0.8.4",
     "strip-ansi": "6.0.0",
     "xml2js": "0.4.23"
   }
