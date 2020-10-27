@@ -4,21 +4,13 @@ module Console.Text exposing
     , Style
     , Text
     , UseColor(..)
-    , black
-    , blue
-    , bold
     , concat
-    , cyan
     , dark
-    , default
     , green
-    , inverted
-    , magenta
     , plain
     , red
     , render
     , underline
-    , white
     , yellow
     )
 
