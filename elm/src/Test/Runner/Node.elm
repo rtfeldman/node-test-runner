@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (run, TestProgram)
+port module Test.Runner.Node exposing (check, run, TestProgram)
 
 {-|
 
@@ -8,7 +8,7 @@ port module Test.Runner.Node exposing (run, TestProgram)
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs run, TestProgram
+@docs check, run, TestProgram
 
 -}
 
@@ -309,33 +309,132 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
     ( model, Cmd.none )
 
 
+failInit : String -> Report -> Int -> ( Model, Cmd Msg )
+failInit message report _ =
+    let
+        model =
+            { available = Dict.empty
+            , runInfo =
+                { testCount = 0
+                , globs = []
+                , paths = []
+                , fuzzRuns = 0
+                , initialSeed = 0
+                }
+            , processes = 0
+            , nextTestToRun = 0
+            , results = []
+            , testReporter = createReporter report
+            , autoFail = Nothing
+            }
+
+        cmd =
+            Encode.object
+                [ ( "type", Encode.string "SUMMARY" )
+                , ( "exitCode", Encode.int 1 )
+                , ( "message", Encode.string message )
+                ]
+                |> Encode.encode 0
+                |> send
+    in
+    ( model, cmd )
+
+
+{-| The implementation of this function will be replaced in the generated JS
+with a version that returns `Just value` if `value` is a `Test`, otherwise `Nothing`.
+
+If you rename or change this function you also need to update the regex that looks for it.
+
+-}
+check : a -> Maybe Test
+check =
+    checkHelperReplaceMe___
+
+
+checkHelperReplaceMe___ : a -> b
+checkHelperReplaceMe___ _ =
+    Debug.todo "The regex for replacing this Debug.todo with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
+
+
 {-| Run the tests.
 -}
-run : RunnerOptions -> Test -> Program Int Model Msg
-run { runs, seed, report, globs, paths, processes } test =
+run : RunnerOptions -> List ( String, List (Maybe Test) ) -> Program Int Model Msg
+run { runs, seed, report, globs, paths, processes } possiblyTests =
     let
-        fuzzRuns =
-            Maybe.withDefault defaultRunCount runs
+        tests =
+            possiblyTests
+                |> List.filterMap
+                    (\( moduleName, maybeModuleTests ) ->
+                        let
+                            moduleTests =
+                                List.filterMap identity maybeModuleTests
+                        in
+                        if List.isEmpty moduleTests then
+                            Nothing
 
-        runners =
-            Test.Runner.fromTest fuzzRuns (Random.initialSeed seed) test
-
-        wrappedInit =
-            init
-                { initialSeed = seed
-                , processes = processes
-                , globs = globs
-                , paths = paths
-                , fuzzRuns = fuzzRuns
-                , runners = runners
-                , report = report
-                }
+                        else
+                            Just (Test.describe moduleName moduleTests)
+                    )
     in
-    Platform.worker
-        { init = wrappedInit
-        , update = update
-        , subscriptions = \_ -> receive Receive
-        }
+    if List.isEmpty tests then
+        Platform.worker
+            { init = failInit (noTestsFoundError globs) report
+            , update = \_ model -> ( model, Cmd.none )
+            , subscriptions = \_ -> Sub.none
+            }
+
+    else
+        let
+            fuzzRuns =
+                Maybe.withDefault defaultRunCount runs
+
+            runners =
+                Test.Runner.fromTest fuzzRuns (Random.initialSeed seed) (Test.concat tests)
+
+            wrappedInit =
+                init
+                    { initialSeed = seed
+                    , processes = processes
+                    , globs = globs
+                    , paths = paths
+                    , fuzzRuns = fuzzRuns
+                    , runners = runners
+                    , report = report
+                    }
+        in
+        Platform.worker
+            { init = wrappedInit
+            , update = update
+            , subscriptions = \_ -> receive Receive
+            }
+
+
+noTestsFoundError : List String -> String
+noTestsFoundError globs =
+    if List.isEmpty globs then
+        """
+No exposed values of type Test found in the tests/ directory.
+
+Are there tests in any .elm file in the tests/ directory?
+If not – add some!
+If there are – are they exposed?
+        """
+            |> String.trim
+
+    else
+        """
+No exposed values of type Test found in files matching:
+
+%globs
+
+Are the above patterns correct? Maybe try running elm-test with no arguments?
+
+Are there tests in any of the matched files?
+If not – add some!
+If there are – are they exposed?
+        """
+            |> String.trim
+            |> String.replace "%globs" (String.join "\n" globs)
 
 
 defaultRunCount : Int
