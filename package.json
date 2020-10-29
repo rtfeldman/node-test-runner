@@ -48,7 +48,6 @@
     "elm-json": "^0.2.8",
     "fs-extra": "^8.1.0",
     "glob": "^7.1.6",
-    "minimist": "^1.2.5",
     "murmur-hash-js": "^1.0.0",
     "split": "^1.0.1",
     "which": "^2.0.2",
