@@ -46,7 +46,7 @@
     "chokidar": "^3.4.2",
     "cross-spawn": "^7.0.3",
     "elm-json": "^0.2.8",
-    "fs-extra": "^8.1.0",
+    "fs-extra": "^9.0.1",
     "glob": "^7.1.6",
     "minimist": "^1.2.5",
     "murmur-hash-js": "^1.0.0",
