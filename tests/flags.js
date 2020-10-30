@@ -255,7 +255,6 @@ describe('flags', () => {
 
     it("Should fail if the given compiler can't be executed", () => {
       const runResult = execElmTest([
-        'elm-test',
         '--compiler=foobar',
         path.join('tests', 'Passing', 'One.elm'),
       ]);
@@ -266,7 +265,6 @@ describe('flags', () => {
 
     it('Should work with different elm on PATH', () => {
       const runResult = execElmTest([
-        'elm-test',
         '--compiler=different-elm',
         path.join('tests', 'Passing', 'One.elm'),
       ]);
@@ -276,7 +274,6 @@ describe('flags', () => {
 
     it('Should work with local different elm', () => {
       const runResult = execElmTest([
-        'elm-test',
         '--compiler=./dummy-bin/different-elm',
         path.join('tests', 'Passing', 'One.elm'),
       ]);
