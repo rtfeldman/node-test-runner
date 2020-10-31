@@ -1,6 +1,6 @@
 module Test.Runner.Node.Vendor.Diff exposing
     ( Change(..)
-    , diff, diffLines
+    , diff
     )
 
 {-| Compares two list and returns how they have changed.
@@ -77,38 +77,6 @@ type BugReport
     = CannotGetA Int
     | CannotGetB Int
     | UnexpectedPath ( Int, Int ) (List ( Int, Int ))
-
-
-{-| Compares two text.
-
-Giving the following text
-
-    a =
-        """aaa
-    bbb
-    ddd"""
-
-    b =
-        """zzz
-    aaa
-    ccc
-    ddd"""
-
-results in
-
-    [ Added "zzz"
-    , NoChange "aaa"
-    , Removed "bbb"
-    , Added "ccc"
-    , NoChange "ddd"
-    ]
-
-.
-
--}
-diffLines : String -> String -> List (Change String)
-diffLines a b =
-    diff (String.lines a) (String.lines b)
 
 
 {-| Compares general lists.

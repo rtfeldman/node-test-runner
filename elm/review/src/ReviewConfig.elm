@@ -32,10 +32,8 @@ config =
 
     , NoUnused.Exports.rule  
         |> Review.Rule.ignoreErrorsForFiles
-            [ "src/Test/Runner/Node/Vendor/Diff.elm"
-            , "src/Test/Runner/Node.elm"
-            --, "src/Test/Runner/Node/Vendor/Console.elm" 
-            --, "src/Test/Reporter/TestResults.elm" -- isTodo
+            [ "x" --"src/Test/Runner/Node/Vendor/Diff.elm"
+            , "src/Test/Runner/Node.elm" -- run, TestProgram are used externally
             ]
     , NoUnused.Modules.rule
     , NoUnused.CustomTypeConstructorArgs.rule
