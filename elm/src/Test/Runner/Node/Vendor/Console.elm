@@ -1,4 +1,4 @@
-module Test.Runner.Node.Vendor.Console exposing (bgBlack, bgBlue, bgCyan, bgGreen, bgMagenta, bgRed, bgWhite, bgYellow, black, blue, bold, colorsInverted, cyan, dark, green, magenta, plain, red, underline, white, yellow)
+module Test.Runner.Node.Vendor.Console exposing (bgBlack, bgBlue, bgCyan, bgGreen, bgMagenta, bgRed, bgWhite, bgYellow, black, blue, bold, colorsInverted, cyan, dark, green, magenta, red, underline, white, yellow)
 
 {-| -}
 
@@ -42,12 +42,6 @@ module Test.Runner.Node.Vendor.Console exposing (bgBlack, bgBlue, bgCyan, bgGree
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
 
-
-{-| Display the text in the console's default style.
--}
-plain : String -> String
-plain str =
-    String.join "" [ "\u{001B}[0m", str, "\u{001B}[0m" ]
 
 
 {-| Make the text darker.
