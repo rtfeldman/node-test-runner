@@ -110,7 +110,7 @@ reportSummary { testCount, duration, failed } autoFail =
 
                 -- Would be nice to have this provided from elm-package.json of tests
                 , ( "@tests", Encode.int testCount )
-                , ( "@failed", Encode.int failed )
+                , ( "@failures", Encode.int failed )
                 , ( "@errors", Encode.int 0 )
                 , ( "@time", Encode.float duration )
                 , ( "testcase", Encode.list identity extraFailures )
