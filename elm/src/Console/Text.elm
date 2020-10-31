@@ -4,21 +4,13 @@ module Console.Text exposing
     , Style
     , Text
     , UseColor(..)
-    , black
-    , blue
-    , bold
     , concat
-    , cyan
     , dark
-    , default
     , green
-    , inverted
-    , magenta
     , plain
     , red
     , render
     , underline
-    , white
     , yellow
     )
 
@@ -92,11 +84,6 @@ plain =
 -- FOREGROUND COLORS --
 
 
-default : String -> Text
-default =
-    Text { foreground = Default, background = Default, style = Normal, modifiers = [] }
-
-
 red : String -> Text
 red =
     Text { foreground = Red, background = Default, style = Normal, modifiers = [] }
@@ -112,41 +99,6 @@ yellow =
     Text { foreground = Yellow, background = Default, style = Normal, modifiers = [] }
 
 
-black : String -> Text
-black =
-    Text { foreground = Black, background = Default, style = Normal, modifiers = [] }
-
-
-blue : String -> Text
-blue =
-    Text { foreground = Blue, background = Default, style = Normal, modifiers = [] }
-
-
-magenta : String -> Text
-magenta =
-    Text { foreground = Magenta, background = Default, style = Normal, modifiers = [] }
-
-
-cyan : String -> Text
-cyan =
-    Text { foreground = Cyan, background = Default, style = Normal, modifiers = [] }
-
-
-white : String -> Text
-white =
-    Text { foreground = White, background = Default, style = Normal, modifiers = [] }
-
-
-inverted : Text -> Text
-inverted txt =
-    case txt of
-        Text styles str ->
-            Text { styles | modifiers = Inverted :: styles.modifiers } str
-
-        Texts texts ->
-            Texts (List.map inverted texts)
-
-
 dark : Text -> Text
 dark txt =
     case txt of
@@ -159,16 +111,6 @@ dark txt =
 
 
 -- STYLES --
-
-
-bold : Text -> Text
-bold txt =
-    case txt of
-        Text styles str ->
-            Text { styles | style = Bold } str
-
-        Texts texts ->
-            Texts (List.map dark texts)
 
 
 underline : Text -> Text

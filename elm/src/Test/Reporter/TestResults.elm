@@ -4,7 +4,6 @@ module Test.Reporter.TestResults exposing
     , SummaryInfo
     , TestResult
     , isFailure
-    , isTodo
     , outcomesFromExpectations
     )
 
@@ -40,16 +39,6 @@ type alias Failure =
     , description : String
     , reason : Reason
     }
-
-
-isTodo : Outcome -> Bool
-isTodo outcome =
-    case outcome of
-        Todo _ ->
-            True
-
-        _ ->
-            False
 
 
 isFailure : Outcome -> Bool

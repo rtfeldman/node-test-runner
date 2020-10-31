@@ -151,7 +151,7 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
                 ( Just failure, 0, _ ) ->
                     Err ( yellow, "TEST RUN INCOMPLETE", " because " ++ failure )
 
-                ( _, _, _ ) ->
+                _ ->
                     Err ( red, "TEST RUN FAILED", "" )
 
         headline =

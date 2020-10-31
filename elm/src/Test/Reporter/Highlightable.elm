@@ -1,4 +1,4 @@
-module Test.Reporter.Highlightable exposing (Highlightable, diffLists, fromDiff, map, resolve)
+module Test.Reporter.Highlightable exposing (Highlightable, diffLists, map, resolve)
 
 import Test.Runner.Node.Vendor.Diff as Diff exposing (Change(..))
 

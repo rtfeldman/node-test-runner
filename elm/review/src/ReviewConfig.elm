@@ -24,20 +24,24 @@ import Review.Rule exposing (Rule)
 
 config : List Rule
 config =
-    [ NoUnused.Variables.rule
+    [ NoUnused.CustomTypeConstructors.rule []
+        |> Review.Rule.ignoreErrorsForFiles
+            [ "src/Test/Reporter/Reporter.elm" --ConsoleReport, JsonReport, JunitReport are used externally
+            , "src/Console/Text.elm" -- Monochrome, UseColor are used externally
+            ]
+    , NoUnused.Exports.rule
+        |> Review.Rule.ignoreErrorsForFiles
+            [ "x" --"src/Test/Runner/Node/Vendor/Diff.elm"
+            , "src/Test/Runner/Node.elm" -- run, TestProgram are used externally
+            ]
+    , NoUnused.Modules.rule
+    , NoUnused.CustomTypeConstructorArgs.rule
+        |> Review.Rule.ignoreErrorsForFiles
+            [ "src/Test/Runner/Node/Vendor/Diff.elm" -- UnexpectedPath is used for reporting errors
+            , "src/Test/Runner/JsMessage.elm" -- Test is used for JSON decoding
+            ]
+    , NoUnused.Dependencies.rule
+    , NoUnused.Parameters.rule
+    , NoUnused.Patterns.rule
+    , NoUnused.Variables.rule
     ]
-
-
-
-{-
-   config =
-       [ NoUnused.CustomTypeConstructors.rule []
-       , NoUnused.CustomTypeConstructorArgs.rule
-       , NoUnused.Dependencies.rule
-       , NoUnused.Exports.rule
-       , NoUnused.Modules.rule
-       , NoUnused.Parameters.rule
-       , NoUnused.Patterns.rule
-       , NoUnused.Variables.rule
-       ]
--}
