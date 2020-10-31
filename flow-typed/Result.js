@@ -2,4 +2,4 @@
 
 type Result<Error, Value> =
   | { tag: 'Ok', value: Value }
-  | { tag: 'Error', message: Error };
+  | { tag: 'Error', error: Error };
