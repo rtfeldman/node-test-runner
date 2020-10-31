@@ -82,6 +82,8 @@ plain =
 
 
 -- FOREGROUND COLORS --
+
+
 red : String -> Text
 red =
     Text { foreground = Red, background = Default, style = Normal, modifiers = [] }

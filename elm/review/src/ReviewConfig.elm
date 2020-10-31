@@ -29,8 +29,7 @@ config =
             [ "src/Test/Reporter/Reporter.elm" --ConsoleReport, JsonReport, JunitReport are used externally
             , "src/Console/Text.elm" -- Monochrome, UseColor are used externally
             ]
-
-    , NoUnused.Exports.rule  
+    , NoUnused.Exports.rule
         |> Review.Rule.ignoreErrorsForFiles
             [ "x" --"src/Test/Runner/Node/Vendor/Diff.elm"
             , "src/Test/Runner/Node.elm" -- run, TestProgram are used externally

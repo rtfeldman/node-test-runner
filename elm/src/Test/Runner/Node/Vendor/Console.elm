@@ -43,7 +43,6 @@ module Test.Runner.Node.Vendor.Console exposing (bgBlack, bgBlue, bgCyan, bgGree
 -}
 
 
-
 {-| Make the text darker.
 
 This can be used with other text modifiers, such as color.
