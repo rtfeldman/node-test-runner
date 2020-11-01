@@ -387,6 +387,16 @@ describe('flags', () => {
   });
 
   describe('--watch', () => {
+    it('Should fail if given a value', () => {
+      const runResult = execElmTest([
+        '--watch=always',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    }).timeout(5000);
+
     it('Should re-run tests if a test file is touched', (done) => {
       const child = spawn(
         elmTestPath,
