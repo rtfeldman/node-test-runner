@@ -269,6 +269,17 @@ describe('flags', () => {
       assert.notStrictEqual(runResult.status, 0);
     }).timeout(5000);
 
+    it('Should fail if given a negative integer', () => {
+      const runResult = execElmTest([
+        '--seed',
+        '-5',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    }).timeout(5000);
+
     it('Should use and, thus, show the proper seed in the JSON report', () => {
       const runResult = execElmTest([
         '--report=json',
@@ -286,6 +297,17 @@ describe('flags', () => {
       const runResult = execElmTest([
         '--fuzz',
         '0xaf',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    }).timeout(5000);
+
+    it('Should fail if given a negative integer', () => {
+      const runResult = execElmTest([
+        '--fuzz',
+        '-5',
         path.join('tests', 'Passing', 'One.elm'),
       ]);
 
