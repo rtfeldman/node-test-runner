@@ -47,7 +47,7 @@ type alias InitArgs =
 
 type alias RunnerOptions =
     { seed : Int
-    , runs : Maybe Int
+    , runs : Int
     , report : Report
     , globs : List String
     , paths : List String
@@ -385,11 +385,8 @@ run { runs, seed, report, globs, paths, processes } possiblyTests =
 
     else
         let
-            fuzzRuns =
-                Maybe.withDefault defaultRunCount runs
-
             runners =
-                Test.Runner.fromTest fuzzRuns (Random.initialSeed seed) (Test.concat tests)
+                Test.Runner.fromTest runs (Random.initialSeed seed) (Test.concat tests)
 
             wrappedInit =
                 init
@@ -397,7 +394,7 @@ run { runs, seed, report, globs, paths, processes } possiblyTests =
                     , processes = processes
                     , globs = globs
                     , paths = paths
-                    , fuzzRuns = fuzzRuns
+                    , fuzzRuns = runs
                     , runners = runners
                     , report = report
                     }
@@ -435,11 +432,6 @@ If there are – are they exposed?
         """
             |> String.trim
             |> String.replace "%globs" (String.join "\n" globs)
-
-
-defaultRunCount : Int
-defaultRunCount =
-    100
 
 
 port receive : (Decode.Value -> msg) -> Sub msg
