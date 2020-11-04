@@ -174,11 +174,6 @@ describe('flags', () => {
       // Checking against a fixture is brittle here
       // For now, check that the output is non-empty.
       assert.ok(runResult.stdout.length > 0);
-
-      // Helpful aliases.
-      assert.strictEqual(execElmTest(['-h']).stdout, runResult.stdout);
-      assert.strictEqual(execElmTest(['-help']).stdout, runResult.stdout);
-      assert.strictEqual(execElmTest(['help']).stdout, runResult.stdout);
     }).timeout(60000);
 
     it('Should exit indicating success (see #359)', () => {
