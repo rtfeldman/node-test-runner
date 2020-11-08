@@ -66,7 +66,6 @@ import Elm.Kernel.Char
 
     '\''
 
-    '🙈' -- '🙈'
 
 **Note 1:** You _cannot_ use single quotes around multiple characters like in
 JavaScript. This is how we distinguish [`String`](String#String) and `Char`
@@ -92,10 +91,9 @@ type Char
 
     isUpper 'A' == True
 
-    isUpper 'B'
-        == True
-        ... isUpper 'Z'
-        == True
+    isUpper 'B' == True
+    ... 
+    isUpper 'Z' == True
 
     isUpper '0' == False
 
@@ -119,10 +117,9 @@ isUpper char =
 
     isLower 'a' == True
 
-    isLower 'b'
-        == True
-        ... isLower 'z'
-        == True
+    isLower 'b' == True
+    ... 
+    isLower 'z' == True
 
     isLower '0' == False
 
@@ -192,10 +189,9 @@ isAlphaNum char =
 
     isDigit '0' == True
 
-    isDigit '1'
-        == True
-        ... isDigit '9'
-        == True
+    isDigit '1' == True
+    ... 
+    isDigit '9' == True
 
     isDigit 'a' == False
 
@@ -217,10 +213,9 @@ isDigit char =
 
     isOctDigit '0' == True
 
-    isOctDigit '1'
-        == True
-        ... isOctDigit '7'
-        == True
+    isOctDigit '1' == True
+    ... 
+    isOctDigit '7' == True
 
     isOctDigit '8' == False
 
@@ -247,8 +242,8 @@ isHexDigit char =
             toCode char
     in
     (0x30 <= code && code <= 0x39)
-        || (0x41 <= code && code <= 0x46)
-        || (0x61 <= code && code <= 0x66)
+    || (0x41 <= code && code <= 0x46)
+    || (0x61 <= code && code <= 0x66)
 
 
 
