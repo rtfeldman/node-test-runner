@@ -150,6 +150,12 @@ describe('flags', () => {
       assert(!runResult.stdout.includes('FINDME'));
       assert(!runResult.stderr.includes('FINDMETWICE'));
     }).timeout(60000);
+
+    it('should exit with success if package already installed', () => {
+      const runResult = execElmTest(['install', 'elm-explorations/test']);
+      console.log(runResult);
+      assert.strictEqual(runResult.status, 0);
+    }).timeout(60000);
   });
 
   describe('elm-test make', () => {
