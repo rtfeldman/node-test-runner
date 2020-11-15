@@ -95,6 +95,8 @@ alreadyLoggedInTests =
 
 Some prefer to expose a single `Test` value and group everything using [describe](https://package.elm-lang.org/packages/elm-explorations/test/latest/Test#describe). Some prefer to expose several `Test` values.
 
+**Also check out the [elm-explorations/test quick-start](https://github.com/elm-explorations/test#quick-start)!**
+
 ## Command Line Arguments
 
 This is the most common commands and flags. Run `elm-test --help` for an exhaustive list.
