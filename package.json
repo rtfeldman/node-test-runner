@@ -8,7 +8,7 @@
   },
   "scripts": {
     "flow": "flow",
-    "lint": "eslint .",
+    "lint": "eslint --report-unused-disable-directives .",
     "review": "cd elm && elm-review",
     "test-only": "mocha tests && cd elm && node ../bin/elm-test",
     "test": "npm run check && npm run test-only",
