@@ -43,5 +43,4 @@ jobs:
         run: npx --no-install mocha tests
 
       - name: elm-test
-        run: node ../bin/elm-test
-        working-directory: elm
+        run: npm run elm-test
