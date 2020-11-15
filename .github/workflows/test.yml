@@ -12,8 +12,10 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
-        node-version: [10.x, 12.x, 14.x, 15.x]
+        # os: [ubuntu-latest, macOS-latest, windows-latest]
+        os: [windows-latest]
+        # node-version: [10.x, 12.x, 14.x, 15.x]
+        node-version: [15.x]
 
     steps:
       - uses: actions/checkout@v2
@@ -41,6 +43,8 @@ jobs:
 
       - name: Mocha
         run: npx --no-install mocha tests
+        env:
+          ELM_TEST_LOG_PARSE_ERRORS: 1
 
       - name: elm-test
         run: npm run elm-test
