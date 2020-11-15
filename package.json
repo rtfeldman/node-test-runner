@@ -61,7 +61,6 @@
     "eslint": "7.12.1",
     "eslint-plugin-mocha": "8.0.0",
     "flow-bin": "0.137.0",
-    "fs-extra": "9.0.1",
     "mocha": "8.2.0",
     "prettier": "2.1.2",
     "strip-ansi": "6.0.0",
