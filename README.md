@@ -170,3 +170,8 @@ language: elm
 elm:
   - 0.19.1
 ```
+
+Here are some examples of running tests on CI servers:
+
+- [`travis.yml`](https://github.com/rtfeldman/elm-css/blob/master/.travis.yml)
+- [`appveyor.yml`](https://github.com/rtfeldman/elm-css/blob/master/appveyor.yml)
