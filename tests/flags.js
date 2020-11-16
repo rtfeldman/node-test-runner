@@ -7,8 +7,8 @@ const fs = require('fs');
 const os = require('os');
 const xml2js = require('xml2js');
 const readline = require('readline');
+const rimraf = require('rimraf');
 const stripAnsi = require('strip-ansi');
-const { rmdirSyncRecursive } = require('../lib/rimraf');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
 const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
@@ -40,7 +40,9 @@ function execElmTest(args, cwd = fixturesDir) {
 
 function ensureEmptyDir(dirPath) {
   if (fs.existsSync(dirPath)) {
-    rmdirSyncRecursive(dirPath);
+    // We can replace this with `fs.rmdirSync(dir, { recursive: true })`
+    // once Node.js 10 is EOL 2021-04-30 and support for Node.js 10 is dropped.
+    rimraf.sync(dirPath);
   }
   fs.mkdirSync(dirPath, { recursive: true });
 }
