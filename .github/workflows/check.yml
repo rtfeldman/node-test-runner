@@ -14,6 +14,9 @@ jobs:
       matrix:
         node-version: [15.x]
 
+    env:
+      ELM_HOME: '${{ github.workspace }}/.elm'
+
     steps:
       - uses: actions/checkout@v2
 
@@ -28,11 +31,11 @@ jobs:
           path: node_modules
           key: node_modules-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
 
-      - name: Cache ~/.elm
+      - name: Cache ELM_HOME
         uses: actions/cache@v2
         with:
-          path: ~/.elm
-          key: elm-${{ hashFiles('elm/**/elm.json', 'example-*/**/elm.json', 'tests/**/elm.json') }}
+          path: '${{ env.ELM_HOME }}'
+          key: elm-${{ matrix.os }}-${{ hashFiles('elm/**/elm.json', 'example-*/**/elm.json', 'tests/**/elm.json') }}
 
       - name: npm ci
         if: steps.cache-node_modules.outputs.cache-hit != 'true'
