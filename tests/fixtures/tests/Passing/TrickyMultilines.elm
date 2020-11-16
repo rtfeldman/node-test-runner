@@ -20,7 +20,8 @@ var $elm_explorations$test$Test$Internal$Batch = function (a) {
   return {$: 'Batch', a: a};
 };
 """
-        -- Remove CR on Windows.
+        -- Remove CR on Windows to match manually escaped newlines in the
+        -- testCode expectation below.
         |> String.replace "\u{000D}" ""
 
 
