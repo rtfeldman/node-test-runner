@@ -34,7 +34,7 @@ jobs:
           key: node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
 
       - name: ls before cache
-        run: ls /elm
+        run: node ls.js
 
       - name: Cache ELM_HOME
         uses: actions/cache@v2
@@ -43,7 +43,7 @@ jobs:
           key: elm-${{ hashFiles('elm/**/elm.json', 'example-*/**/elm.json', 'tests/**/elm.json') }}
 
       - name: ls after cache
-        run: ls /elm
+        run: node ls.js
 
       - name: npm ci
         if: steps.cache-node_modules.outputs.cache-hit != 'true'
@@ -56,4 +56,4 @@ jobs:
         run: npm run elm-test
 
       - name: ls at very end
-        run: ls /elm
+        run: node ls.js
