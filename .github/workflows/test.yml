@@ -17,7 +17,7 @@ jobs:
         node-version: [15.x]
 
     env:
-      ELM_HOME: /elm
+      ELM_HOME: '${{ github.workspace }}/.elm'
 
     steps:
       - uses: actions/checkout@v2
@@ -39,7 +39,7 @@ jobs:
       - name: Cache ELM_HOME
         uses: actions/cache@v2
         with:
-          path: /elm
+          path: '${{ github.workspace }}/.elm'
           key: elm-${{ hashFiles('elm/**/elm.json', 'example-*/**/elm.json', 'tests/**/elm.json') }}
 
       - name: ls after cache
