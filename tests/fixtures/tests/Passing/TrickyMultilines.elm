@@ -20,6 +20,8 @@ var $elm_explorations$test$Test$Internal$Batch = function (a) {
   return {$: 'Batch', a: a};
 };
 """
+        -- Remove CR on Windows.
+        |> String.replace "\u{000D}" ""
 
 
 testCode : Test
