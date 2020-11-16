@@ -30,7 +30,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: node_modules
-          key: node_modules-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
+          key: node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
 
       - name: Cache ELM_HOME
         uses: actions/cache@v2
