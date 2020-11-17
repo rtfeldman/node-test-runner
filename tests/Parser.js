@@ -123,6 +123,32 @@ testSubtraction =
 `,
         ['testFuzz', 'testRecord', 'testSubtraction']
       ));
+
+    it('handles a module definition with CRLF', () =>
+      testParser(
+        `module Main exposing
+    (one
+    , two
+    )
+`.replace(/\n/g, '\r\n'),
+        ['one', 'two']
+      ));
+
+    it('handles finds test in a file with `exposting (..)` and CRLF', () =>
+      testParser(
+        `module Main exposing (..)
+
+import Test exposing (Test, test)
+
+one =
+    test "one" something
+
+two : Test
+two =
+    test "two" somethingElse
+`.replace(/\n/g, '\r\n'),
+        ['one', 'two']
+      ));
   });
 
   // Note: It doesn’t matter much what the actual return array looks like. The
