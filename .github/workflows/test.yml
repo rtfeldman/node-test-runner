@@ -36,11 +36,16 @@ jobs:
         uses: actions/cache@v2
         with:
           path: '${{ env.ELM_HOME }}'
-          key: elm-${{ matrix.os }}-${{ hashFiles('elm/**/elm.json', 'example-*/**/elm.json', 'tests/**/elm.json') }}
+          key: elm-${{ matrix.os }}-${{ hashFiles('elm-tooling.json', 'elm/**/elm.json', 'example-*/**/elm.json', 'tests/**/elm.json') }}
 
       - name: npm ci
         if: steps.cache-node_modules.outputs.cache-hit != 'true'
         run: npm ci
+        env:
+          NO_ELM_TOOLING_INSTALL: 1
+
+      - name: elm-tooling install
+        run: npx --no-install elm-tooling install
 
       - name: Mocha
         run: npx --no-install mocha tests
