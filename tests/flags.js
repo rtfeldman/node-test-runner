@@ -3,12 +3,12 @@
 const assert = require('assert');
 const path = require('path');
 const spawn = require('cross-spawn');
-const fs = require('fs-extra');
+const fs = require('fs');
 const os = require('os');
 const xml2js = require('xml2js');
 const readline = require('readline');
+const rimraf = require('rimraf');
 const stripAnsi = require('strip-ansi');
-
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
 const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
@@ -38,11 +38,23 @@ function execElmTest(args, cwd = fixturesDir) {
   );
 }
 
+function ensureEmptyDir(dirPath) {
+  if (fs.existsSync(dirPath)) {
+    // We can replace this with `fs.rmdirSync(dir, { recursive: true })`
+    // once Node.js 10 is EOL 2021-04-30 and support for Node.js 10 is dropped.
+    rimraf.sync(dirPath);
+  }
+  fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
 describe('flags', () => {
   describe('elm-test init', () => {
     beforeEach(() => {
-      fs.removeSync(scratchDir);
-      fs.ensureDirSync(scratchDir);
+      ensureEmptyDir(scratchDir);
     });
 
     it('Should fail if given extra arguments', () => {
@@ -58,7 +70,7 @@ describe('flags', () => {
           scratchElmJsonPath
         );
 
-        const jsonBefore = fs.readJsonSync(scratchElmJsonPath);
+        const jsonBefore = readJson(scratchElmJsonPath);
         assert.strictEqual(
           typeof jsonBefore['test-dependencies']['elm-explorations/test'],
           'undefined'
@@ -67,7 +79,7 @@ describe('flags', () => {
         elmTestWithYes(['init'], (code) => {
           assert.strictEqual(code, 0);
 
-          const jsonAfter = fs.readJsonSync(scratchElmJsonPath);
+          const jsonAfter = readJson(scratchElmJsonPath);
           assert.strictEqual(
             typeof jsonAfter['test-dependencies']['elm-explorations/test'],
             'string'
@@ -85,7 +97,7 @@ describe('flags', () => {
           scratchElmJsonPath
         );
 
-        const jsonBefore = fs.readJsonSync(scratchElmJsonPath);
+        const jsonBefore = readJson(scratchElmJsonPath);
         assert.strictEqual(
           typeof jsonBefore['test-dependencies']['direct'][
             'elm-explorations/test'
@@ -96,7 +108,7 @@ describe('flags', () => {
         elmTestWithYes(['init'], (code) => {
           assert.strictEqual(code, 0);
 
-          const jsonAfter = fs.readJsonSync(scratchElmJsonPath);
+          const jsonAfter = readJson(scratchElmJsonPath);
           assert.strictEqual(
             typeof jsonAfter['test-dependencies']['direct'][
               'elm-explorations/test'
@@ -112,8 +124,7 @@ describe('flags', () => {
 
   describe('elm-test install', () => {
     beforeEach(() => {
-      fs.removeSync(scratchDir);
-      fs.ensureDirSync(scratchDir);
+      ensureEmptyDir(scratchDir);
     });
 
     it('should fail if given no arguments', () => {
@@ -344,7 +355,7 @@ describe('flags', () => {
       //          It may break with new npm versions of elm.
       const ext = process.platform === 'win32' ? '.exe' : '';
       const elmExe = require.resolve('elm/bin/elm' + ext);
-      fs.ensureDirSync(dummyBinPath);
+      fs.mkdirSync(dummyBinPath, { recursive: true });
       fs.copyFileSync(elmExe, path.join(dummyBinPath, 'different-elm' + ext));
     });
 
