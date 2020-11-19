@@ -1,11 +1,8 @@
-[ignore]
-
-.*elm.json
-
-[include]
-
-[libs]
-
 [options]
+include_warnings=true
+exact_by_default=true
 
-module.ignore_non_literal_requires=true
+[lints]
+all=error
+untyped-import=off
+unclear-type=off
