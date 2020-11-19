@@ -11,7 +11,8 @@ const rimraf = require('rimraf');
 const stripAnsi = require('strip-ansi');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
-const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
+const rootDir = path.join(__dirname, '..');
+const elmTestPath = path.join(rootDir, 'bin', 'elm-test');
 const scratchDir = path.join(fixturesDir, 'scratch');
 const scratchElmJsonPath = path.join(scratchDir, 'elm.json');
 
@@ -140,7 +141,7 @@ describe('flags', () => {
     }).timeout(60000);
 
     it('should fail if the current directory does not contain an elm.json', () => {
-      const runResult = execElmTest(['install', 'elm/regex'], scratchDir);
+      const runResult = execElmTest(['install', 'elm/regex'], rootDir);
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
     }).timeout(60000);
@@ -164,7 +165,6 @@ describe('flags', () => {
 
     it('should exit with success if package already installed', () => {
       const runResult = execElmTest(['install', 'elm-explorations/test']);
-      console.log(runResult);
       assert.strictEqual(runResult.status, 0);
     }).timeout(60000);
   });
