@@ -1,0 +1,3 @@
+/full/path/to/elm.json
+Failed to read elm.json:
+Expected "source-directories" to contain at least one item, but it is empty.
