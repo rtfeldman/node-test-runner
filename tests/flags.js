@@ -489,6 +489,16 @@ describe('flags', () => {
     }).timeout(60000);
   });
 
+  describe('finding elm.json', () => {
+    it('find an elm.json up the directory tree', () => {
+      const runResult = execElmTest(
+        ['One.elm'],
+        path.join(fixturesDir, 'tests', 'Passing')
+      );
+      assert.strictEqual(runResult.status, 0);
+    }).timeout(60000);
+  });
+
   describe('unknown flags', () => {
     it('Should fail on unknown short flag', () => {
       const runResult = execElmTest([
