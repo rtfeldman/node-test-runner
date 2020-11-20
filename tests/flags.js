@@ -48,6 +48,11 @@ function ensureEmptyDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+function touch(filePath) {
+  const now = new Date();
+  fs.utimesSync(filePath, now, now);
+}
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -140,7 +145,7 @@ describe('flags', () => {
       assert.notStrictEqual(runResult.status, 0);
     }).timeout(60000);
 
-    it('should fail if the current directory does not contain an elm.json', () => {
+    it('should fail if no elm.json can be found', () => {
       const runResult = execElmTest(['install', 'elm/regex'], rootDir);
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
@@ -409,14 +414,14 @@ describe('flags', () => {
       assert.notStrictEqual(runResult.status, 0);
     }).timeout(5000);
 
-    it('Should re-run tests if a test file is touched', (done) => {
+    it('Should re-run tests if files change', (done) => {
       const child = spawn(
         elmTestPath,
         ['--report=json', '--watch', path.join('tests', 'Passing', 'One.elm')],
         Object.assign({ encoding: 'utf-8', cwd: fixturesDir }, spawnOpts)
       );
 
-      let hasRetriggered = false;
+      let runsExecuted = 0;
 
       child.on('close', (code, signal) => {
         // don't send error when killed after test passed
@@ -427,22 +432,29 @@ describe('flags', () => {
       const reader = readline.createInterface({ input: child.stdout });
       reader.on('line', (line) => {
         try {
-          const json = stripAnsi('' + line);
-          // skip expected non-json
-          if (json === 'Watching for changes...') return;
-          const parsedLine = JSON.parse(json);
+          const parsedLine = JSON.parse(stripAnsi('' + line));
           if (parsedLine.event !== 'runComplete') return;
-          if (!hasRetriggered) {
-            const now = new Date();
-            fs.utimesSync(
-              path.join(fixturesDir, 'tests', 'Passing', 'One.elm'),
-              now,
-              now
-            );
-            hasRetriggered = true;
-          } else {
-            child.kill();
-            done();
+          runsExecuted++;
+          switch (runsExecuted) {
+            case 1:
+              touch(path.join(fixturesDir, 'tests', 'Passing', 'One.elm'));
+              break;
+            case 2:
+              touch(path.join(fixturesDir, 'src', 'Port1.elm'));
+              break;
+            case 3:
+              touch(path.join(fixturesDir, 'elm.json'));
+              setTimeout(() => touch(path.join(fixturesDir, 'elm.json')), 100);
+              break;
+            case 4:
+              child.kill();
+              done();
+              break;
+            default:
+              child.kill();
+              done(
+                new Error(`More runs executed than expected: ${runsExecuted}`)
+              );
           }
         } catch (e) {
           child.kill();
