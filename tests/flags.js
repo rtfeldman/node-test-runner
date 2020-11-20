@@ -431,15 +431,16 @@ describe('flags', () => {
         Object.assign({ encoding: 'utf-8', cwd: fixturesDir }, spawnOpts)
       );
 
-      let runsExecuted = 0;
-
       child.on('close', (code, signal) => {
         // don't send error when killed after test passed
         if (code !== null || signal !== 'SIGTERM') {
           done(new Error('elm-test --watch exited with status code: ' + code));
         }
       });
+
+      let runsExecuted = 0;
       const reader = readline.createInterface({ input: child.stdout });
+
       reader.on('line', (line) => {
         try {
           const parsedLine = JSON.parse(stripAnsi('' + line));
@@ -478,7 +479,96 @@ describe('flags', () => {
             default:
               child.kill();
               done(
-                new Error(`More runs executed than expected: ${runsExecuted}`)
+                new Error(
+                  `More runs executed than expected: ${runsExecuted}\n${line}`
+                )
+              );
+          }
+        } catch (e) {
+          child.kill();
+          done(e);
+        }
+      });
+    }).timeout(60000);
+
+    it('Should re-run tests after init and install', (done) => {
+      ensureEmptyDir(scratchDir);
+
+      fs.copyFileSync(
+        path.join(fixturesDir, 'templates', 'application', 'elm.json'),
+        scratchElmJsonPath
+      );
+      fs.mkdirSync(path.join(scratchDir, 'src'));
+
+      // We start the watcher in a directory with only an elm.json, no tests dir.
+      const child = spawn(
+        elmTestPath,
+        ['--report=json', '--watch'],
+        Object.assign({ encoding: 'utf-8', cwd: scratchDir }, spawnOpts)
+      );
+
+      child.on('close', (code, signal) => {
+        // don't send error when killed after test passed
+        if (code !== null || signal !== 'SIGTERM') {
+          done(new Error('elm-test --watch exited with status code: ' + code));
+        }
+      });
+
+      let runsExecuted = 0;
+
+      child.stderr.on('data', (data) => {
+        switch (runsExecuted) {
+          case 0: {
+            // We got an error message saying that no tests were found.
+            // Let’s init the example tests! This should trigger a re-run.
+            elmTestWithYes(['init'], (code) => {
+              assert.strictEqual(code, 0);
+              runsExecuted++;
+            });
+            break;
+          }
+          case 2:
+            child.kill();
+            done();
+            break;
+          default:
+            child.kill();
+            done(
+              new Error(
+                `Unexpected stderr test run: ${runsExecuted}\n${data.toString()}`
+              )
+            );
+        }
+      });
+
+      const reader = readline.createInterface({ input: child.stdout });
+
+      reader.on('line', (line) => {
+        try {
+          const parsedLine = JSON.parse(stripAnsi('' + line));
+          if (parsedLine.event !== 'runComplete') return;
+          runsExecuted++;
+          switch (runsExecuted) {
+            case 1: {
+              // elm/json is in the "indirect" dependencies – let’s move it to "direct".
+              // This should re-run the tests because we likely did this for a
+              // reason – some file depends on elm/json now.
+              elmTestWithYes(['install', 'elm/json'], (code) => {
+                assert.strictEqual(code, 0);
+              });
+              break;
+            }
+            case 2:
+              // Remove the tests dir again. This should re-run and output
+              // messages about no tests found but not crash.
+              rimraf.sync(path.join(scratchDir, 'tests'));
+              break;
+            default:
+              child.kill();
+              done(
+                new Error(
+                  `Unexpected stdout test run: ${runsExecuted}\n${line}`
+                )
               );
           }
         } catch (e) {
