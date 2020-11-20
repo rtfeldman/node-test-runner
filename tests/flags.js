@@ -414,7 +414,17 @@ describe('flags', () => {
       assert.notStrictEqual(runResult.status, 0);
     }).timeout(5000);
 
-    it('Should re-run tests if files change', (done) => {
+    it('Should re-run tests when files are changed, added and removed', (done) => {
+      const addedFile = path.join(
+        fixturesDir,
+        'tests',
+        'Passing',
+        'Generated.elm'
+      );
+      if (fs.existsSync(addedFile)) {
+        fs.unlinkSync(addedFile);
+      }
+
       const child = spawn(
         elmTestPath,
         ['--report=json', '--watch', path.join('tests', 'Passing', 'One.elm')],
@@ -437,16 +447,31 @@ describe('flags', () => {
           runsExecuted++;
           switch (runsExecuted) {
             case 1:
+              // Imagine this adds `import Passing.Generated`…
               touch(path.join(fixturesDir, 'tests', 'Passing', 'One.elm'));
               break;
             case 2:
-              touch(path.join(fixturesDir, 'src', 'Port1.elm'));
+              // … then if Generated.elm is created we should re-run the tests.
+              // (A really smart implementation cound follow the import graph.)
+              fs.writeFileSync(addedFile, 'module Generated exposing (a)\na=1');
               break;
             case 3:
-              touch(path.join(fixturesDir, 'elm.json'));
-              setTimeout(() => touch(path.join(fixturesDir, 'elm.json')), 100);
+              // Same thing if we remove it again.
+              fs.unlinkSync(addedFile);
               break;
             case 4:
+              // Tests might depend on source files. (Again, a really smart
+              // implementation would know for sure.)
+              touch(path.join(fixturesDir, 'src', 'Port1.elm'));
+              break;
+            case 5:
+              // elm.json needs to be watched too. You might add source
+              // directories or install dependencies.
+              touch(path.join(fixturesDir, 'elm.json'));
+              // Another change close after should be batched into the same run.
+              setTimeout(() => touch(path.join(fixturesDir, 'elm.json')), 100);
+              break;
+            case 6:
               child.kill();
               done();
               break;
