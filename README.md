@@ -4,8 +4,8 @@ Runs [elm-explorations/test] suites from Node.js.
 
 When people say “elm-test” they usually refer to either:
 
-- The name of the Node.js CLI tool in this repository.
-- The Elm library for writing tests: [elm-explorations/test].
+- This CLI tool for running tests.
+- [elm-explorations/test] – an Elm package for defining tests that this CLI tool can run.
 
 [elm-explorations/test]: https://package.elm-lang.org/packages/elm-explorations/test/latest
 
