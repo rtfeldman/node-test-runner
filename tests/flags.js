@@ -579,12 +579,21 @@ describe('flags', () => {
     }).timeout(60000);
   });
 
-  describe('finding elm.json', () => {
-    it('find an elm.json up the directory tree', () => {
+  describe('mixed', () => {
+    it('Should find an elm.json up the directory tree', () => {
       const runResult = execElmTest(
         ['One.elm'],
         path.join(fixturesDir, 'tests', 'Passing')
       );
+      assert.strictEqual(runResult.status, 0);
+    }).timeout(60000);
+
+    it('Should deduplicate test files', () => {
+      // This is nice if two globs accidentally intersect.
+      const runResult = execElmTest([
+        'tests/Passing/Dedup/*.elm',
+        'tests/**/!(Failing)/**/One.elm',
+      ]);
       assert.strictEqual(runResult.status, 0);
     }).timeout(60000);
   });

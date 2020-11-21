@@ -78,7 +78,7 @@ function assertTestFailure(runResult) {
 function readdir(dir) {
   return fs
     .readdirSync(dir)
-    .filter((item) => !item.startsWith('.'))
+    .filter((item) => item.endsWith('.elm'))
     .sort();
 }
 
