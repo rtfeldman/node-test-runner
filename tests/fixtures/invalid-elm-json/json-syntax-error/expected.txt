@@ -1,3 +1,3 @@
 /full/path/to/elm.json
 Failed to read elm.json:
-Unexpected token } in JSON at position 462
+Unexpected string in JSON at position 11
