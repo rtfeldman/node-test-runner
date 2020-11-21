@@ -34,7 +34,8 @@ describe('handling invalid elm.json', () => {
       const expected = fs
         .readFileSync(path.join(fullPath, 'expected.txt'), 'utf8')
         .trim()
-        .replace('/full/path/to/elm.json', path.join(fullPath, 'elm.json'));
+        .replace('/full/path/to/elm.json', path.join(fullPath, 'elm.json'))
+        .replace(/\r\n/g, '\n');
       assert.throws(() => ElmJson.read(fullPath), {
         message: expected,
       });
