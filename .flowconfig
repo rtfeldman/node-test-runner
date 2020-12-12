@@ -5,4 +5,3 @@ exact_by_default=true
 [lints]
 all=error
 untyped-import=off
-unclear-type=off
