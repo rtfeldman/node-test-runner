@@ -48,9 +48,9 @@
     "commander": "^6.2.0",
     "cross-spawn": "^7.0.3",
     "elm-json": "^0.2.8",
-    "fs-extra": "^9.0.1",
     "glob": "^7.1.6",
-    "murmur-hash-js": "^1.0.0",
+    "graceful-fs": "^4.2.4",
+    "rimraf": "^3.0.2",
     "split": "^1.0.1",
     "which": "^2.0.2",
     "xmlbuilder": "^15.1.0"
@@ -58,7 +58,7 @@
   "devDependencies": {
     "elm": "0.19.1-3",
     "elm-format": "0.8.3",
-    "elm-review": "^2.3.3",
+    "elm-review": "2.3.3",
     "eslint": "7.12.1",
     "eslint-plugin-mocha": "8.0.0",
     "flow-bin": "0.137.0",

@@ -4,17 +4,19 @@ const assert = require('assert');
 const stream = require('stream');
 const Parser = require('../lib/Parser');
 
-function testParser(elmCode, expectedExposedNames) {
-  return Parser.extractExposedPossiblyTests('SomeFile.elm', (_, options) => {
-    const readable = stream.Readable.from([elmCode], {
-      ...options,
-      autoDestroy: true,
-    });
-    readable.close = readable.destroy;
-    return readable;
-  }).then((exposed) => {
-    assert.deepStrictEqual(exposed, expectedExposedNames);
-  });
+async function testParser(elmCode, expectedExposedNames) {
+  const exposed = await Parser.extractExposedPossiblyTests(
+    'SomeFile.elm',
+    (_, options) => {
+      const readable = stream.Readable.from([elmCode], {
+        ...options,
+        autoDestroy: true,
+      });
+      readable.close = readable.destroy;
+      return readable;
+    }
+  );
+  assert.deepStrictEqual(exposed, expectedExposedNames);
 }
 
 describe('Parser', () => {
@@ -185,14 +187,15 @@ One = 1
       testParser('module "string" Main exposing (one)', []));
 
     it('treats `effect module` as a critical error', () =>
-      testParser(
-        'effect module Example where { subscription = MySub } exposing (..)',
-        ['should', 'not', 'succeed']
-      ).catch((error) => {
-        assert.strictEqual(
-          error.message,
-          'This file is problematic:\n\nSomeFile.elm\n\nIt starts with `effect module`. Effect modules can only exist inside src/ in elm and elm-explorations packages. They cannot contain tests.'
-        );
-      }));
+      assert.rejects(
+        testParser(
+          'effect module Example where { subscription = MySub } exposing (..)',
+          ['should', 'not', 'succeed']
+        ),
+        {
+          message:
+            'This file is problematic:\n\nSomeFile.elm\n\nIt starts with `effect module`. Effect modules can only exist inside src/ in elm and elm-explorations packages. They cannot contain tests.',
+        }
+      ));
   });
 });

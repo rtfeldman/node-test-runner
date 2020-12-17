@@ -1,0 +1,3 @@
+/full/path/to/elm.json
+Failed to read elm.json:
+EISDIR: illegal operation on a directory, read

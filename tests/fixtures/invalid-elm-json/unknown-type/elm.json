@@ -1,5 +1,5 @@
 {
-    "type": "application",
+    "type": "Application",
     "source-directories": [
         "src"
     ],

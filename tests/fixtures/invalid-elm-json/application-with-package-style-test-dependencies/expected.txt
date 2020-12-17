@@ -1,0 +1,3 @@
+/full/path/to/elm.json
+Failed to read elm.json:
+Expected test-dependencies->"direct" to be an object, but got: undefined
