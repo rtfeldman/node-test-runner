@@ -1,5 +1,4 @@
-{
-    "type": "application",
+{   "type" "application",
     "source-directories": [
         "src"
     ],

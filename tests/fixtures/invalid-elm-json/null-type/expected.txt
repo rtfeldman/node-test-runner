@@ -1,0 +1,3 @@
+/full/path/to/elm.json
+Failed to read elm.json:
+Expected "type" to be "application" or "package", but got: null

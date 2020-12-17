@@ -1,19 +1,3 @@
-// Make sure necessary things are defined.
-if (typeof Elm === 'undefined') {
-  throw 'test runner config error: Elm is not defined. Make sure you provide a file compiled by Elm!';
-}
-
-var potentialModuleNames = Object.keys(Elm.Test.Generated);
-
-if (potentialModuleNames.length !== 1) {
-  console.error(
-    'Multiple potential generated modules to run in the Elm.Test.Generated namespace: ',
-    potentialModuleNames,
-    ' - this should never happen!'
-  );
-  process.exit(1);
-}
-
 var net = require('net'),
   client = net.createConnection(pipeFilename);
 
@@ -26,10 +10,8 @@ client.on('error', function (error) {
 client.setEncoding('utf8');
 client.setNoDelay(true);
 
-var testModule = Elm.Test.Generated[potentialModuleNames[0]];
-
 // Run the Elm app.
-var app = testModule.init({ flags: Date.now() });
+var app = Elm.Test.Generated.Main.init({ flags: Date.now() });
 
 client.on('data', function (msg) {
   app.ports.receive.send(JSON.parse(msg));

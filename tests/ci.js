@@ -75,6 +75,13 @@ function assertTestFailure(runResult) {
   );
 }
 
+function readdir(dir) {
+  return fs
+    .readdirSync(dir)
+    .filter((item) => item.endsWith('.elm'))
+    .sort();
+}
+
 describe('--help', () => {
   it('Should print the usage and exit indicating success', () => {
     const runResult = execElmTest(['--help']);
@@ -166,8 +173,7 @@ describe('Testing elm-test on single Elm files', () => {
   }
 
   it(`Should run every file in tests/Passing`, () => {
-    const filesFound = fs.readdirSync(cwd + '/tests/Passing/');
-    filesFound.sort();
+    const filesFound = readdir(path.join(cwd, 'tests', 'Passing'));
     assert.deepStrictEqual(filesFound, passingTestFiles);
   });
 
@@ -192,8 +198,7 @@ describe('Testing elm-test on single Elm files', () => {
   }
 
   it(`Should run every file in tests/Failing`, () => {
-    const filesFound = fs.readdirSync(cwd + '/tests/Failing/');
-    filesFound.sort();
+    const filesFound = readdir(path.join(cwd, 'tests', 'Failing'));
     assert.deepStrictEqual(filesFound, failingTestFiles);
   });
 
@@ -209,8 +214,7 @@ describe('Testing elm-test on single Elm files', () => {
   }
 
   it(`Should run every file in tests/RuntimeException`, () => {
-    const filesFound = fs.readdirSync(cwd + '/tests/RuntimeException/');
-    filesFound.sort();
+    const filesFound = readdir(path.join(cwd, 'tests', 'RuntimeException'));
     assert.deepStrictEqual(filesFound, erroredTestFiles);
   });
 });

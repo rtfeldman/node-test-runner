@@ -11,7 +11,8 @@ const rimraf = require('rimraf');
 const stripAnsi = require('strip-ansi');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
-const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
+const rootDir = path.join(__dirname, '..');
+const elmTestPath = path.join(rootDir, 'bin', 'elm-test');
 const scratchDir = path.join(fixturesDir, 'scratch');
 const scratchElmJsonPath = path.join(scratchDir, 'elm.json');
 
@@ -45,6 +46,11 @@ function ensureEmptyDir(dirPath) {
     rimraf.sync(dirPath);
   }
   fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function touch(filePath) {
+  const now = new Date();
+  fs.utimesSync(filePath, now, now);
 }
 
 function readJson(filePath) {
@@ -139,8 +145,8 @@ describe('flags', () => {
       assert.notStrictEqual(runResult.status, 0);
     }).timeout(60000);
 
-    it('should fail if the current directory does not contain an elm.json', () => {
-      const runResult = execElmTest(['install', 'elm/regex'], scratchDir);
+    it('should fail if no elm.json can be found', () => {
+      const runResult = execElmTest(['install', 'elm/regex'], rootDir);
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
     }).timeout(60000);
@@ -164,7 +170,6 @@ describe('flags', () => {
 
     it('should exit with success if package already installed', () => {
       const runResult = execElmTest(['install', 'elm-explorations/test']);
-      console.log(runResult);
       assert.strictEqual(runResult.status, 0);
     }).timeout(60000);
   });
@@ -409,14 +414,22 @@ describe('flags', () => {
       assert.notStrictEqual(runResult.status, 0);
     }).timeout(5000);
 
-    it('Should re-run tests if a test file is touched', (done) => {
+    it('Should re-run tests when files are changed, added and removed', (done) => {
+      const addedFile = path.join(
+        fixturesDir,
+        'tests',
+        'Passing',
+        'Generated.elm'
+      );
+      if (fs.existsSync(addedFile)) {
+        fs.unlinkSync(addedFile);
+      }
+
       const child = spawn(
         elmTestPath,
         ['--report=json', '--watch', path.join('tests', 'Passing', 'One.elm')],
         Object.assign({ encoding: 'utf-8', cwd: fixturesDir }, spawnOpts)
       );
-
-      let hasRetriggered = false;
 
       child.on('close', (code, signal) => {
         // don't send error when killed after test passed
@@ -424,31 +437,164 @@ describe('flags', () => {
           done(new Error('elm-test --watch exited with status code: ' + code));
         }
       });
+
+      let runsExecuted = 0;
       const reader = readline.createInterface({ input: child.stdout });
+
       reader.on('line', (line) => {
         try {
-          const json = stripAnsi('' + line);
-          // skip expected non-json
-          if (json === 'Watching for changes...') return;
-          const parsedLine = JSON.parse(json);
+          const parsedLine = JSON.parse(stripAnsi('' + line));
           if (parsedLine.event !== 'runComplete') return;
-          if (!hasRetriggered) {
-            const now = new Date();
-            fs.utimesSync(
-              path.join(fixturesDir, 'tests', 'Passing', 'One.elm'),
-              now,
-              now
-            );
-            hasRetriggered = true;
-          } else {
-            child.kill();
-            done();
+          runsExecuted++;
+          switch (runsExecuted) {
+            case 1:
+              // Imagine this adds `import Passing.Generated`…
+              touch(path.join(fixturesDir, 'tests', 'Passing', 'One.elm'));
+              break;
+            case 2:
+              // … then if Generated.elm is created we should re-run the tests.
+              // (A really smart implementation cound follow the import graph.)
+              fs.writeFileSync(addedFile, 'module Generated exposing (a)\na=1');
+              break;
+            case 3:
+              // Same thing if we remove it again.
+              fs.unlinkSync(addedFile);
+              break;
+            case 4:
+              // Tests might depend on source files. (Again, a really smart
+              // implementation would know for sure.)
+              touch(path.join(fixturesDir, 'src', 'Port1.elm'));
+              break;
+            case 5:
+              // elm.json needs to be watched too. You might add source
+              // directories or install dependencies.
+              touch(path.join(fixturesDir, 'elm.json'));
+              // Another change close after should be batched into the same run.
+              setTimeout(() => touch(path.join(fixturesDir, 'elm.json')), 100);
+              break;
+            case 6:
+              child.kill();
+              done();
+              break;
+            default:
+              child.kill();
+              done(
+                new Error(
+                  `More runs executed than expected: ${runsExecuted}\n${line}`
+                )
+              );
           }
         } catch (e) {
           child.kill();
           done(e);
         }
       });
+    }).timeout(60000);
+
+    it('Should re-run tests after init and install', (done) => {
+      ensureEmptyDir(scratchDir);
+
+      fs.copyFileSync(
+        path.join(fixturesDir, 'templates', 'application', 'elm.json'),
+        scratchElmJsonPath
+      );
+      fs.mkdirSync(path.join(scratchDir, 'src'));
+
+      // We start the watcher in a directory with only an elm.json, no tests dir.
+      const child = spawn(
+        elmTestPath,
+        ['--report=json', '--watch'],
+        Object.assign({ encoding: 'utf-8', cwd: scratchDir }, spawnOpts)
+      );
+
+      child.on('close', (code, signal) => {
+        // don't send error when killed after test passed
+        if (code !== null || signal !== 'SIGTERM') {
+          done(new Error('elm-test --watch exited with status code: ' + code));
+        }
+      });
+
+      let runsExecuted = 0;
+
+      child.stderr.on('data', (data) => {
+        switch (runsExecuted) {
+          case 0: {
+            // We got an error message saying that no tests were found.
+            // Let’s init the example tests! This should trigger a re-run.
+            elmTestWithYes(['init'], (code) => {
+              assert.strictEqual(code, 0);
+              runsExecuted++;
+            });
+            break;
+          }
+          case 2:
+            child.kill();
+            done();
+            break;
+          default:
+            child.kill();
+            done(
+              new Error(
+                `Unexpected stderr test run: ${runsExecuted}\n${data.toString()}`
+              )
+            );
+        }
+      });
+
+      const reader = readline.createInterface({ input: child.stdout });
+
+      reader.on('line', (line) => {
+        try {
+          const parsedLine = JSON.parse(stripAnsi('' + line));
+          if (parsedLine.event !== 'runComplete') return;
+          runsExecuted++;
+          switch (runsExecuted) {
+            case 1: {
+              // elm/json is in the "indirect" dependencies – let’s move it to "direct".
+              // This should re-run the tests because we likely did this for a
+              // reason – some file depends on elm/json now.
+              elmTestWithYes(['install', 'elm/json'], (code) => {
+                assert.strictEqual(code, 0);
+              });
+              break;
+            }
+            case 2:
+              // Remove the tests dir again. This should re-run and output
+              // messages about no tests found but not crash.
+              rimraf.sync(path.join(scratchDir, 'tests'));
+              break;
+            default:
+              child.kill();
+              done(
+                new Error(
+                  `Unexpected stdout test run: ${runsExecuted}\n${line}`
+                )
+              );
+          }
+        } catch (e) {
+          child.kill();
+          done(e);
+        }
+      });
+    }).timeout(60000);
+  });
+
+  describe('mixed', () => {
+    it('Should find an elm.json up the directory tree', () => {
+      const runResult = execElmTest(
+        ['One.elm'],
+        path.join(fixturesDir, 'tests', 'Passing')
+      );
+      assert.strictEqual(runResult.status, 0);
+    }).timeout(60000);
+
+    it('Should deduplicate test files', () => {
+      // This is nice if two globs accidentally intersect.
+      const runResult = execElmTest([
+        'tests/Passing/Dedup/*.elm',
+        'tests/**/!(Failing)/**/One.elm',
+      ]);
+      assert.strictEqual(runResult.status, 0);
     }).timeout(60000);
   });
 
