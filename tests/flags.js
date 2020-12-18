@@ -357,10 +357,12 @@ describe('flags', () => {
 
   describe('--compiler', () => {
     before(() => {
-      const ext = process.platform === 'win32' ? '.exe' : '';
       const elmExe = path.resolve(which.sync('elm'));
       fs.mkdirSync(dummyBinPath, { recursive: true });
-      fs.copyFileSync(elmExe, path.join(dummyBinPath, 'different-elm' + ext));
+      fs.copyFileSync(
+        elmExe,
+        path.join(dummyBinPath, 'different-elm' + path.extname(elmExe))
+      );
     });
 
     it('Should fail if given no value', () => {
