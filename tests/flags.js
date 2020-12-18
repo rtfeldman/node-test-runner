@@ -9,6 +9,7 @@ const xml2js = require('xml2js');
 const readline = require('readline');
 const rimraf = require('rimraf');
 const stripAnsi = require('strip-ansi');
+const which = require('which');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
 const rootDir = path.join(__dirname, '..');
@@ -356,10 +357,8 @@ describe('flags', () => {
 
   describe('--compiler', () => {
     before(() => {
-      // Warning: this assumes the directory structure of the elm npm module.
-      //          It may break with new npm versions of elm.
       const ext = process.platform === 'win32' ? '.exe' : '';
-      const elmExe = require.resolve('elm/bin/elm' + ext);
+      const elmExe = path.resolve(which.sync('elm'));
       fs.mkdirSync(dummyBinPath, { recursive: true });
       fs.copyFileSync(elmExe, path.join(dummyBinPath, 'different-elm' + ext));
     });
