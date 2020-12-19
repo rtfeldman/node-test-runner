@@ -16,7 +16,7 @@
     "check": "flow check && npm run lint && npm run format:check && npm run review",
     "format:check": "prettier --check . && elm-format elm --validate",
     "format:write": "prettier --write . && elm-format elm --yes",
-    "prepare": "node -r ./elm-tooling-polyfill.js node_modules/elm-tooling/index.js install"
+    "prepare": "elm-tooling install"
   },
   "repository": {
     "type": "git",
@@ -48,7 +48,7 @@
     "chokidar": "^3.4.2",
     "commander": "^6.2.0",
     "cross-spawn": "^7.0.3",
-    "elm-tooling": "^0.6.2",
+    "elm-tooling": "^0.6.3",
     "glob": "^7.1.6",
     "graceful-fs": "^4.2.4",
     "rimraf": "^3.0.2",

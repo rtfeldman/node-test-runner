@@ -45,7 +45,7 @@ jobs:
           NO_ELM_TOOLING_INSTALL: 1
 
       - name: elm-tooling install
-        run: npm run prepare
+        run: npx --no-install elm-tooling install
 
       - name: Mocha
         run: npx --no-install mocha tests
