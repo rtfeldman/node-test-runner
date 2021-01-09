@@ -48,7 +48,7 @@
     "chokidar": "^3.4.2",
     "commander": "^6.2.0",
     "cross-spawn": "^7.0.3",
-    "elm-tooling": "^0.6.3",
+    "elm-tooling": "^1.0.0",
     "glob": "^7.1.6",
     "graceful-fs": "^4.2.4",
     "rimraf": "^3.0.2",
