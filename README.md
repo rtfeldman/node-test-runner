@@ -1,6 +1,6 @@
 # node-test-runner [![Version](https://img.shields.io/npm/v/elm-test.svg)](https://www.npmjs.com/package/elm-test)
 
-Runs [elm-explorations/test] suites from Node.js.
+Runs [elm-explorations/test] suites in Node.js.
 
 When people say “elm-test” they usually refer to either:
 
@@ -37,9 +37,9 @@ Run in watch mode:
 
     npx elm-test --watch
 
-## Where to put your tests
+## Where to put tests
 
-### File location
+### Locating files containing tests
 
 There are 3 places you could put your tests:
 
@@ -68,7 +68,7 @@ You can mix all three variants if you want:
 
     npx elm-test tests "src/**/*Tests.elm" app
 
-### Inside each file
+### Locating tests within files
 
 For elm-test to find tests in your files you need to:
 
@@ -95,7 +95,7 @@ alreadyLoggedInTests =
 
 Some prefer to expose a single `Test` value and group everything using [describe](https://package.elm-lang.org/packages/elm-explorations/test/latest/Test#describe). Some prefer to expose several `Test` values.
 
-**Also check out the [elm-explorations/test quick-start](https://github.com/elm-explorations/test#quick-start)!**
+**Also check out the [elm-explorations/test quick-start](https://github.com/elm-explorations/test#quick-start) guide!**
 
 ## Command Line Arguments
 
@@ -105,7 +105,7 @@ This is the most common commands and flags. Run `elm-test --help` for an exhaust
 
 ### install
 
-Like `elm install`, except it installs to `"test-dependencies"` in your `elm.json` instead of to `"dependencies"`.
+Like `elm install`, except elm-test will install to `"test-dependencies"` in your `elm.json` instead of to `"dependencies"`.
 
     elm-test install elm/regex
 
@@ -115,7 +115,7 @@ Runs `elm-test install elm-explorations/test` and then creates a `tests/Example.
 
 An `elm.json` is required, so you need to run `elm init` first if you don’t already have one.
 
-Afterwards, you can run `elm-test` with no arguments to try out the example.
+After initializing elm-test in your project, try out the example by running `elm-test` with no arguments.
 
     elm init
     elm-test init
@@ -123,7 +123,7 @@ Afterwards, you can run `elm-test` with no arguments to try out the example.
 
 ### --watch
 
-Starts the runner in watch mode. Your tests will automatically rerun whenever any test file or a file they import are changed.
+Start the runner in watch mode. Your tests will automatically rerun whenever your project changes.
 
     elm-test --watch
 
@@ -143,9 +143,9 @@ Define how many times each fuzz-test should run. Defaults to `100`.
 
 Specify which format to use for reporting your test results. Valid options are:
 
-- `console` (default): pretty, human readable formatted output
-- `json`: every event is written as a json-encoded object
-- `junit`: junit-compatible xml
+- `console` (default): pretty, human readable formatted output.
+- `json`: newline-delimited json with an object for each event.
+- `junit`: junit-compatible xml.
 
 <!---->
 
@@ -175,7 +175,4 @@ elm:
   - 0.19.1
 ```
 
-Here are some examples of running tests on CI servers:
-
-- [`travis.yml`](https://github.com/rtfeldman/elm-css/blob/master/.travis.yml)
-- [`appveyor.yml`](https://github.com/rtfeldman/elm-css/blob/master/appveyor.yml)
+Here is an example [`travis.yml`](https://github.com/rtfeldman/elm-css/blob/master/.travis.yml) configuration file for running tests in CI.
