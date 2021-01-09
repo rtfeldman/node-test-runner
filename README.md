@@ -33,6 +33,8 @@ Run tests in files matching a [glob](https://github.com/isaacs/node-glob#glob-pr
 
     npx elm-test "src/**/*Tests.elm"
 
+> Note: The double quotes are important! Without quotes, your shell might expand the globs for you. With quotes, elm-test expands the globs. This way the watcher can pick up new tests matching the globs, and it will work cross-platform.
+
 Run in watch mode:
 
     npx elm-test --watch
@@ -68,6 +70,8 @@ You can mix all three variants if you want:
 
     npx elm-test tests "src/**/*Tests.elm" app
 
+> In this example, `"src"` and `"app"` need to be in `"source-directories"` in `elm.json`.
+
 ### Locating tests within files
 
 For elm-test to find tests in your files you need to:
@@ -99,7 +103,7 @@ Some prefer to expose a single `Test` value and group everything using [describe
 
 ## Command Line Arguments
 
-This is the most common commands and flags. Run `elm-test --help` for an exhaustive list.
+These are the most common commands and flags. Run `elm-test --help` for an exhaustive list.
 
 **Note:** Throughout this section, the `npx` prefix is omitted for brevity.
 
@@ -113,7 +117,7 @@ Like `elm install`, except elm-test will install to `"test-dependencies"` in you
 
 Runs `elm-test install elm-explorations/test` and then creates a `tests/Example.elm` example test to get you started.
 
-An `elm.json` is required, so you need to run `elm init` first if you don’t already have one.
+`elm-test init` requires an `elm.json` file up the directory tree, so you will need to run `elm init` first if you don’t already have one.
 
 After initializing elm-test in your project, try out the example by running `elm-test` with no arguments.
 
@@ -147,9 +151,9 @@ Specify which format to use for reporting your test results. Valid options are:
 - `json`: newline-delimited json with an object for each event.
 - `junit`: junit-compatible xml.
 
-<!---->
-
-    elm-test --report json
+```
+elm-test --report json
+```
 
 ### --compiler
 
