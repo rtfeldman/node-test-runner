@@ -157,17 +157,17 @@ elm-test --report json
 
 ### --compiler
 
-As mentioned in “Installation” we recommend installing elm-test locally in every project. This ensures all contributors and CI use the same version, to avoid nasty “works on my computer” issues.
+If `elm` is _not_ in your `$PATH` when elm-test runs, or the Elm executable is called something other than `elm`, you can use this flag to point to your installation.
+
+    elm-test --compiler /path/to/elm
 
 To run a tool installed locally using `npm` you can use `npx`:
 
     npx elm-test
 
-`npx` adds the local `node_modules/.bin/` folder to `$PATH` when it executes the command passed to it. This means that if you have installed `elm` locally, `elm-test` automatically finds that local installation.
+`npx` adds the local `node_modules/.bin/` folder to `$PATH` when it executes the command passed to it. This means that if you have installed `elm` locally, `elm-test` will automatically find that local installation.
 
-If you for some reason `elm` is _not_ in your `$PATH` when elm-test runs, you can use this flag to point to your installation.
-
-    elm-test --compiler /path/to/elm
+As mentioned in [Installation](#installation) we recommend installing elm-test locally in every project. This ensures all contributors and CI use the same version, to avoid nasty “works on my computer” issues.
 
 ## Travis CI
 
