@@ -78,7 +78,13 @@ type Msg
     | Complete (List String) (List Outcome) Posix Posix
 
 
-port send : String -> Cmd msg
+{-| The port names are prefixed to reduce the likelihood of the project
+having a port with the same name, which is a compile error.
+-}
+port elmTestPort__send : String -> Cmd msg
+
+
+port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 
 dispatch : Model -> Posix -> Cmd Msg
@@ -135,7 +141,7 @@ update msg ({ testReporter } as model) =
                                 , ( "message", summary )
                                 ]
                                 |> Encode.encode 0
-                                |> send
+                                |> elmTestPort__send
                     in
                     ( model, cmd )
 
@@ -160,7 +166,7 @@ update msg ({ testReporter } as model) =
                                 , ( "message", Encode.string (Decode.errorToString err) )
                                 ]
                                 |> Encode.encode 0
-                                |> send
+                                |> elmTestPort__send
                     in
                     ( model, cmd )
 
@@ -235,7 +241,7 @@ sendResults isFinished testReporter results =
           )
         ]
         |> Encode.encode 0
-        |> send
+        |> elmTestPort__send
 
 
 sendBegin : Model -> Cmd msg
@@ -256,7 +262,7 @@ sendBegin model =
     in
     Encode.object (baseFields ++ extraFields)
         |> Encode.encode 0
-        |> send
+        |> elmTestPort__send
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
@@ -335,7 +341,7 @@ failInit message report _ =
                 , ( "message", Encode.string message )
                 ]
                 |> Encode.encode 0
-                |> send
+                |> elmTestPort__send
     in
     ( model, cmd )
 
@@ -402,7 +408,7 @@ run { runs, seed, report, globs, paths, processes } possiblyTests =
         Platform.worker
             { init = wrappedInit
             , update = update
-            , subscriptions = \_ -> receive Receive
+            , subscriptions = \_ -> elmTestPort__receive Receive
             }
 
 
@@ -432,6 +438,3 @@ If there are – are they exposed?
         """
             |> String.trim
             |> String.replace "%globs" (String.join "\n" globs)
-
-
-port receive : (Decode.Value -> msg) -> Sub msg

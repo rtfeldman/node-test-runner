@@ -159,6 +159,7 @@ describe('Testing elm-test on single Elm files', () => {
   const passingTestFiles = [
     'Dependency.elm',
     'One.elm',
+    'Ports.elm',
     'Several.elm',
     'TrickyMultilines.elm',
     'Unexposed.elm',
