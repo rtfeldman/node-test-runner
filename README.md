@@ -133,7 +133,7 @@ Start the runner in watch mode. Your tests will automatically rerun whenever you
 
 ### --seed
 
-Run with a previous fuzzer seed, rather than a randomly generated seed. This allows reproducing a failing fuzz-test. The command needed to reproduce (including the `--seed` flag) is printed after each test run. Copy, paste and run it!
+Run with a specific fuzzer seed, rather than a randomly generated seed. This allows reproducing a failing fuzz-test. The command needed to reproduce (including the `--seed` flag) is printed after each test run. Copy, paste and run it!
 
     elm-test --seed 336948560956134
 
@@ -145,7 +145,7 @@ Define how many times each fuzz-test should run. Defaults to `100`.
 
 ### --report
 
-Specify which format to use for reporting your test results. Valid options are:
+Specify which format to use for reporting test results. Valid options are:
 
 - `console` (default): pretty, human readable formatted output.
 - `json`: newline-delimited json with an object for each event.
