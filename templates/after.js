@@ -14,11 +14,11 @@ client.setNoDelay(true);
 var app = Elm.Test.Generated.Main.init({ flags: Date.now() });
 
 client.on('data', function (msg) {
-  app.ports.receive.send(JSON.parse(msg));
+  app.ports.elmTestPort__receive.send(JSON.parse(msg));
 });
 
 // Use ports for inter-process communication.
-app.ports.send.subscribe(function (msg) {
+app.ports.elmTestPort__send.subscribe(function (msg) {
   // We split incoming messages on the socket on newlines. The gist is that node
   // is rather unpredictable in whether or not a single `write` will result in a
   // single `on('data')` callback. Sometimes it does, sometimes multiple writes
