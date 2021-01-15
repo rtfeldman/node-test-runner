@@ -115,6 +115,11 @@ describe('Testing elm-test on an example application', () => {
     const runResult = execElmTest([args], cwd);
     assertTestFailure(runResult);
   }).timeout(60000);
+
+  it('Should successfully run `elm-test make`', () => {
+    const runResult = execElmTest(['make'], cwd);
+    assertTestSuccess(runResult);
+  }).timeout(60000);
 });
 
 describe('Testing elm-test on an example package', () => {
@@ -130,6 +135,11 @@ describe('Testing elm-test on an example package', () => {
     const args = path.join('tests', '*Fail*.elm');
     const runResult = execElmTest([args], cwd);
     assertTestFailure(runResult);
+  }).timeout(60000);
+
+  it('Should successfully run `elm-test make`', () => {
+    const runResult = execElmTest(['make'], cwd);
+    assertTestSuccess(runResult);
   }).timeout(60000);
 });
 
