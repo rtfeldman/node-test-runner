@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project mirrors major Elm versions. So version 0.18.\* of this project will
 be compatible with Elm 0.18.\*.
 
+## 0.19.1-beta1.revision5 - 2020-TBA
+
+### Breaking
+
+- Removed support for Node.js 8 (which reached end of life 2019-12-31). Node.js 10.13.0 is now the minium supported Node.js version.
+- Removed the undocumented `--verbose` flag. It didn’t do much at all in its current state.
+
+### Fixed
+
+- Now works on Apple Silicon/M1/ARM MacBooks. Installation used to fail with “Error: No binaries are available for your platform: darwin-arm64.”
+- You can now run your test from a subdirectory. `elm-test` finds your `elm.json` up the directory tree instead of printing an error.
+- If you had a port named `send` or `receive` and they were reached via test cases, `elm-test` used to fail with a duplicate port error. `elm-test` has renamed its internal ports so that conflicts are very unlikely.
+- The JUnit reporter now says `@failures` instead of `@failed` which makes Jenkins happier.
+- `elm-test` now errors on unknown (misspelled) flags instead of silently ignoring them.
+- `elm-test` now errors on bad `--fuzz` and `--seed` values instead of silently ignoring them.
+- A whole host of Elm package dependencies errors, by using `elm-json` to calculate the set of dependencies needed to run your tests.
+- `elm-test --watch` no longer crashes if for packages if there are compilation errors in `src/` at startup.
+- `elm-test --watch` now detects changes in your `elm.json`.
+- `elm-test --watch` now works better when lots of files change at once. If 10 files changed, your tests used to run 10 times in sequence (more or less). Now, they only run once or twice. Changes within 100 ms are batched together. Changes happening while the tests are running no longer queue up – they instead trigger one single test once the current run is done.
+- Compilation errors are no longer hidden by a super long “Compilation failed while attempting to build [absolute paths to every single test Elm file]” message.
+- A bunch of checks and validations have been added to help in edge cases.
+
+## Performance
+
+- `elm-test` is now faster to install (by having fewer dependencies). It used to be around 18 MB, now it’s just 2 MB.
+- `elm-test` now runs about half a second faster, by no longer using `elmi-to-json`. (As a bonus, if you ever encountered errors mentioning `elmi-to-json`, that won’t happen anymore.)
+- `elm-test --watch` now reruns your tests sooner after file changes (about 100 ms after the changes, instead of about 500 ms).
+
+## Changed
+
+- The `--help` output is now more conventional and hopefully easier to read.
+
 ## 0.19.1-revision4 - 2020-09-21
 
 ### Fixed
