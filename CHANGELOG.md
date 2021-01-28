@@ -4,7 +4,7 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors major Elm versions. So version 0.18.\* of this project will be compatible with Elm 0.18.\*.
 
-## 0.19.1-beta1.revision5 - 2020-TBA
+## 0.19.1-revision5 - 2020-01-28
 
 ### Breaking
 
