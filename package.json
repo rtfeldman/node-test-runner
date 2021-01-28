@@ -1,6 +1,6 @@
 {
   "name": "elm-test",
-  "version": "0.19.1-revision4",
+  "version": "0.19.1-revision5",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
@@ -45,10 +45,10 @@
   "homepage": "https://github.com/rtfeldman/node-test-runner#readme",
   "dependencies": {
     "chalk": "^4.1.0",
-    "chokidar": "^3.4.2",
+    "chokidar": "^3.5.1",
     "commander": "^7.0.0",
     "cross-spawn": "^7.0.3",
-    "elm-tooling": "^1.0.0",
+    "elm-tooling": "^1.1.0",
     "glob": "^7.1.6",
     "graceful-fs": "^4.2.4",
     "rimraf": "^3.0.2",
