@@ -155,6 +155,16 @@ Specify which format to use for reporting test results. Valid options are:
 elm-test --report json
 ```
 
+### --no-color
+
+Disable colored console output.
+
+Colors are also disabled when you pipe the output of `elm-test` to another program. You can use `--color` to force the colors back.
+
+Alternatively, you can set the environment variable `FORCE_COLOR` to `0` to disable colors, or to any other value to force them.
+
+See [chalk.supportsColor](https://github.com/chalk/chalk#chalksupportscolor) for more information.
+
 ### --compiler
 
 If `elm` is _not_ in your `$PATH` when elm-test runs, or the Elm executable is called something other than `elm`, you can use this flag to point to your installation.
