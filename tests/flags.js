@@ -32,11 +32,11 @@ function elmTestWithYes(args, callback) {
   });
 }
 
-function execElmTest(args, cwd = fixturesDir) {
+function execElmTest(args, cwd = fixturesDir, extraOpts = {}) {
   return spawn.sync(
     elmTestPath,
     args,
-    Object.assign({ encoding: 'utf-8', cwd }, spawnOpts)
+    Object.assign({ encoding: 'utf-8', cwd }, spawnOpts, extraOpts)
   );
 }
 
@@ -576,6 +576,64 @@ describe('flags', () => {
           child.kill();
           done(e);
         }
+      });
+    }).timeout(60000);
+  });
+
+  describe('color', () => {
+    it('Should allow forcing colors on/off with flags and env vars', () => {
+      // Run with a constant seed so we can compare outputs (the seed is printed).
+      const baseArgs = ['--seed=1', path.join('tests', 'Passing', 'One.elm')];
+
+      // Replace printed duration with a fixed value so we can compare outputs.
+      const fixDuration = (string) => string.replace(/\d+ ms/g, '123 ms');
+
+      // This has no colors because in the tests `elm-test` is not connected to a terminal.
+      const base = execElmTest(baseArgs);
+      assert.strictEqual(base.status, 0, 'base run');
+
+      // This should have the same output but with some color codes here and there.
+      const colorFlag = execElmTest([...baseArgs, '--color']);
+      assert.strictEqual(colorFlag.status, 0, 'colorFlag run');
+      assert.ok(
+        colorFlag.stdout.length > base.stdout.length,
+        'colorFlag.stdout should have color'
+      );
+
+      const shouldNotHaveColor = (name, args, env) => {
+        const runResult = execElmTest(baseArgs.concat(args), fixturesDir, {
+          env: Object.assign({}, spawnOpts.env, env),
+        });
+        assert.strictEqual(runResult.status, 0, `${name}: run`);
+        assert.strictEqual(
+          fixDuration(runResult.stdout),
+          fixDuration(base.stdout),
+          `${name}: stdout should NOT have color`
+        );
+      };
+
+      const shouldHaveColor = (name, args, env) => {
+        const runResult = execElmTest(baseArgs.concat(args), fixturesDir, {
+          env: Object.assign({}, spawnOpts.env, env),
+        });
+        assert.strictEqual(runResult.status, 0, `${name}: run`);
+        assert.strictEqual(
+          fixDuration(runResult.stdout),
+          fixDuration(colorFlag.stdout),
+          `${name}: stdout should have color`
+        );
+      };
+
+      shouldHaveColor('Force color with env var', [], { FORCE_COLOR: '1' });
+
+      shouldNotHaveColor('Env var overrides flag (to no color)', ['--color'], {
+        FORCE_COLOR: '0',
+      });
+
+      shouldNotHaveColor('No colors via flag', ['--no-color'], {});
+
+      shouldHaveColor('Env var overrides flag (to color)', ['--no-color'], {
+        FORCE_COLOR: '1',
       });
     }).timeout(60000);
   });
