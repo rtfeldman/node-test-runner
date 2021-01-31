@@ -157,8 +157,6 @@ elm-test --report json
 
 ### --no-color
 
-> **Note:** `--no-color` and `--color` are broken in version 0.19.1-revision5. See [#491](https://github.com/rtfeldman/node-test-runner/pull/491).
-
 Disable colored console output.
 
 Colors are also disabled when you pipe the output of `elm-test` to another program. You can use `--color` to force the colors back.
