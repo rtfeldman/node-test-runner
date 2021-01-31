@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 ### Fixed
 
 - The `--no-color` and `--color` flags (to disable and force colors) now work again (regression in 0.19.1-revision5).
+- `--no-color` now turns off colors in Elm compiler error messages as well.
 
 ## 0.19.1-revision5 - 2020-01-28
 
