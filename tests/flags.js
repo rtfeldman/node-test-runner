@@ -308,6 +308,17 @@ describe('flags', () => {
 
       assert.strictEqual('12345', firstOutput.initialSeed);
     }).timeout(60000);
+
+    it('Should allow 0', () => {
+      const runResult = execElmTest([
+        '--report=json',
+        '--seed=0',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+      const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
+
+      assert.strictEqual('0', firstOutput.initialSeed);
+    }).timeout(60000);
   });
 
   describe('--fuzz', () => {
@@ -315,6 +326,17 @@ describe('flags', () => {
       const runResult = execElmTest([
         '--fuzz',
         '0xaf',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    }).timeout(5000);
+
+    it('Should fail if given 0', () => {
+      const runResult = execElmTest([
+        '--fuzz',
+        '0',
         path.join('tests', 'Passing', 'One.elm'),
       ]);
 
