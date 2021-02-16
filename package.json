@@ -61,7 +61,7 @@
     "eslint": "7.19.0",
     "eslint-plugin-mocha": "8.0.0",
     "flow-bin": "0.144.0",
-    "mocha": "8.2.1",
+    "mocha": "8.3.0",
     "prettier": "2.1.2",
     "strip-ansi": "6.0.0",
     "xml2js": "0.4.23"
