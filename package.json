@@ -60,7 +60,7 @@
     "elm-review": "2.4.2",
     "eslint": "7.20.0",
     "eslint-plugin-mocha": "8.0.0",
-    "flow-bin": "0.144.0",
+    "flow-bin": "0.145.0",
     "mocha": "8.3.0",
     "prettier": "2.1.2",
     "strip-ansi": "6.0.0",
