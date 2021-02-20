@@ -254,6 +254,9 @@ describe('Testing elm-test on single Elm files', () => {
 
   it(`Should run every file in tests/CompileError`, () => {
     const filesFound = readdir(path.join(cwd, 'tests', 'CompileError'));
-    assert.deepStrictEqual(filesFound, Object.keys(compilerErrorTestFiles).sort());
+    assert.deepStrictEqual(
+      filesFound,
+      Object.keys(compilerErrorTestFiles).sort()
+    );
   });
 });
