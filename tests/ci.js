@@ -228,4 +228,32 @@ describe('Testing elm-test on single Elm files', () => {
     const filesFound = readdir(path.join(cwd, 'tests', 'RuntimeException'));
     assert.deepStrictEqual(filesFound, erroredTestFiles);
   });
+
+  // tests that fail at compile time
+  const compilerErrorTestFiles = {
+    'InvalidSyntax.elm': 'endless comment',
+    'NoTests.elm': 'no exposed values of type test',
+  };
+
+  for (const [testToRun, output] of Object.entries(compilerErrorTestFiles)) {
+    for (const reporter of ['console', 'junit', 'json']) {
+      it(`Compile errors should go to stderr for test: ${testToRun}, reporter: ${reporter}`, () => {
+        const itsPath = path.join('tests', 'CompileError', testToRun);
+        const runResult = execElmTest([itsPath, '--report', reporter], cwd);
+        assert(
+          runResult.stderr.toLowerCase().includes(output),
+          runResult.stderr
+        );
+        assert.deepStrictEqual(
+          runResult.stdout.split('\n').slice(1).join('\n').trim(),
+          ''
+        );
+      });
+    }
+  }
+
+  it(`Should run every file in tests/CompileError`, () => {
+    const filesFound = readdir(path.join(cwd, 'tests', 'CompileError'));
+    assert.deepStrictEqual(filesFound, erroredTestFiles);
+  });
 });
