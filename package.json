@@ -46,9 +46,9 @@
   "dependencies": {
     "chalk": "^4.1.0",
     "chokidar": "^3.5.1",
-    "commander": "^7.0.0",
+    "commander": "^7.1.0",
     "cross-spawn": "^7.0.3",
-    "elm-tooling": "^1.1.0",
+    "elm-tooling": "^1.2.0",
     "glob": "^7.1.6",
     "graceful-fs": "^4.2.4",
     "rimraf": "^3.0.2",
@@ -57,11 +57,11 @@
     "xmlbuilder": "^15.1.0"
   },
   "devDependencies": {
-    "elm-review": "2.4.0",
-    "eslint": "7.17.0",
+    "elm-review": "2.4.2",
+    "eslint": "7.20.0",
     "eslint-plugin-mocha": "8.0.0",
-    "flow-bin": "0.142.0",
-    "mocha": "8.2.1",
+    "flow-bin": "0.145.0",
+    "mocha": "8.3.0",
     "prettier": "2.1.2",
     "strip-ansi": "6.0.0",
     "xml2js": "0.4.23"
