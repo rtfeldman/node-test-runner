@@ -53,7 +53,6 @@ jobs:
       - name: elm-test
         run: npm run elm-test
 
-
   publish:
     needs: main
     runs-on: ubuntu-latest
@@ -81,6 +80,6 @@ jobs:
         with:
           tag_name: ${{ steps.publish.outputs.version }}
           release_name: Release ${{ steps.publish.outputs.version }}
-          body: ""
+          body: ''
           draft: false
           prerelease: false
