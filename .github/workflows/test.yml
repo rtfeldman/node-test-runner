@@ -52,3 +52,35 @@ jobs:
 
       - name: elm-test
         run: npm run elm-test
+
+
+  publish:
+    needs: main
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - id: publish
+        uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+
+      - if: steps.publish.outputs.type != 'none'
+        env:
+          INPUT_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          TAG="latest-$(npx semver -c ${{ steps.publish.outputs.version }})"
+          npm dist-tag add elm-test@${{ steps.publish.outputs.version }} $TAG
+
+      - name: Create Release
+        if: steps.publish.outputs.type != 'none'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.publish.outputs.version }}
+          release_name: Release ${{ steps.publish.outputs.version }}
+          body: ""
+          draft: false
+          prerelease: false
