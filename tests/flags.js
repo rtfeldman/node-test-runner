@@ -208,6 +208,7 @@ describe('flags', () => {
           'tests/Passing/One.elm',
         ]);
 
+        assert.ok(Number.isInteger(runResult.status));
         assert.notStrictEqual(runResult.status, 0);
       }).timeout(60000);
     });
