@@ -9,7 +9,7 @@ module.exports = function(verbose) {
   var operatingSystem = process.platform;
 
   var filename = "elm-interface-to-json-" + operatingSystem + "-" + arch + ".tar.gz";
-  var url = "http://localhost:5000/" + filename;
+  var url = "https://github.com/rtfeldman/node-test-runner/releases/download/0.18.13/" + filename;
 
   var binariesDir = path.join(__dirname, "bin");
   var binaryExtension = process.platform === "win32" ? ".exe" : "";
