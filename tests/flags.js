@@ -189,6 +189,29 @@ describe('flags', () => {
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
     }).timeout(60000);
+
+    describe('--output', () => {
+      it('should ignore --output flag when set to /dev/null', () => {
+        const runResult = execElmTest([
+          'make',
+          '--output=/dev/null',
+          'tests/Passing/One.elm',
+        ]);
+
+        assert.strictEqual(runResult.status, 0);
+      }).timeout(60000);
+
+      it('should fail if setting --output to anything other than /dev/null', () => {
+        const runResult = execElmTest([
+          'make',
+          '--output=output_file',
+          'tests/Passing/One.elm',
+        ]);
+
+        assert.ok(Number.isInteger(runResult.status));
+        assert.notStrictEqual(runResult.status, 0);
+      }).timeout(60000);
+    });
   });
 
   describe('--help', () => {
