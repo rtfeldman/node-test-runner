@@ -4,6 +4,15 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors major Elm versions. So version 0.18.\* of this project will be compatible with Elm 0.18.\*.
 
+## 0.19.1-revision7 - 2021-05-14
+
+### Fixed
+
+- elm-test now works if you have `{ "type": "module" }` in your package.json.
+- `--output=/dev/null` is now ignored. This is needed by Emacs’ flycheck-elm package, which calls both `elm make` and `elm-test make` with `--output=/dev/null`. `elm-test make` does not produce any output files, so the flag doesn’t change anything. (Before 0.19.1-revision5, all unknown flags were silently ignored.)
+- The “no tests found” error message now works with `--report=json` and `--report=junit` again (regression in 0.19.1-revision5).
+- Better error message for `--fuzz=0`.
+
 ## 0.19.1-revision6 - 2020-01-29
 
 ### Fixed
