@@ -58,7 +58,7 @@
   },
   "devDependencies": {
     "elm-review": "2.4.2",
-    "eslint": "7.20.0",
+    "eslint": "7.29.0",
     "eslint-plugin-mocha": "8.0.0",
     "flow-bin": "0.145.0",
     "mocha": "8.3.0",
