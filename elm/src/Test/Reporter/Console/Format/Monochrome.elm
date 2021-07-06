@@ -1,6 +1,6 @@
 module Test.Reporter.Console.Format.Monochrome exposing (formatEquality)
 
-import Test.Reporter.Highlightable as Highlightable exposing (Highlightable(..))
+import Test.Reporter.Highlightable as Highlightable exposing (Highlightable)
 
 
 formatEquality : List (Highlightable String) -> List (Highlightable String) -> ( String, String )

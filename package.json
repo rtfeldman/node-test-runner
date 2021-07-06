@@ -57,7 +57,7 @@
     "xmlbuilder": "^15.1.0"
   },
   "devDependencies": {
-    "elm-review": "2.4.2",
+    "elm-review": "2.5.3",
     "eslint": "7.29.0",
     "eslint-plugin-mocha": "8.0.0",
     "flow-bin": "0.145.0",

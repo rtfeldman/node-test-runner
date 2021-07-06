@@ -19,8 +19,8 @@ import Platform
 import Random
 import Task
 import Test exposing (Test)
-import Test.Reporter.Reporter exposing (Report(..), RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, outcomesFromExpectations)
+import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
+import Test.Reporter.TestResults exposing (Outcome, TestResult, isFailure, outcomesFromExpectations)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Time exposing (Posix)

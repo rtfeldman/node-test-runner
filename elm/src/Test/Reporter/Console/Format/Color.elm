@@ -1,6 +1,6 @@
 module Test.Reporter.Console.Format.Color exposing (formatEquality)
 
-import Test.Reporter.Highlightable as Highlightable exposing (Highlightable(..))
+import Test.Reporter.Highlightable as Highlightable exposing (Highlightable)
 import Test.Runner.Node.Vendor.Console as Console
 
 
