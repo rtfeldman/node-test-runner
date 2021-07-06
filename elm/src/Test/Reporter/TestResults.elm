@@ -9,7 +9,7 @@ module Test.Reporter.TestResults exposing
 
 import Expect exposing (Expectation)
 import Test.Runner
-import Test.Runner.Failure exposing (Reason(..))
+import Test.Runner.Failure exposing (Reason)
 
 
 type Outcome
