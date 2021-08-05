@@ -59,7 +59,7 @@
   "devDependencies": {
     "elm-review": "2.5.3",
     "eslint": "7.31.0",
-    "eslint-plugin-mocha": "8.0.0",
+    "eslint-plugin-mocha": "9.0.0",
     "flow-bin": "0.156.0",
     "mocha": "8.3.0",
     "prettier": "2.3.2",
