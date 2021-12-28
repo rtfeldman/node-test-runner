@@ -7,7 +7,6 @@
     "node": ">=10.13.0"
   },
   "scripts": {
-    "prepare": "elm-tooling install",
     "test": "npm run check && npm run test-only",
     "flow": "flow",
     "lint": "eslint --report-unused-disable-directives .",
@@ -48,7 +47,7 @@
     "chokidar": "^3.5.1",
     "commander": "^7.1.0",
     "cross-spawn": "^7.0.3",
-    "elm-tooling": "^1.2.0",
+    "elm-solve-deps-wasm": "^1.0.0",
     "glob": "^7.1.6",
     "graceful-fs": "^4.2.4",
     "rimraf": "^3.0.2",
