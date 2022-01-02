@@ -7,6 +7,7 @@
     "node": ">=10.13.0"
   },
   "scripts": {
+    "prepare": "elm-tooling install",
     "test": "npm run check && npm run test-only",
     "flow": "flow",
     "lint": "eslint --report-unused-disable-directives .",
@@ -58,6 +59,7 @@
   },
   "devDependencies": {
     "elm-review": "2.5.3",
+    "elm-tooling": "1.7.0",
     "eslint": "7.31.0",
     "eslint-plugin-mocha": "8.0.0",
     "flow-bin": "0.156.0",
