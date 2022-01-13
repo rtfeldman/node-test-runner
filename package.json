@@ -4,7 +4,7 @@
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
-    "node": ">=10.13.0"
+    "node": ">=12.13.0"
   },
   "scripts": {
     "prepare": "elm-tooling install",
@@ -51,7 +51,6 @@
     "elm-tooling": "^1.2.0",
     "glob": "^7.1.6",
     "graceful-fs": "^4.2.4",
-    "rimraf": "^3.0.2",
     "split": "^1.0.1",
     "which": "^2.0.2",
     "xmlbuilder": "^15.1.0"
