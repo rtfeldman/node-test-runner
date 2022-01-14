@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
-        node-version: [12.x, 14.x, 15.x]
+        node-version: [10.x, 12.x, 14.x, 15.x]
 
     env:
       ELM_HOME: '${{ github.workspace }}/elm-stuff/elm-home'
