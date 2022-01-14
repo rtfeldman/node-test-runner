@@ -7,7 +7,6 @@ const fs = require('fs');
 const os = require('os');
 const xml2js = require('xml2js');
 const readline = require('readline');
-const rimraf = require('rimraf');
 const stripAnsi = require('strip-ansi');
 const which = require('which');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
@@ -40,12 +39,21 @@ function execElmTest(args, cwd = fixturesDir, extraOpts = {}) {
   );
 }
 
-function ensureEmptyDir(dirPath) {
-  if (fs.existsSync(dirPath)) {
-    // We can replace this with `fs.rmdirSync(dir, { recursive: true })`
-    // once Node.js 10 is EOL 2021-04-30 and support for Node.js 10 is dropped.
-    rimraf.sync(dirPath);
+function rimraf(dirPath) {
+  // We can replace this with just `fs.rmSync(dirPath, { recursive: true, force: true })`
+  // when Node.js 12 is EOL 2022-04-30 and support for Node.js 12 is dropped.
+  // `fs.rmSync` was added in Node.js 14.14.0, which is also when the
+  // `recursive` option of `fs.rmdirSync` was deprecated. The `if` avoids
+  // printing a deprecation message.
+  if (fs.rmSync !== undefined) {
+    fs.rmSync(dirPath, { recursive: true, force: true });
+  } else if (fs.existsSync(dirPath)) {
+    fs.rmdirSync(dirPath, { recursive: true });
   }
+}
+
+function ensureEmptyDir(dirPath) {
+  rimraf(dirPath);
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
@@ -607,7 +615,7 @@ describe('flags', () => {
             case 2:
               // Remove the tests dir again. This should re-run and output
               // messages about no tests found but not crash.
-              rimraf.sync(path.join(scratchDir, 'tests'));
+              rimraf(path.join(scratchDir, 'tests'));
               break;
             default:
               child.kill();
