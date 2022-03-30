@@ -27,13 +27,13 @@ jobs:
 
       - name: Cache node_modules
         id: cache-node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3.0.1
         with:
           path: node_modules
           key: node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
 
       - name: Cache ELM_HOME
-        uses: actions/cache@v2
+        uses: actions/cache@v3.0.1
         with:
           path: '${{ env.ELM_HOME }}'
           key: elm-${{ matrix.os }}-${{ hashFiles('elm-tooling.json', 'elm/**/elm.json', 'example-*/**/elm.json', 'tests/**/elm.json') }}
