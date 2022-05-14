@@ -102,6 +102,22 @@ user
         ['user']
       ));
 
+    it('handles escapes in string literals and char literals', () =>
+      testParser(
+        `
+module Main exposing ( ..)
+
+string = "\\n\\r\\t\\"\\'\\\\\\u{00A0}"
+
+chars = [ '\\n', '\\r', '\\t', '\\"', '\\'', '\\\\', '\\u{00A0}' ]
+
+test = something
+--}
+
+`,
+        ['string', 'chars', 'test']
+      ));
+
     it('handles tokens that look like the start of some other token at the end of a line', () =>
       testParser(
         `
@@ -136,7 +152,7 @@ testSubtraction =
         ['one', 'two']
       ));
 
-    it('handles finds test in a file with `exposting (..)` and CRLF', () =>
+    it('handles finds test in a file with `exposing (..)` and CRLF', () =>
       testParser(
         `module Main exposing (..)
 
