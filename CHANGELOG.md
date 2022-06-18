@@ -4,6 +4,30 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors major Elm versions. So version 0.18.\* of this project will be compatible with Elm 0.18.\*.
 
+## 0.19.1-revision8 - 2022-06-20
+
+### Breaking
+
+- Removed support for Node.js 10 (which reached end of life 2021-04-30). Node.js 12.20.0 is now the minium supported Node.js version. (Node.js 12 actually reached end of life 2022-04-30, but we decided to keep support for it for a while longer since there was no need of dropping it right now.)
+
+### Added
+
+- The new `elm-test install-unstable-test-master` command installs the `master` version of the [elm-explorations/test library](https://github.com/elm-explorations/test/). **This let’s you TODO.** Big thanks to [Martin Janiczek](https://github.com/Janiczek/)!
+
+### Changed
+
+- elm-test no longer uses [elm-json](https://github.com/zwilias/elm-json/) to calculate the set of dependencies needed to run your tests. Instead, we use [elm-solve-deps-wasm](https://github.com/mpizenberg/elm-solve-deps-wasm) which basically is a WebAssembly port of the dependency solver in [elm-test-rs](https://github.com/mpizenberg/elm-test-rs). Big thanks to [Matthieu Pizenberg](https://github.com/mpizenberg/)! Benefits of this change:
+
+  - elm-test no longer needs to download the elm-json binary at install time or run time. elm-solve-deps-wasm is a regular, cross platform npm package.
+  - Improves compatibility with [Lamdera](https://lamdera.com/).
+  - elm-solve-deps-wasm works offline to a greater extent than elm-json. Many times it doesn’t need to make any calls to package.elm-lang.org at all!
+
+- elm-test now shows suggestions on misspelled CLI flags.
+
+### Fixed
+
+- If you have `module MyTest exposing (..)` with the expose-all `(..)` _and_ a char literal with a unicode escape, like `'\u{000D}'`, in the same file, elm-test now correctly finds all tests to run in that file. A bug with unicode escape parsing previously caused no tests to be found.
+
 ## 0.19.1-revision7 - 2021-05-14
 
 ### Fixed
