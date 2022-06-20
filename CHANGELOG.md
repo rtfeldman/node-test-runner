@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 - `elm-test uninstall-unstable-test-master`
   - which undoes that
 
-**This let’s you test the upcoming major version of elm-explorations/test.** Big thanks to [Martin Janiczek](https://github.com/Janiczek/)!
+**This let’s you test the [upcoming major version of elm-explorations/test](https://discourse.elm-lang.org/t/call-for-testing-of-elm-explorations-test-2-0-0/8458).** Big thanks to [Martin Janiczek](https://github.com/Janiczek/)!
 
 ### Changed
 
