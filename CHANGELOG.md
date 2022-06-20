@@ -8,11 +8,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 
 ### Breaking
 
-- Removed support for Node.js 10 (which reached end of life 2021-04-30). Node.js 12.20.0 is now the minium supported Node.js version. (Node.js 12 actually reached end of life 2022-04-30, but we decided to keep support for it for a while longer since there was no need of dropping it right now.)
+- Removed support for Node.js 10 (which reached end of life 2021-04-30). Node.js 12.20.0 is now the minimum supported Node.js version. (Node.js 12 actually reached end of life 2022-04-30, but we decided to keep support for it for a while longer since there was no need of dropping it right now.)
 
 ### Added
 
-- The new `elm-test install-unstable-test-master` command installs the `master` version of the [elm-explorations/test library](https://github.com/elm-explorations/test/). **This let’s you TODO.** Big thanks to [Martin Janiczek](https://github.com/Janiczek/)!
+- `elm-test install-unstable-test-master`
+  - which installs the `master` version of the [elm-explorations/test library](https://github.com/elm-explorations/test/) in place of the `1.2.2` version in your `ELM_HOME`
+- `elm-test uninstall-unstable-test-master`
+  - which undoes that
+
+**This let’s you test the upcoming major version of elm-explorations/test.** Big thanks to [Martin Janiczek](https://github.com/Janiczek/)!
 
 ### Changed
 
@@ -48,7 +53,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 
 ### Breaking
 
-- Removed support for Node.js 8 (which reached end of life 2019-12-31). Node.js 10.13.0 is now the minium supported Node.js version.
+- Removed support for Node.js 8 (which reached end of life 2019-12-31). Node.js 10.13.0 is now the minimum supported Node.js version.
 - Removed the undocumented `--verbose` flag. It didn’t do much at all in its current state.
 
 ### Fixed
