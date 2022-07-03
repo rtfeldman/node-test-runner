@@ -4,6 +4,12 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors major Elm versions. So version 0.18.\* of this project will be compatible with Elm 0.18.\*.
 
+## 0.19.1-revision9 - 2022-07-03
+
+### Fixed
+
+- `elm-test install-unstable-test-master` (added in the previous version) now works with packages.
+
 ## 0.19.1-revision8 - 2022-06-20
 
 ### Breaking
