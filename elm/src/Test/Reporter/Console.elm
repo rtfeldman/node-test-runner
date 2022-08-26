@@ -36,8 +36,8 @@ pluralize singular plural count =
     String.join " " [ String.fromInt count, suffix ]
 
 
-passedToText : UseColor -> List String -> String -> Text
-passedToText useColor labels coverageReport =
+passedToText : List String -> String -> Text
+passedToText labels coverageReport =
     Text.concat
         [ passedLabelsToText labels
         , dark <| plain <| "\n" ++ indent coverageReport ++ "\n\n"
