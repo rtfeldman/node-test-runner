@@ -1,6 +1,8 @@
 module Test.Reporter.Json exposing (reportBegin, reportComplete, reportSummary)
 
+import Dict exposing (Dict)
 import Json.Encode as Encode exposing (Value)
+import Test.Coverage
 import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
@@ -25,6 +27,7 @@ reportComplete { duration, labels, outcome } =
         , ( "status", Encode.string (getStatus outcome) )
         , ( "labels", encodeLabels labels )
         , ( "failures", Encode.list identity (encodeFailures outcome) )
+        , ( "coverageReports", Encode.list identity (encodeCoverageReports outcome) )
         , ( "duration", Encode.string <| String.fromInt duration )
         ]
 
@@ -33,13 +36,71 @@ encodeFailures : Outcome -> List Value
 encodeFailures outcome =
     case outcome of
         Failed failures ->
-            List.map encodeFailure failures
+            List.map (Tuple.first >> encodeFailure) failures
 
         Todo str ->
             [ Encode.string str ]
 
-        _ ->
+        Passed _ ->
             []
+
+
+encodeCoverageReports : Outcome -> List Value
+encodeCoverageReports outcome =
+    case outcome of
+        Failed failures ->
+            List.map (Tuple.second >> encodeCoverageReport) failures
+
+        Todo _ ->
+            []
+
+        Passed coverageReport ->
+            [ encodeCoverageReport coverageReport ]
+
+
+encodeCoverageReport : Test.Coverage.CoverageReport -> Value
+encodeCoverageReport coverageReport =
+    case coverageReport of
+        Test.Coverage.NoCoverage ->
+            Encode.null
+                |> encodeSumType "NoCoverage"
+
+        Test.Coverage.CoverageToReport r ->
+            [ ( "coverageCount", encodeCoverageCount r.coverageCount )
+            , ( "runsElapsed", Encode.int r.runsElapsed )
+            ]
+                |> Encode.object
+                |> encodeSumType "CoverageToReport"
+
+        Test.Coverage.CoverageCheckSucceeded r ->
+            [ ( "coverageCount", encodeCoverageCount r.coverageCount )
+            , ( "runsElapsed", Encode.int r.runsElapsed )
+            ]
+                |> Encode.object
+                |> encodeSumType "CoverageCheckSucceeded"
+
+        Test.Coverage.CoverageCheckFailed r ->
+            [ ( "coverageCount", encodeCoverageCount r.coverageCount )
+            , ( "runsElapsed", Encode.int r.runsElapsed )
+            , ( "badLabel", Encode.string r.badLabel )
+            , ( "badLabelPercentage", Encode.float r.badLabelPercentage )
+            , ( "expectedCoverage", Encode.string r.expectedCoverage )
+            ]
+                |> Encode.object
+                |> encodeSumType "CoverageCheckFailed"
+
+
+encodeCoverageCount : Dict (List String) Int -> Value
+encodeCoverageCount dict =
+    dict
+        |> Dict.toList
+        |> Encode.list
+            (\( labels, count ) ->
+                Encode.object
+                    [ ( "labels", Encode.list Encode.string labels )
+                    , ( "count", Encode.int count )
+                    ]
+            )
 
 
 {-| Algorithm:
@@ -58,7 +119,7 @@ getStatus outcome =
         Todo _ ->
             "todo"
 
-        Passed ->
+        Passed _ ->
             "pass"
 
 
@@ -92,10 +153,12 @@ encodeFailure { given, description, reason } =
         ]
 
 
-encodeReasonType : String -> Value -> Value
-encodeReasonType reasonType data =
+encodeSumType : String -> Value -> Value
+encodeSumType sumType data =
     Encode.object
-        [ ( "type", Encode.string reasonType ), ( "data", data ) ]
+        [ ( "type", Encode.string sumType )
+        , ( "data", data )
+        ]
 
 
 encodeReason : String -> Reason -> Value
@@ -103,7 +166,7 @@ encodeReason description reason =
     case reason of
         Custom ->
             Encode.string description
-                |> encodeReasonType "Custom"
+                |> encodeSumType "Custom"
 
         Equality expected actual ->
             [ ( "expected", Encode.string expected )
@@ -111,7 +174,7 @@ encodeReason description reason =
             , ( "comparison", Encode.string description )
             ]
                 |> Encode.object
-                |> encodeReasonType "Equality"
+                |> encodeSumType "Equality"
 
         Comparison first second ->
             [ ( "first", Encode.string first )
@@ -119,11 +182,11 @@ encodeReason description reason =
             , ( "comparison", Encode.string description )
             ]
                 |> Encode.object
-                |> encodeReasonType "Comparison"
+                |> encodeSumType "Comparison"
 
         TODO ->
             Encode.string description
-                |> encodeReasonType "TODO"
+                |> encodeSumType "TODO"
 
         Invalid BadDescription ->
             let
@@ -135,18 +198,18 @@ encodeReason description reason =
                         "This is an invalid test description: " ++ description
             in
             Encode.string explanation
-                |> encodeReasonType "Invalid"
+                |> encodeSumType "Invalid"
 
         Invalid _ ->
             Encode.string description
-                |> encodeReasonType "Invalid"
+                |> encodeSumType "Invalid"
 
         ListDiff expected actual ->
             [ ( "expected", Encode.list Encode.string expected )
             , ( "actual", Encode.list Encode.string actual )
             ]
                 |> Encode.object
-                |> encodeReasonType "ListDiff"
+                |> encodeSumType "ListDiff"
 
         CollectionDiff { expected, actual, extra, missing } ->
             [ ( "expected", Encode.string expected )
@@ -155,4 +218,4 @@ encodeReason description reason =
             , ( "missing", Encode.list Encode.string missing )
             ]
                 |> Encode.object
-                |> encodeReasonType "CollectionDiff"
+                |> encodeSumType "CollectionDiff"

@@ -2,6 +2,7 @@ module Test.Reporter.Console exposing (reportBegin, reportComplete, reportSummar
 
 import Console.Text as Text exposing (..)
 import Json.Encode as Encode exposing (Value)
+import Test.Coverage
 import Test.Reporter.Console.Format exposing (format)
 import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
@@ -33,6 +34,19 @@ pluralize singular plural count =
                 plural
     in
     String.join " " [ String.fromInt count, suffix ]
+
+
+passedToText : UseColor -> List String -> String -> Text
+passedToText useColor labels coverageReport =
+    Text.concat
+        [ passedLabelsToText labels
+        , plain <| "\n" ++ indent coverageReport ++ "\n\n"
+        ]
+
+
+passedLabelsToText : List String -> Text
+passedLabelsToText =
+    formatLabels (dark << plain << withChar '↓') (green << withChar '✓') >> Text.concat
 
 
 todosToText : ( List String, String ) -> Text
@@ -109,24 +123,53 @@ reportBegin useColor { globs, fuzzRuns, testCount, initialSeed } =
         |> Just
 
 
+getStatus : Outcome -> String
+getStatus outcome =
+    case outcome of
+        Failed _ ->
+            "fail"
+
+        Todo _ ->
+            "todo"
+
+        Passed _ ->
+            "pass"
+
+
 reportComplete : UseColor -> Results.TestResult -> Value
 reportComplete useColor { labels, outcome } =
-    case outcome of
-        Passed ->
-            -- No failures of any kind.
-            Encode.null
+    Encode.object <|
+        ( "status", Encode.string (getStatus outcome) )
+            :: (case outcome of
+                    Passed coverageReport ->
+                        -- No failures of any kind.
+                        case coverageReportToString coverageReport of
+                            Nothing ->
+                                []
 
-        Failed failures ->
-            -- We have non-TODOs still failing; report them, not the TODOs.
-            failures
-                |> failuresToText useColor labels
-                |> textToValue useColor
+                            Just report ->
+                                [ ( "coverageReport"
+                                  , report
+                                        |> passedToText useColor labels
+                                        |> textToValue useColor
+                                  )
+                                ]
 
-        Todo str ->
-            Encode.object
-                [ ( "todo", Encode.string str )
-                , ( "labels", Encode.list Encode.string labels )
-                ]
+                    Failed failures ->
+                        [ ( "failure"
+                          , -- We have non-TODOs still failing; report them, not the TODOs.
+                            failures
+                                |> List.map Tuple.first
+                                |> failuresToText useColor labels
+                                |> textToValue useColor
+                          )
+                        ]
+
+                    Todo str ->
+                        [ ( "todo", Encode.string str )
+                        , ( "labels", Encode.list Encode.string labels )
+                        ]
+               )
 
 
 summarizeTodos : List ( List String, String ) -> Text
@@ -205,3 +248,23 @@ stat label value =
 withChar : Char -> String -> String
 withChar icon str =
     String.fromChar icon ++ " " ++ str ++ "\n"
+
+
+coverageReportToString : Test.Coverage.CoverageReport -> Maybe String
+coverageReportToString coverageReport =
+    case coverageReport of
+        Test.Coverage.NoCoverage ->
+            Nothing
+
+        Test.Coverage.CoverageToReport r ->
+            Just (Test.Coverage.coverageReportTable r)
+
+        Test.Coverage.CoverageCheckSucceeded _ ->
+            {- Not reporting the table although the data is technically there.
+               We keep the full data dump for the JSON reporter.
+            -}
+            Nothing
+
+        Test.Coverage.CoverageCheckFailed _ ->
+            -- The table is included in the failure message already.
+            Nothing

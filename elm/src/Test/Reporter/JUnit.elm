@@ -1,6 +1,7 @@
 module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
+import Test.Coverage
 import Test.Reporter.TestResults exposing (Failure, Outcome(..), SummaryInfo, TestResult)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
@@ -10,20 +11,62 @@ reportBegin _ =
     Nothing
 
 
+encodeCoverageReport : String -> Maybe ( String, Value )
+encodeCoverageReport reportText =
+    if String.isEmpty reportText then
+        Nothing
+
+    else
+        Just ( "system-out", Encode.string reportText )
+
+
+coverageReportToString : Test.Coverage.CoverageReport -> Maybe String
+coverageReportToString coverageReport =
+    case coverageReport of
+        Test.Coverage.NoCoverage ->
+            Nothing
+
+        Test.Coverage.CoverageToReport r ->
+            Just (Test.Coverage.coverageReportTable r)
+
+        Test.Coverage.CoverageCheckSucceeded _ ->
+            {- Not reporting the table to the JUnit stdout (similarly to the
+               Console reporter) although the data is technically there.
+               We keep the full data dump for the JSON reporter.
+            -}
+            Nothing
+
+        Test.Coverage.CoverageCheckFailed _ ->
+            -- The table is included in the failure message already.
+            Nothing
+
+
 encodeOutcome : Outcome -> List ( String, Value )
 encodeOutcome outcome =
     case outcome of
-        Passed ->
-            []
+        Passed coverageReport ->
+            coverageReport
+                |> coverageReportToString
+                |> Maybe.andThen encodeCoverageReport
+                |> Maybe.map List.singleton
+                |> Maybe.withDefault []
 
         Failed failures ->
             let
                 message =
                     failures
-                        |> List.map formatFailure
+                        |> List.map (Tuple.first >> formatFailure)
+                        |> String.join "\n\n\n"
+
+                coverageReports =
+                    failures
+                        |> List.filterMap (Tuple.second >> coverageReportToString)
                         |> String.join "\n\n\n"
             in
-            [ encodeFailureTuple message ]
+            List.filterMap identity
+                [ Just (encodeFailureTuple message)
+                , encodeCoverageReport coverageReports
+                ]
 
         Todo message ->
             [ encodeFailureTuple ("TODO: " ++ message) ]
