@@ -2,7 +2,7 @@ module Test.Reporter.Json exposing (reportBegin, reportComplete, reportSummary)
 
 import Dict exposing (Dict)
 import Json.Encode as Encode exposing (Value)
-import Test.Coverage
+import Test.Coverage exposing (CoverageReport)
 import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
@@ -58,7 +58,7 @@ encodeCoverageReports outcome =
             [ encodeCoverageReport coverageReport ]
 
 
-encodeCoverageReport : Test.Coverage.CoverageReport -> Value
+encodeCoverageReport : CoverageReport -> Value
 encodeCoverageReport coverageReport =
     case coverageReport of
         Test.Coverage.NoCoverage ->

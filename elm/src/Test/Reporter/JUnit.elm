@@ -1,7 +1,7 @@
 module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
-import Test.Coverage
+import Test.Coverage exposing (CoverageReport)
 import Test.Reporter.TestResults exposing (Failure, Outcome(..), SummaryInfo, TestResult)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
@@ -20,7 +20,7 @@ encodeCoverageReport reportText =
         Just ( "system-out", Encode.string reportText )
 
 
-coverageReportToString : Test.Coverage.CoverageReport -> Maybe String
+coverageReportToString : CoverageReport -> Maybe String
 coverageReportToString coverageReport =
     case coverageReport of
         Test.Coverage.NoCoverage ->

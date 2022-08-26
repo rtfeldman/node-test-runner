@@ -2,7 +2,7 @@ module Test.Reporter.Console exposing (reportBegin, reportComplete, reportSummar
 
 import Console.Text as Text exposing (..)
 import Json.Encode as Encode exposing (Value)
-import Test.Coverage
+import Test.Coverage exposing (CoverageReport)
 import Test.Reporter.Console.Format exposing (format)
 import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
@@ -40,7 +40,7 @@ passedToText : UseColor -> List String -> String -> Text
 passedToText useColor labels coverageReport =
     Text.concat
         [ passedLabelsToText labels
-        , plain <| "\n" ++ indent coverageReport ++ "\n\n"
+        , dark <| plain <| "\n" ++ indent coverageReport ++ "\n\n"
         ]
 
 
@@ -64,7 +64,7 @@ todoToChalk message =
     plain ("◦ TODO: " ++ message ++ "\n\n")
 
 
-failuresToText : UseColor -> List String -> List Failure -> Text
+failuresToText : UseColor -> List String -> List ( Failure, CoverageReport ) -> Text
 failuresToText useColor labels failures =
     Text.concat (failureLabelsToText labels :: List.map (failureToText useColor) failures)
 
@@ -74,8 +74,8 @@ failureLabelsToText =
     formatLabels (dark << plain << withChar '↓') (red << withChar '✗') >> Text.concat
 
 
-failureToText : UseColor -> Results.Failure -> Text
-failureToText useColor { given, description, reason } =
+failureToText : UseColor -> ( Failure, CoverageReport ) -> Text
+failureToText useColor ( { given, description, reason }, coverageReport ) =
     let
         formatEquality =
             case useColor of
@@ -85,18 +85,23 @@ failureToText useColor { given, description, reason } =
                 UseColor ->
                     FormatColor.formatEquality
 
-        messageText =
-            plain ("\n" ++ indent (format formatEquality description reason) ++ "\n\n")
-    in
-    case given of
-        Nothing ->
-            messageText
+        coverageText =
+            coverageReportToString coverageReport
+                |> Maybe.map (\str -> dark (plain ("\n" ++ indent str ++ "\n")))
 
-        Just givenStr ->
-            [ dark (plain ("\nGiven " ++ givenStr ++ "\n"))
-            , messageText
-            ]
-                |> Text.concat
+        givenText =
+            given
+                |> Maybe.map (\str -> dark (plain ("\nGiven " ++ str ++ "\n")))
+
+        messageText =
+            plain <| "\n" ++ indent (format formatEquality description reason) ++ "\n\n"
+    in
+    [ coverageText
+    , givenText
+    , Just messageText
+    ]
+        |> List.filterMap identity
+        |> Text.concat
 
 
 textToValue : UseColor -> Text -> Value
@@ -159,7 +164,6 @@ reportComplete useColor { labels, outcome } =
                         [ ( "failure"
                           , -- We have non-TODOs still failing; report them, not the TODOs.
                             failures
-                                |> List.map Tuple.first
                                 |> failuresToText useColor labels
                                 |> textToValue useColor
                           )
@@ -250,7 +254,7 @@ withChar icon str =
     String.fromChar icon ++ " " ++ str ++ "\n"
 
 
-coverageReportToString : Test.Coverage.CoverageReport -> Maybe String
+coverageReportToString : CoverageReport -> Maybe String
 coverageReportToString coverageReport =
     case coverageReport of
         Test.Coverage.NoCoverage ->
