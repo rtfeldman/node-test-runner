@@ -155,7 +155,7 @@ reportComplete useColor { labels, outcome } =
                             Just report ->
                                 [ ( "coverageReport"
                                   , report
-                                        |> passedToText useColor labels
+                                        |> passedToText labels
                                         |> textToValue useColor
                                   )
                                 ]
