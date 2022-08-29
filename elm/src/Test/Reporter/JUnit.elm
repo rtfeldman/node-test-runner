@@ -11,13 +11,9 @@ reportBegin _ =
     Nothing
 
 
-encodeCoverageReport : String -> Maybe ( String, Value )
+encodeCoverageReport : String -> ( String, Value )
 encodeCoverageReport reportText =
-    if String.isEmpty reportText then
-        Nothing
-
-    else
-        Just ( "system-out", Encode.string reportText )
+    ( "system-out", Encode.string reportText )
 
 
 coverageReportToString : CoverageReport -> Maybe String
@@ -47,8 +43,7 @@ encodeOutcome outcome =
         Passed coverageReport ->
             coverageReport
                 |> coverageReportToString
-                |> Maybe.andThen encodeCoverageReport
-                |> Maybe.map List.singleton
+                |> Maybe.map (encodeCoverageReport >> List.singleton)
                 |> Maybe.withDefault []
 
         Failed failures ->
@@ -58,14 +53,23 @@ encodeOutcome outcome =
                         |> List.map (Tuple.first >> formatFailure)
                         |> String.join "\n\n\n"
 
+                coverageReports : String
                 coverageReports =
                     failures
                         |> List.filterMap (Tuple.second >> coverageReportToString)
                         |> String.join "\n\n\n"
+
+                nonemptyCoverageReports : Maybe String
+                nonemptyCoverageReports =
+                    if String.isEmpty coverageReports then
+                        Nothing
+
+                    else
+                        Just coverageReports
             in
             List.filterMap identity
                 [ Just (encodeFailureTuple message)
-                , encodeCoverageReport coverageReports
+                , Maybe.map encodeCoverageReport nonemptyCoverageReports
                 ]
 
         Todo message ->
