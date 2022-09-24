@@ -20,5 +20,5 @@ test =
                 ]
         }
         (Fuzz.intRange 1 20)
-        "Int range boundaries - mandatory"
+        "expectCoverage: passing"
         (\n -> Expect.pass)

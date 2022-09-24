@@ -18,5 +18,5 @@ test =
                 ]
         }
         (Fuzz.intRange 1 20)
-        "Int range boundaries"
+        "reportCoverage: failing"
         (\n -> Expect.fail "The test is supposed to fail")
