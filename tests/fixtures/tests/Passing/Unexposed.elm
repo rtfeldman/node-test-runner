@@ -26,10 +26,11 @@ all =
 
 testTrue : Test
 testTrue =
-    test "Expect.true works" <|
+    test "Expect.equal True works" <|
         \() ->
             True
-                |> Expect.true "this should never fail!"
+                |> Expect.equal True
+                |> Expect.onFail "this should never fail!"
 
 
 testUnexposed : Test
