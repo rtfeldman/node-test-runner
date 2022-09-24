@@ -75,6 +75,40 @@ function assertTestFailure(runResult) {
   );
 }
 
+function assertCoverageShown(reporter, runResult) {
+  const msg = getDetailedMessage("Expected to show coverage table", runResult);
+  switch (reporter) {
+    case 'console':
+      assert.ok(runResult.stdout.includes("Coverage report:"), msg);
+      break;
+    case 'junit':
+      assert.ok(runResult.stdout.includes("Coverage report:"), msg);
+      break;
+    case 'json':
+      assert.ok(runResult.stdout.includes("coverageCount"), msg);
+      break;
+    default:
+      throw 'Unknown reporter!';
+  }
+}
+
+function assertCoverageNotShown(reporter, runResult) {
+  const msg = getDetailedMessage("Expected to show coverage table", runResult);
+  switch (reporter) {
+    case 'console':
+      assert.ok(!runResult.stdout.includes("Coverage report:"), msg);
+      break;
+    case 'junit':
+      assert.ok(!runResult.stdout.includes("Coverage report:"), msg);
+      break;
+    case 'json':
+      assert.ok(!runResult.stdout.includes("coverageCount"), msg);
+      break;
+    default:
+      throw 'Unknown reporter!';
+  }
+}
+
 function readdir(dir) {
   return fs
     .readdirSync(dir)
@@ -259,4 +293,46 @@ describe('Testing elm-test on single Elm files', () => {
       Object.keys(compilerErrorTestFiles).sort()
     );
   });
+});
+
+
+describe('Coverage report tests', () => {
+  const cwd = fixturesDir;
+  const coverageReportFiles = {
+    'console': {
+      'ReportCoveragePassing.elm':         {showCoverage: true},
+      'ReportCoverageFailing.elm':         {showCoverage: true},
+      'ExpectCoveragePassing.elm':         {showCoverage: false},
+      'ExpectCoverageFailingCoverage.elm': {showCoverage: true},
+      'ExpectCoverageFailingTest.elm':     {showCoverage: true},
+    },
+    'junit': {
+      'ReportCoveragePassing.elm':         {showCoverage: true},
+      'ReportCoverageFailing.elm':         {showCoverage: true},
+      'ExpectCoveragePassing.elm':         {showCoverage: false},
+      'ExpectCoverageFailingCoverage.elm': {showCoverage: true},
+      'ExpectCoverageFailingTest.elm':     {showCoverage: true},
+    },
+    'json': {
+      'ReportCoveragePassing.elm':         {showCoverage: true},
+      'ReportCoverageFailing.elm':         {showCoverage: true},
+      'ExpectCoveragePassing.elm':         {showCoverage: true},
+      'ExpectCoverageFailingCoverage.elm': {showCoverage: true},
+      'ExpectCoverageFailingTest.elm':     {showCoverage: true},
+    },
+  };
+
+  for (const [reporter, tests] of Object.entries(coverageReportFiles)) {
+    for (const [test, {showCoverage}] of Object.entries(tests)) {
+      const testFile = path.join(cwd, 'tests', 'Coverage', test);
+      it(`Coverage report test for test: ${test}, reporter: ${reporter}`, () => {
+        const runResult = execElmTest([testFile, '--report', reporter], cwd);
+        if (showCoverage) {
+          assertCoverageShown(reporter, runResult);
+        } else {
+          assertCoverageNotShown(reporter, runResult);
+        }
+      });
+    }
+  }
 });
