@@ -7,7 +7,7 @@
         "elm/html": "1.0.0",
         "elm/project-metadata-utils": "1.0.0",
         "elm/parser": "1.1.0",
-        "elm-explorations/test": "1.2.2",
+        "elm-explorations/test": "2.0.0",
         "elm/core": "1.0.2",
         "elm/random": "1.0.0",
         "elm/time": "1.0.0",
