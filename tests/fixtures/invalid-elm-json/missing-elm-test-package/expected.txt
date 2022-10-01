@@ -1,0 +1,2 @@
+/full/path/to/elm.json
+You must have "elm-explorations/test" in your "test-dependencies" or "dependencies" to run elm-test.

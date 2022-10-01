@@ -1,0 +1,2 @@
+/full/path/to/elm.json
+This version of elm-test only supports elm-explorations/test 2.x, but you have "1.2.0 <= v < 2.0.0".
