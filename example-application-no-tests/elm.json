@@ -23,8 +23,7 @@
         },
         "indirect": {
             "elm/bytes": "1.0.8",
-            "elm/random": "1.0.0",
-            "turboMaCk/queue": "1.1.0"
+            "elm/random": "1.0.0"
         }
     }
 }
