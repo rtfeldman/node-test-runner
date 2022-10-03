@@ -21,4 +21,4 @@ test =
         }
         (Fuzz.intRange 1 20)
         "expectCoverage: failing because of coverage"
-        (\n -> Expect.pass)
+        (\_ -> Expect.pass)

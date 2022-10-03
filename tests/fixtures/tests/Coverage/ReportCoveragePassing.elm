@@ -19,4 +19,4 @@ test =
         }
         (Fuzz.intRange 1 20)
         "reportCoverage: passing"
-        (\n -> Expect.pass)
+        (\_ -> Expect.pass)

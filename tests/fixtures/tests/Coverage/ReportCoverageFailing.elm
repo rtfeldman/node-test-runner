@@ -19,4 +19,4 @@ test =
         }
         (Fuzz.intRange 1 20)
         "reportCoverage: failing"
-        (\n -> Expect.fail "The test is supposed to fail")
+        (\_ -> Expect.fail "The test is supposed to fail")
