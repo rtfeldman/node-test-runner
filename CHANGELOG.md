@@ -4,6 +4,20 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors major Elm versions. So version 0.18.\* of this project will be compatible with Elm 0.18.\*.
 
+## 0.19.1-revision10 - 2022-10-09
+
+> ⚠️ Updating to this version also requires upgrading [elm-explorations/test]!
+
+### Breaking
+
+- This version of `elm-test` _only_ works with [elm-explorations/test] 2.x (2.0.0 <= v < 3.0.0). [elm-explorations/test] 2.0.0 was just released. The [versions table](https://github.com/rtfeldman/node-test-runner#versions) should make it clear which versions work together.
+
+- Removed `elm-test install-unstable-test-master` and `elm-test uninstall-unstable-test-master`. They are no longer needed since [elm-explorations/test] 2.0.0 has been released.
+
+### Added
+
+- Fuzzer coverage statistics report. Fuzzer coverage is new in [elm-explorations/test] 2.0.0, and it required a change in how things are reported from Elm to the test runner, which is why elm-test 0.19.1-revision10 is not compatible with older [elm-explorations/test] versions.
+
 ## 0.19.1-revision9 - 2022-07-03
 
 ### Fixed
@@ -19,7 +33,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 ### Added
 
 - `elm-test install-unstable-test-master`
-  - which installs the `master` version of the [elm-explorations/test library](https://github.com/elm-explorations/test/) in place of the `1.2.2` version in your `ELM_HOME`
+  - which installs the `master` version of the [elm-explorations/test] library in place of the `1.2.2` version in your `ELM_HOME`
 - `elm-test uninstall-unstable-test-master`
   - which undoes that
 
@@ -247,3 +261,5 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 - Ensure your test files expose each test you want to run, and that those values are of type `Test`
 - Make sure those tests aren't defined twice (for example: once as a top-level value, and again in a `describe` block) or they will be executed twice.
 - run `elm-test` to execute your tests.
+
+[elm-explorations/test]: https://github.com/elm-explorations/test/
