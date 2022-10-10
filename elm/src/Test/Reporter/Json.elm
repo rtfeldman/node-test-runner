@@ -2,7 +2,7 @@ module Test.Reporter.Json exposing (reportBegin, reportComplete, reportSummary)
 
 import Dict exposing (Dict)
 import Json.Encode as Encode exposing (Value)
-import Test.Coverage exposing (CoverageReport)
+import Test.Distribution exposing (DistributionReport)
 import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), SummaryInfo)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
@@ -27,7 +27,7 @@ reportComplete { duration, labels, outcome } =
         , ( "status", Encode.string (getStatus outcome) )
         , ( "labels", encodeLabels labels )
         , ( "failures", Encode.list identity (encodeFailures outcome) )
-        , ( "coverageReports", Encode.list identity (encodeCoverageReports outcome) )
+        , ( "distributionReports", Encode.list identity (encodeDistributionReports outcome) )
         , ( "duration", Encode.string <| String.fromInt duration )
         ]
 
@@ -45,53 +45,53 @@ encodeFailures outcome =
             []
 
 
-encodeCoverageReports : Outcome -> List Value
-encodeCoverageReports outcome =
+encodeDistributionReports : Outcome -> List Value
+encodeDistributionReports outcome =
     case outcome of
         Failed failures ->
-            List.map (Tuple.second >> encodeCoverageReport) failures
+            List.map (Tuple.second >> encodeDistributionReport) failures
 
         Todo _ ->
             []
 
-        Passed coverageReport ->
-            [ encodeCoverageReport coverageReport ]
+        Passed distributionReport ->
+            [ encodeDistributionReport distributionReport ]
 
 
-encodeCoverageReport : CoverageReport -> Value
-encodeCoverageReport coverageReport =
-    case coverageReport of
-        Test.Coverage.NoCoverage ->
+encodeDistributionReport : DistributionReport -> Value
+encodeDistributionReport distributionReport =
+    case distributionReport of
+        Test.Distribution.NoDistribution ->
             Encode.null
-                |> encodeSumType "NoCoverage"
+                |> encodeSumType "NoDistribution"
 
-        Test.Coverage.CoverageToReport r ->
-            [ ( "coverageCount", encodeCoverageCount r.coverageCount )
+        Test.Distribution.DistributionToReport r ->
+            [ ( "distributionCount", encodeDistributionCount r.distributionCount )
             , ( "runsElapsed", Encode.int r.runsElapsed )
             ]
                 |> Encode.object
-                |> encodeSumType "CoverageToReport"
+                |> encodeSumType "DistributionToReport"
 
-        Test.Coverage.CoverageCheckSucceeded r ->
-            [ ( "coverageCount", encodeCoverageCount r.coverageCount )
+        Test.Distribution.DistributionCheckSucceeded r ->
+            [ ( "distributionCount", encodeDistributionCount r.distributionCount )
             , ( "runsElapsed", Encode.int r.runsElapsed )
             ]
                 |> Encode.object
-                |> encodeSumType "CoverageCheckSucceeded"
+                |> encodeSumType "DistributionCheckSucceeded"
 
-        Test.Coverage.CoverageCheckFailed r ->
-            [ ( "coverageCount", encodeCoverageCount r.coverageCount )
+        Test.Distribution.DistributionCheckFailed r ->
+            [ ( "distributionCount", encodeDistributionCount r.distributionCount )
             , ( "runsElapsed", Encode.int r.runsElapsed )
             , ( "badLabel", Encode.string r.badLabel )
             , ( "badLabelPercentage", Encode.float r.badLabelPercentage )
-            , ( "expectedCoverage", Encode.string r.expectedCoverage )
+            , ( "expectedDistribution", Encode.string r.expectedDistribution )
             ]
                 |> Encode.object
-                |> encodeSumType "CoverageCheckFailed"
+                |> encodeSumType "DistributionCheckFailed"
 
 
-encodeCoverageCount : Dict (List String) Int -> Value
-encodeCoverageCount dict =
+encodeDistributionCount : Dict (List String) Int -> Value
+encodeDistributionCount dict =
     dict
         |> Dict.toList
         |> Encode.list

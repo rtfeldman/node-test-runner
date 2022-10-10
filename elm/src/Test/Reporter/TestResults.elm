@@ -8,15 +8,15 @@ module Test.Reporter.TestResults exposing
     )
 
 import Expect exposing (Expectation)
-import Test.Coverage exposing (CoverageReport)
+import Test.Distribution exposing (DistributionReport)
 import Test.Runner
 import Test.Runner.Failure exposing (Reason)
 
 
 type Outcome
-    = Passed CoverageReport
+    = Passed DistributionReport
     | Todo String
-    | Failed (List ( Failure, CoverageReport ))
+    | Failed (List ( Failure, DistributionReport ))
 
 
 type alias TestResult =
@@ -59,7 +59,7 @@ outcomesFromExpectations expectations =
             -- Most often we'll get exactly 1 pass, so try that case first!
             case Test.Runner.getFailureReason expectation of
                 Nothing ->
-                    [ Passed (Test.Runner.getCoverageReport expectation) ]
+                    [ Passed (Test.Runner.getDistributionReport expectation) ]
 
                 Just failure ->
                     if Test.Runner.isTodo expectation then
@@ -67,7 +67,7 @@ outcomesFromExpectations expectations =
 
                     else
                         [ Failed
-                            [ ( failure, Test.Runner.getCoverageReport expectation ) ]
+                            [ ( failure, Test.Runner.getDistributionReport expectation ) ]
                         ]
 
         _ :: _ ->
@@ -96,9 +96,9 @@ outcomesFromExpectations expectations =
 
 
 type alias OutcomeBuilder =
-    { passes : List CoverageReport
+    { passes : List DistributionReport
     , todos : List String
-    , failures : List ( Failure, CoverageReport )
+    , failures : List ( Failure, DistributionReport )
     }
 
 
@@ -113,7 +113,7 @@ outcomesFromExpectationsHelp expectation builder =
                 { builder
                     | failures =
                         ( failure
-                        , Test.Runner.getCoverageReport expectation
+                        , Test.Runner.getDistributionReport expectation
                         )
                             :: builder.failures
                 }
@@ -121,6 +121,6 @@ outcomesFromExpectationsHelp expectation builder =
         Nothing ->
             { builder
                 | passes =
-                    Test.Runner.getCoverageReport expectation
+                    Test.Runner.getDistributionReport expectation
                         :: builder.passes
             }

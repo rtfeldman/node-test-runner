@@ -1,4 +1,4 @@
-module Coverage.ReportCoveragePassing exposing (test)
+module Distribution.ReportDistributionFailing exposing (test)
 
 import Expect
 import Fuzz
@@ -9,8 +9,8 @@ test : Test
 test =
     Test.fuzzWith
         { runs = 10000
-        , coverage =
-            Test.reportCoverage
+        , distribution =
+            Test.reportDistribution
                 [ ( "low", \n -> n == 1 )
                 , ( "high", \n -> n == 20 )
                 , ( "in between", \n -> n > 1 && n < 20 )
@@ -18,5 +18,5 @@ test =
                 ]
         }
         (Fuzz.intRange 1 20)
-        "reportCoverage: passing"
-        (\_ -> Expect.pass)
+        "reportDistribution: failing"
+        (\_ -> Expect.fail "The test is supposed to fail")

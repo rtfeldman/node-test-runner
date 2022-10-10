@@ -2,7 +2,7 @@ module Test.Reporter.Console exposing (reportBegin, reportComplete, reportSummar
 
 import Console.Text as Text exposing (..)
 import Json.Encode as Encode exposing (Value)
-import Test.Coverage exposing (CoverageReport)
+import Test.Distribution exposing (DistributionReport)
 import Test.Reporter.Console.Format exposing (format)
 import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
@@ -37,10 +37,10 @@ pluralize singular plural count =
 
 
 passedToText : List String -> String -> Text
-passedToText labels coverageReport =
+passedToText labels distributionReport =
     Text.concat
         [ passedLabelsToText labels
-        , dark <| plain <| "\n" ++ indent coverageReport ++ "\n\n"
+        , dark <| plain <| "\n" ++ indent distributionReport ++ "\n\n"
         ]
 
 
@@ -64,7 +64,7 @@ todoToChalk message =
     plain ("◦ TODO: " ++ message ++ "\n\n")
 
 
-failuresToText : UseColor -> List String -> List ( Failure, CoverageReport ) -> Text
+failuresToText : UseColor -> List String -> List ( Failure, DistributionReport ) -> Text
 failuresToText useColor labels failures =
     Text.concat (failureLabelsToText labels :: List.map (failureToText useColor) failures)
 
@@ -74,8 +74,8 @@ failureLabelsToText =
     formatLabels (dark << plain << withChar '↓') (red << withChar '✗') >> Text.concat
 
 
-failureToText : UseColor -> ( Failure, CoverageReport ) -> Text
-failureToText useColor ( { given, description, reason }, coverageReport ) =
+failureToText : UseColor -> ( Failure, DistributionReport ) -> Text
+failureToText useColor ( { given, description, reason }, distributionReport ) =
     let
         formatEquality =
             case useColor of
@@ -85,8 +85,8 @@ failureToText useColor ( { given, description, reason }, coverageReport ) =
                 UseColor ->
                     FormatColor.formatEquality
 
-        coverageText =
-            coverageReportToString coverageReport
+        distributionText =
+            distributionReportToString distributionReport
                 |> Maybe.map (\str -> dark (plain ("\n" ++ indent str ++ "\n")))
 
         givenText =
@@ -96,7 +96,7 @@ failureToText useColor ( { given, description, reason }, coverageReport ) =
         messageText =
             plain <| "\n" ++ indent (format formatEquality description reason) ++ "\n\n"
     in
-    [ coverageText
+    [ distributionText
     , givenText
     , Just messageText
     ]
@@ -146,14 +146,14 @@ reportComplete useColor { labels, outcome } =
     Encode.object <|
         ( "status", Encode.string (getStatus outcome) )
             :: (case outcome of
-                    Passed coverageReport ->
+                    Passed distributionReport ->
                         -- No failures of any kind.
-                        case coverageReportToString coverageReport of
+                        case distributionReportToString distributionReport of
                             Nothing ->
                                 []
 
                             Just report ->
-                                [ ( "coverageReport"
+                                [ ( "distributionReport"
                                   , report
                                         |> passedToText labels
                                         |> textToValue useColor
@@ -254,20 +254,20 @@ withChar icon str =
     String.fromChar icon ++ " " ++ str ++ "\n"
 
 
-coverageReportToString : CoverageReport -> Maybe String
-coverageReportToString coverageReport =
-    case coverageReport of
-        Test.Coverage.NoCoverage ->
+distributionReportToString : distributionReport -> Maybe String
+distributionReportToString distributionReport =
+    case distributionReport of
+        Test.distribution.Nodistribution ->
             Nothing
 
-        Test.Coverage.CoverageToReport r ->
-            Just (Test.Coverage.coverageReportTable r)
+        Test.distribution.distributionToReport r ->
+            Just (Test.distribution.distributionReportTable r)
 
-        Test.Coverage.CoverageCheckSucceeded _ ->
+        Test.distribution.distributionCheckSucceeded _ ->
             {- Not reporting the table although the data is technically there.
                We keep the full data dump for the JSON reporter.
             -}
             Nothing
 
-        Test.Coverage.CoverageCheckFailed r ->
-            Just (Test.Coverage.coverageReportTable r)
+        Test.distribution.distributionCheckFailed r ->
+            Just (Test.distribution.distributionReportTable r)

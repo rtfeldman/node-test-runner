@@ -75,34 +75,34 @@ function assertTestFailure(runResult) {
   );
 }
 
-function assertCoverageShown(reporter, runResult) {
-  const msg = getDetailedMessage('Expected to show coverage table', runResult);
+function assertDistributionShown(reporter, runResult) {
+  const msg = getDetailedMessage('Expected to show distribution table', runResult);
   switch (reporter) {
     case 'console':
-      assert.ok(runResult.stdout.includes('Coverage report:'), msg);
+      assert.ok(runResult.stdout.includes('Distribution report:'), msg);
       break;
     case 'junit':
-      assert.ok(runResult.stdout.includes('Coverage report:'), msg);
+      assert.ok(runResult.stdout.includes('Distribution report:'), msg);
       break;
     case 'json':
-      assert.ok(runResult.stdout.includes('coverageCount'), msg);
+      assert.ok(runResult.stdout.includes('distributionCount'), msg);
       break;
     default:
       throw 'Unknown reporter!';
   }
 }
 
-function assertCoverageNotShown(reporter, runResult) {
-  const msg = getDetailedMessage('Expected to show coverage table', runResult);
+function assertDistributionNotShown(reporter, runResult) {
+  const msg = getDetailedMessage('Expected to show distribution table', runResult);
   switch (reporter) {
     case 'console':
-      assert.ok(!runResult.stdout.includes('Coverage report:'), msg);
+      assert.ok(!runResult.stdout.includes('Distribution report:'), msg);
       break;
     case 'junit':
-      assert.ok(!runResult.stdout.includes('Coverage report:'), msg);
+      assert.ok(!runResult.stdout.includes('Distribution report:'), msg);
       break;
     case 'json':
-      assert.ok(!runResult.stdout.includes('coverageCount'), msg);
+      assert.ok(!runResult.stdout.includes('distributionCount'), msg);
       break;
     default:
       throw 'Unknown reporter!';
@@ -295,41 +295,41 @@ describe('Testing elm-test on single Elm files', () => {
   });
 });
 
-describe('Coverage report tests', () => {
+describe('Distribution report tests', () => {
   const cwd = fixturesDir;
-  const coverageReportFiles = {
+  const distributionReportFiles = {
     console: {
-      'ReportCoveragePassing.elm': { showCoverage: true },
-      'ReportCoverageFailing.elm': { showCoverage: true },
-      'ExpectCoveragePassing.elm': { showCoverage: false },
-      'ExpectCoverageFailingCoverage.elm': { showCoverage: true },
-      'ExpectCoverageFailingTest.elm': { showCoverage: true },
+      'ReportDistributionPassing.elm': { showDistribution: true },
+      'ReportDistributionFailing.elm': { showDistribution: true },
+      'ExpectDistributionPassing.elm': { showDistribution: false },
+      'ExpectDistributionFailingDistribution.elm': { showDistribution: true },
+      'ExpectDistributionFailingTest.elm': { showDistribution: true },
     },
     junit: {
-      'ReportCoveragePassing.elm': { showCoverage: true },
-      'ReportCoverageFailing.elm': { showCoverage: true },
-      'ExpectCoveragePassing.elm': { showCoverage: false },
-      'ExpectCoverageFailingCoverage.elm': { showCoverage: true },
-      'ExpectCoverageFailingTest.elm': { showCoverage: true },
+      'ReportDistributionPassing.elm': { showDistribution: true },
+      'ReportDistributionFailing.elm': { showDistribution: true },
+      'ExpectDistributionPassing.elm': { showDistribution: false },
+      'ExpectDistributionFailingDistribution.elm': { showDistribution: true },
+      'ExpectDistributionFailingTest.elm': { showDistribution: true },
     },
     json: {
-      'ReportCoveragePassing.elm': { showCoverage: true },
-      'ReportCoverageFailing.elm': { showCoverage: true },
-      'ExpectCoveragePassing.elm': { showCoverage: true },
-      'ExpectCoverageFailingCoverage.elm': { showCoverage: true },
-      'ExpectCoverageFailingTest.elm': { showCoverage: true },
+      'ReportDistributionPassing.elm': { showDistribution: true },
+      'ReportDistributionFailing.elm': { showDistribution: true },
+      'ExpectDistributionPassing.elm': { showDistribution: true },
+      'ExpectDistributionFailingDistribution.elm': { showDistribution: true },
+      'ExpectDistributionFailingTest.elm': { showDistribution: true },
     },
   };
 
-  for (const [reporter, tests] of Object.entries(coverageReportFiles)) {
-    for (const [test, { showCoverage }] of Object.entries(tests)) {
-      const testFile = path.join(cwd, 'tests', 'Coverage', test);
-      it(`Coverage report test for test: ${test}, reporter: ${reporter}`, () => {
+  for (const [reporter, tests] of Object.entries(distributionReportFiles)) {
+    for (const [test, { showDistribution }] of Object.entries(tests)) {
+      const testFile = path.join(cwd, 'tests', 'Distribution', test);
+      it(`Distribution report test for test: ${test}, reporter: ${reporter}`, () => {
         const runResult = execElmTest([testFile, '--report', reporter], cwd);
-        if (showCoverage) {
-          assertCoverageShown(reporter, runResult);
+        if (showDistribution) {
+          assertDistributionShown(reporter, runResult);
         } else {
-          assertCoverageNotShown(reporter, runResult);
+          assertDistributionNotShown(reporter, runResult);
         }
       });
     }

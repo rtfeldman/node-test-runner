@@ -1,7 +1,7 @@
 module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
-import Test.Coverage exposing (CoverageReport)
+import Test.Distribution exposing (DistributionReport)
 import Test.Reporter.TestResults exposing (Failure, Outcome(..), SummaryInfo, TestResult)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
@@ -11,38 +11,38 @@ reportBegin _ =
     Nothing
 
 
-encodeCoverageReport : String -> ( String, Value )
-encodeCoverageReport reportText =
+encodeDistributionReport : String -> ( String, Value )
+encodeDistributionReport reportText =
     ( "system-out", Encode.string reportText )
 
 
-coverageReportToString : CoverageReport -> Maybe String
-coverageReportToString coverageReport =
-    case coverageReport of
-        Test.Coverage.NoCoverage ->
+distributionReportToString : DistributionReport -> Maybe String
+distributionReportToString distributionReport =
+    case distributionReport of
+        Test.Distribution.NoDistribution ->
             Nothing
 
-        Test.Coverage.CoverageToReport r ->
-            Just (Test.Coverage.coverageReportTable r)
+        Test.Distribution.DistributionToReport r ->
+            Just (Test.Distribution.distributionReportTable r)
 
-        Test.Coverage.CoverageCheckSucceeded _ ->
+        Test.Distribution.DistributionCheckSucceeded _ ->
             {- Not reporting the table to the JUnit stdout (similarly to the
                Console reporter) although the data is technically there.
                We keep the full data dump for the JSON reporter.
             -}
             Nothing
 
-        Test.Coverage.CoverageCheckFailed r ->
-            Just (Test.Coverage.coverageReportTable r)
+        Test.Distribution.DistributionCheckFailed r ->
+            Just (Test.Distribution.distributionReportTable r)
 
 
 encodeOutcome : Outcome -> List ( String, Value )
 encodeOutcome outcome =
     case outcome of
-        Passed coverageReport ->
-            coverageReport
-                |> coverageReportToString
-                |> Maybe.map (encodeCoverageReport >> List.singleton)
+        Passed distributionReport ->
+            distributionReport
+                |> distributionReportToString
+                |> Maybe.map (encodeDistributionReport >> List.singleton)
                 |> Maybe.withDefault []
 
         Failed failures ->
@@ -52,23 +52,23 @@ encodeOutcome outcome =
                         |> List.map (Tuple.first >> formatFailure)
                         |> String.join "\n\n\n"
 
-                coverageReports : String
-                coverageReports =
+                distributionReports : String
+                distributionReports =
                     failures
-                        |> List.filterMap (Tuple.second >> coverageReportToString)
+                        |> List.filterMap (Tuple.second >> distributionReportToString)
                         |> String.join "\n\n\n"
 
-                nonemptyCoverageReports : Maybe String
-                nonemptyCoverageReports =
-                    if String.isEmpty coverageReports then
+                nonemptyDistributionReports : Maybe String
+                nonemptyDistributionReports =
+                    if String.isEmpty distributionReports then
                         Nothing
 
                     else
-                        Just coverageReports
+                        Just distributionReports
             in
             List.filterMap identity
                 [ Just (encodeFailureTuple message)
-                , Maybe.map encodeCoverageReport nonemptyCoverageReports
+                , Maybe.map encodeDistributionReport nonemptyDistributionReports
                 ]
 
         Todo message ->

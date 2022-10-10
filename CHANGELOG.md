@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 
 ### Added
 
-- Fuzzer coverage statistics report. Fuzzer coverage is new in [elm-explorations/test] 2.0.0, and it required a change in how things are reported from Elm to the test runner, which is why elm-test 0.19.1-revision10 is not compatible with older [elm-explorations/test] versions.
+- Fuzzer distribution statistics report. Fuzzer distribution is new in [elm-explorations/test] 2.0.0, and it required a change in how things are reported from Elm to the test runner, which is why elm-test 0.19.1-revision10 is not compatible with older [elm-explorations/test] versions.
 
 ## 0.19.1-revision9 - 2022-07-03
 
