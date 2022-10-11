@@ -1,9 +1,7 @@
 module Test.Reporter.Console.FormatTest exposing (suite)
 
 import Expect
-import Fuzz
 import Test exposing (..)
-import Test.Distribution
 import Test.Reporter.Console.Format exposing (highlightEqual)
 
 
@@ -60,72 +58,4 @@ suite =
                     highlightEqual expected actual
                         |> Expect.notEqual Nothing
             ]
-        , Test.fuzzWith
-            { runs = 10000
-            , distribution =
-                Test.reportDistribution
-                    [ ( "low", \n -> n == 1 )
-                    , ( "high", \n -> n == 20 )
-                    , ( "in between", \n -> n > 1 && n < 20 )
-                    , ( "outside", \n -> n < 1 || n > 20 )
-                    ]
-            }
-            (Fuzz.intRange 1 20)
-            "reportDistribution: passing"
-            (\_ -> Expect.pass)
-        , Test.fuzzWith
-            { runs = 10000
-            , distribution =
-                Test.reportDistribution
-                    [ ( "low", \n -> n == 1 )
-                    , ( "high", \n -> n == 20 )
-                    , ( "in between", \n -> n > 1 && n < 20 )
-                    , ( "outside", \n -> n < 1 || n > 20 )
-                    ]
-            }
-            (Fuzz.intRange 1 20)
-            "reportDistribution: failing"
-            (\_ -> Expect.fail "The test is supposed to fail")
-        , Test.fuzzWith
-            { runs = 10000
-            , distribution =
-                Test.expectDistribution
-                    [ ( Test.Distribution.atLeast 4, "low", \n -> n == 1 )
-                    , ( Test.Distribution.atLeast 4, "high", \n -> n == 20 )
-                    , ( Test.Distribution.atLeast 80, "in between", \n -> n > 1 && n < 20 )
-                    , ( Test.Distribution.zero, "outside", \n -> n < 1 || n > 20 )
-                    , ( Test.Distribution.moreThanZero, "one", \n -> n == 1 )
-                    ]
-            }
-            (Fuzz.intRange 1 20)
-            "expectDistribution: passing"
-            (\_ -> Expect.pass)
-        , Test.fuzzWith
-            { runs = 10000
-            , distribution =
-                Test.expectDistribution
-                    [ ( Test.Distribution.atLeast 4, "low", \n -> n == 1 )
-                    , ( Test.Distribution.atLeast 4, "high", \n -> n == 20 )
-                    , ( Test.Distribution.atLeast 80, "in between", \n -> n > 1 && n < 20 )
-                    , ( Test.Distribution.zero, "outside", \n -> n < 1 || n > 20 )
-                    , ( Test.Distribution.zero, "one", \n -> n == 1 )
-                    ]
-            }
-            (Fuzz.intRange 1 20)
-            "expectDistribution: failing because of distribution"
-            (\_ -> Expect.pass)
-        , Test.fuzzWith
-            { runs = 10000
-            , distribution =
-                Test.expectDistribution
-                    [ ( Test.Distribution.atLeast 4, "low", \n -> n == 1 )
-                    , ( Test.Distribution.atLeast 4, "high", \n -> n == 20 )
-                    , ( Test.Distribution.atLeast 80, "in between", \n -> n > 1 && n < 20 )
-                    , ( Test.Distribution.zero, "outside", \n -> n < 1 || n > 20 )
-                    , ( Test.Distribution.moreThanZero, "one", \n -> n == 1 )
-                    ]
-            }
-            (Fuzz.intRange 1 20)
-            "expectDistribution: failing because of test"
-            (\_ -> Expect.fail "This test is supposed to fail")
         ]
