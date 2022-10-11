@@ -39,9 +39,15 @@ describe('handling invalid elm.json', () => {
         .trim()
         .replace('/full/path/to/elm.json', path.join(fullPath, 'elm.json'))
         .replace(/\r\n/g, '\n');
-      assert.throws(() => ElmJson.read(fullPath), {
-        message: expected,
-      });
+      assert.throws(
+        () => {
+          const elmJson = ElmJson.read(fullPath);
+          ElmJson.requireElmTestPackage(fullPath, elmJson);
+        },
+        {
+          message: expected,
+        }
+      );
     });
   }
 });
