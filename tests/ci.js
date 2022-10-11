@@ -76,7 +76,10 @@ function assertTestFailure(runResult) {
 }
 
 function assertDistributionShown(reporter, runResult) {
-  const msg = getDetailedMessage('Expected to show distribution table', runResult);
+  const msg = getDetailedMessage(
+    'Expected to show distribution table',
+    runResult
+  );
   switch (reporter) {
     case 'console':
       assert.ok(runResult.stdout.includes('Distribution report:'), msg);
@@ -93,7 +96,10 @@ function assertDistributionShown(reporter, runResult) {
 }
 
 function assertDistributionNotShown(reporter, runResult) {
-  const msg = getDetailedMessage('Expected to show distribution table', runResult);
+  const msg = getDetailedMessage(
+    'Expected to show distribution table',
+    runResult
+  );
   switch (reporter) {
     case 'console':
       assert.ok(!runResult.stdout.includes('Distribution report:'), msg);
