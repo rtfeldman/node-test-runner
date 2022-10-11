@@ -257,17 +257,17 @@ withChar icon str =
 distributionReportToString : distributionReport -> Maybe String
 distributionReportToString distributionReport =
     case distributionReport of
-        Test.distribution.Nodistribution ->
+        Test.Distribution.Nodistribution ->
             Nothing
 
-        Test.distribution.distributionToReport r ->
-            Just (Test.distribution.distributionReportTable r)
+        Test.Distribution.DistributionToReport r ->
+            Just (Test.Distribution.distributionReportTable r)
 
-        Test.distribution.distributionCheckSucceeded _ ->
+        Test.Distribution.DistributionCheckSucceeded _ ->
             {- Not reporting the table although the data is technically there.
                We keep the full data dump for the JSON reporter.
             -}
             Nothing
 
-        Test.distribution.distributionCheckFailed r ->
-            Just (Test.distribution.distributionReportTable r)
+        Test.Distribution.DistributionCheckFailed r ->
+            Just (Test.Distribution.distributionReportTable r)
