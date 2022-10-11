@@ -4,7 +4,7 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors major Elm versions. So version 0.18.\* of this project will be compatible with Elm 0.18.\*.
 
-## 0.19.1-revision10 - 2022-10-09
+## 0.19.1-revision10 - 2022-10-11
 
 > ⚠️ Updating to this version also requires upgrading [elm-explorations/test]!
 
@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 ### Added
 
 - Fuzzer distribution statistics report. Fuzzer distribution is new in [elm-explorations/test] 2.0.0, and it required a change in how things are reported from Elm to the test runner, which is why elm-test 0.19.1-revision10 is not compatible with older [elm-explorations/test] versions.
+
+- The `--no-clear-console` flag. By default, `elm-test --watch` clears the screen on every re-run, so you only see up-to-date output. With `--no-clear-console`, the console is _not_ cleared and a separator is instead printed between the old and new output instead (similar to how [elm-test-rs](https://github.com/mpizenberg/elm-test-rs) works). This is useful if you are running several commands in the same terminal and don’t want `elm-test --watch` to clear away output from other commands.
 
 ## 0.19.1-revision9 - 2022-07-03
 
