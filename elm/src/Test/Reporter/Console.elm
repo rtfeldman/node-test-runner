@@ -122,9 +122,14 @@ reportBegin useColor { globs, fuzzRuns, testCount, initialSeed } =
                 ++ " --seed "
                 ++ String.fromInt initialSeed
     in
-    (String.join " " (prefix :: globs) ++ "\n")
-        |> plain
-        |> textToValue useColor
+    Encode.object
+        [ ( "type", Encode.string "begin" )
+        , ( "output"
+          , (String.join " " (prefix :: globs) ++ "\n")
+                |> plain
+                |> textToValue useColor
+          )
+        ]
         |> Just
 
 
@@ -144,7 +149,8 @@ getStatus outcome =
 reportComplete : UseColor -> Results.TestResult -> Value
 reportComplete useColor { labels, outcome } =
     Encode.object <|
-        ( "status", Encode.string (getStatus outcome) )
+        ( "type", Encode.string "complete" )
+            :: ( "status", Encode.string (getStatus outcome) )
             :: (case outcome of
                     Passed distributionReport ->
                         -- No failures of any kind.
@@ -229,16 +235,21 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
             else
                 summarizeTodos (List.reverse todos)
     in
-    [ headline
-    , stat "Duration: " (formatDuration duration)
-    , stat "Passed:   " (String.fromInt passed)
-    , stat "Failed:   " (String.fromInt failed)
-    , todoStats
-    , individualTodos
-    ]
-        |> Text.concat
-        |> Text.render useColor
-        |> Encode.string
+    Encode.object
+        [ ( "type", Encode.string "summary" )
+        , ( "summary"
+          , [ headline
+            , stat "Duration: " (formatDuration duration)
+            , stat "Passed:   " (String.fromInt passed)
+            , stat "Failed:   " (String.fromInt failed)
+            , todoStats
+            , individualTodos
+            ]
+                |> Text.concat
+                |> Text.render useColor
+                |> Encode.string
+          )
+        ]
 
 
 stat : String -> String -> Text
