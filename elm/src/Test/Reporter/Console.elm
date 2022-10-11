@@ -254,10 +254,10 @@ withChar icon str =
     String.fromChar icon ++ " " ++ str ++ "\n"
 
 
-distributionReportToString : distributionReport -> Maybe String
+distributionReportToString : DistributionReport -> Maybe String
 distributionReportToString distributionReport =
     case distributionReport of
-        Test.Distribution.Nodistribution ->
+        Test.Distribution.NoDistribution ->
             Nothing
 
         Test.Distribution.DistributionToReport r ->
