@@ -55,7 +55,7 @@
     "xmlbuilder": "^15.1.1"
   },
   "devDependencies": {
-    "elm-review": "2.7.2",
+    "elm-review": "2.7.5",
     "elm-tooling": "1.8.0",
     "eslint": "8.17.0",
     "eslint-plugin-mocha": "9.0.0",
