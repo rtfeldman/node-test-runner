@@ -20,8 +20,8 @@ Not all versions of [elm-explorations/test] and this CLI tool work together!
 
 > **Unfortunate behavior of 0.19.1-revision9 and older**
 >
-> - `elm-test init` always installs the latest [elm-explorations/test]. This means that if you run `elm-test init` on version 0.19.1-revision9 or older, you will get elm-explorations/test 2.0.0 or later, which don’t work together. Solution: Revert the `elm-test init` changes, update the elm-test CLI to 0.19.1-revision10 or later and run `elm-test init`.
-> - elm-test 0.19.1-revision9 or older does not validate that [elm-explorations/test] in your elm.json has a compatible version. If you upgrade to elm-explorations/test 2.0.0 or later but forget to upgrade the elm-test CLI, you’ll get this somewhat cryptic error: TODO check what the error looks like.
+> - `elm-test init` always installs the latest [elm-explorations/test]. This means that if you run `elm-test init` on version 0.19.1-revision9 or older, you will get elm-explorations/test 2.0.0 or later, which don’t work 100 % together (see the next point).
+> - elm-test 0.19.1-revision9 or older do _not_ validate that [elm-explorations/test] in your elm.json has a compatible version. If you upgrade to elm-explorations/test 2.0.0 or later but forget to upgrade the elm-test CLI, most things will still work, but test distribution diagrams (new in elm-explorations/test 2.0.0) won’t show up. So if you use `Test.fuzzWith` and wonder why distribution diagrams never show up – check your elm-test CLI version!
 > - There exists an elm-test CLI version called just "0.19.1". It should have been called "0.19.1-revision1", but unfortunately isn’t. Don’t make the mistake thinking it’s the latest version! You always want "0.19.1-revisionX".
 
 ## Installation
