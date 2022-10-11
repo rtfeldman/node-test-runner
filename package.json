@@ -29,7 +29,6 @@
     "bin",
     "lib",
     "templates",
-    "elm/elm.json",
     "elm/src"
   ],
   "keywords": [

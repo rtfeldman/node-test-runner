@@ -75,6 +75,46 @@ function assertTestFailure(runResult) {
   );
 }
 
+function assertDistributionShown(reporter, runResult) {
+  const msg = getDetailedMessage(
+    'Expected to show distribution table',
+    runResult
+  );
+  switch (reporter) {
+    case 'console':
+      assert.ok(runResult.stdout.includes('Distribution report:'), msg);
+      break;
+    case 'junit':
+      assert.ok(runResult.stdout.includes('Distribution report:'), msg);
+      break;
+    case 'json':
+      assert.ok(runResult.stdout.includes('distributionCount'), msg);
+      break;
+    default:
+      throw 'Unknown reporter!';
+  }
+}
+
+function assertDistributionNotShown(reporter, runResult) {
+  const msg = getDetailedMessage(
+    'Expected to show distribution table',
+    runResult
+  );
+  switch (reporter) {
+    case 'console':
+      assert.ok(!runResult.stdout.includes('Distribution report:'), msg);
+      break;
+    case 'junit':
+      assert.ok(!runResult.stdout.includes('Distribution report:'), msg);
+      break;
+    case 'json':
+      assert.ok(!runResult.stdout.includes('distributionCount'), msg);
+      break;
+    default:
+      throw 'Unknown reporter!';
+  }
+}
+
 function readdir(dir) {
   return fs
     .readdirSync(dir)
@@ -259,4 +299,45 @@ describe('Testing elm-test on single Elm files', () => {
       Object.keys(compilerErrorTestFiles).sort()
     );
   });
+});
+
+describe('Distribution report tests', () => {
+  const cwd = fixturesDir;
+  const distributionReportFiles = {
+    console: {
+      'ReportDistributionPassing.elm': { showDistribution: true },
+      'ReportDistributionFailing.elm': { showDistribution: true },
+      'ExpectDistributionPassing.elm': { showDistribution: false },
+      'ExpectDistributionFailingDistribution.elm': { showDistribution: true },
+      'ExpectDistributionFailingTest.elm': { showDistribution: true },
+    },
+    junit: {
+      'ReportDistributionPassing.elm': { showDistribution: true },
+      'ReportDistributionFailing.elm': { showDistribution: true },
+      'ExpectDistributionPassing.elm': { showDistribution: false },
+      'ExpectDistributionFailingDistribution.elm': { showDistribution: true },
+      'ExpectDistributionFailingTest.elm': { showDistribution: true },
+    },
+    json: {
+      'ReportDistributionPassing.elm': { showDistribution: true },
+      'ReportDistributionFailing.elm': { showDistribution: true },
+      'ExpectDistributionPassing.elm': { showDistribution: true },
+      'ExpectDistributionFailingDistribution.elm': { showDistribution: true },
+      'ExpectDistributionFailingTest.elm': { showDistribution: true },
+    },
+  };
+
+  for (const [reporter, tests] of Object.entries(distributionReportFiles)) {
+    for (const [test, { showDistribution }] of Object.entries(tests)) {
+      const testFile = path.join(cwd, 'tests', 'Distribution', test);
+      it(`Distribution report test for test: ${test}, reporter: ${reporter}`, () => {
+        const runResult = execElmTest([testFile, '--report', reporter], cwd);
+        if (showDistribution) {
+          assertDistributionShown(reporter, runResult);
+        } else {
+          assertDistributionNotShown(reporter, runResult);
+        }
+      });
+    }
+  }
 });

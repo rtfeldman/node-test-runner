@@ -11,10 +11,13 @@ const invalidElmJsonContainerDir = path.join(fixturesDir, 'invalid-elm-json');
 const invalidElmJsonDirs = [
   'application-with-package-style-test-dependencies',
   'dependency-not-string',
+  'elm-test-package-too-old-application',
+  'elm-test-package-too-old-package',
   'empty-source-directories',
   'is-folder',
   'is-null',
   'json-syntax-error',
+  'missing-elm-test-package',
   'null-type',
   'package-with-application-style-dependencies',
   'source-directories-not-array',
@@ -36,9 +39,15 @@ describe('handling invalid elm.json', () => {
         .trim()
         .replace('/full/path/to/elm.json', path.join(fullPath, 'elm.json'))
         .replace(/\r\n/g, '\n');
-      assert.throws(() => ElmJson.read(fullPath), {
-        message: expected,
-      });
+      assert.throws(
+        () => {
+          const elmJson = ElmJson.read(fullPath);
+          ElmJson.requireElmTestPackage(fullPath, elmJson);
+        },
+        {
+          message: expected,
+        }
+      );
     });
   }
 });
@@ -69,7 +78,7 @@ const expectedWrittenElmJson = `{
     "test-dependencies": {
         "direct": {
             "elm/regex": "1.0.0",
-            "elm-explorations/test": "1.2.0"
+            "elm-explorations/test": "2.0.0"
         },
         "indirect": {
             "elm/html": "1.0.0",

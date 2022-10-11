@@ -15,7 +15,7 @@ withoutNums =
 testWithoutNums : Test
 testWithoutNums =
     describe "withoutNums"
-        [ fuzzWith { runs = 100 } (tuple3 ( string, int, string )) "adding numbers to strings has no effect" <|
+        [ fuzzWith { runs = 100, distribution = Test.noDistribution } (triple string int string) "adding numbers to strings has no effect" <|
             \( prefix, num, suffix ) ->
                 withoutNums (prefix ++ String.fromInt num ++ suffix)
                     |> Expect.equal (withoutNums (prefix ++ suffix))
@@ -32,7 +32,8 @@ testEqual =
 
 testTrue : Test
 testTrue =
-    test "Expect.true works" <|
+    test "Expect.equal True works" <|
         \() ->
             True
-                |> Expect.true "this should never fail!"
+                |> Expect.equal True
+                |> Expect.onFail "this should never fail!"

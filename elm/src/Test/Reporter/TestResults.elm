@@ -8,14 +8,15 @@ module Test.Reporter.TestResults exposing
     )
 
 import Expect exposing (Expectation)
+import Test.Distribution exposing (DistributionReport)
 import Test.Runner
 import Test.Runner.Failure exposing (Reason)
 
 
 type Outcome
-    = Passed
+    = Passed DistributionReport
     | Todo String
-    | Failed (List Failure)
+    | Failed (List ( Failure, DistributionReport ))
 
 
 type alias TestResult =
@@ -58,20 +59,22 @@ outcomesFromExpectations expectations =
             -- Most often we'll get exactly 1 pass, so try that case first!
             case Test.Runner.getFailureReason expectation of
                 Nothing ->
-                    [ Passed ]
+                    [ Passed (Test.Runner.getDistributionReport expectation) ]
 
                 Just failure ->
                     if Test.Runner.isTodo expectation then
                         [ Todo failure.description ]
 
                     else
-                        [ Failed [ failure ] ]
+                        [ Failed
+                            [ ( failure, Test.Runner.getDistributionReport expectation ) ]
+                        ]
 
         _ :: _ ->
             let
                 builder =
                     List.foldl outcomesFromExpectationsHelp
-                        { passes = 0, todos = [], failures = [] }
+                        { passes = [], todos = [], failures = [] }
                         expectations
 
                 failuresList =
@@ -83,7 +86,7 @@ outcomesFromExpectations expectations =
                             [ Failed failures ]
             in
             List.concat
-                [ List.repeat builder.passes Passed
+                [ List.map Passed builder.passes
                 , List.map Todo builder.todos
                 , failuresList
                 ]
@@ -93,9 +96,9 @@ outcomesFromExpectations expectations =
 
 
 type alias OutcomeBuilder =
-    { passes : Int
+    { passes : List DistributionReport
     , todos : List String
-    , failures : List Failure
+    , failures : List ( Failure, DistributionReport )
     }
 
 
@@ -107,7 +110,17 @@ outcomesFromExpectationsHelp expectation builder =
                 { builder | todos = failure.description :: builder.todos }
 
             else
-                { builder | failures = failure :: builder.failures }
+                { builder
+                    | failures =
+                        ( failure
+                        , Test.Runner.getDistributionReport expectation
+                        )
+                            :: builder.failures
+                }
 
         Nothing ->
-            { builder | passes = builder.passes + 1 }
+            { builder
+                | passes =
+                    Test.Runner.getDistributionReport expectation
+                        :: builder.passes
+            }

@@ -2,7 +2,23 @@
 
 Notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors major Elm versions. So version 0.18.\* of this project will be compatible with Elm 0.18.\*.
+The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.1-revisionX of this project will be compatible with Elm 0.19.1.
+
+## 0.19.1-revision10 - 2022-10-11
+
+⚠️ Updating to this version also requires upgrading to the just released [elm-explorations/test 2.0.0](https://github.com/elm-explorations/test/blob/master/CHANGELOG.md#changes-in-200)!
+
+### Breaking
+
+- This version of `elm-test` _only_ works with elm-explorations/test 2.x (2.0.0 <= v < 3.0.0), which was just released. The [versions table](https://github.com/rtfeldman/node-test-runner#versions) should make it clear which versions work together.
+
+- Removed `elm-test install-unstable-test-master` and `elm-test uninstall-unstable-test-master`. They are no longer needed since elm-explorations/test 2.0.0 has been released.
+
+### Added
+
+- Fuzzer distribution statistics report. [Fuzzer distribution](https://github.com/elm-explorations/test/blob/master/CHANGELOG.md#2-testdistribution) is new in elm-explorations/test 2.0.0, and it required a change in how things are reported from Elm to the test runner, which is why elm-test 0.19.1-revision10 is not compatible with older elm-explorations/test versions.
+
+- The `--no-clear-console` flag. By default, `elm-test --watch` clears the screen on every re-run, so you only see up-to-date output. With `--no-clear-console`, the console is _not_ cleared and a separator is instead printed between the old and new output instead (similar to how [elm-test-rs](https://github.com/mpizenberg/elm-test-rs) works). This is useful if you are running several commands in the same terminal and don’t want `elm-test --watch` to clear away output from other commands.
 
 ## 0.19.1-revision9 - 2022-07-03
 
@@ -19,7 +35,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 ### Added
 
 - `elm-test install-unstable-test-master`
-  - which installs the `master` version of the [elm-explorations/test library](https://github.com/elm-explorations/test/) in place of the `1.2.2` version in your `ELM_HOME`
+  - which installs the `master` version of the [elm-explorations/test] library in place of the `1.2.2` version in your `ELM_HOME`
 - `elm-test uninstall-unstable-test-master`
   - which undoes that
 

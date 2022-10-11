@@ -2,6 +2,7 @@ module Test.Reporter.Console exposing (reportBegin, reportComplete, reportSummar
 
 import Console.Text as Text exposing (..)
 import Json.Encode as Encode exposing (Value)
+import Test.Distribution exposing (DistributionReport)
 import Test.Reporter.Console.Format exposing (format)
 import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
@@ -35,6 +36,19 @@ pluralize singular plural count =
     String.join " " [ String.fromInt count, suffix ]
 
 
+passedToText : List String -> String -> Text
+passedToText labels distributionReport =
+    Text.concat
+        [ passedLabelsToText labels
+        , dark <| plain <| "\n" ++ indent distributionReport ++ "\n\n"
+        ]
+
+
+passedLabelsToText : List String -> Text
+passedLabelsToText =
+    formatLabels (dark << plain << withChar '↓') (green << withChar '✓') >> Text.concat
+
+
 todosToText : ( List String, String ) -> Text
 todosToText ( labels, failure ) =
     Text.concat [ todoLabelsToText labels, todoToChalk failure ]
@@ -50,7 +64,7 @@ todoToChalk message =
     plain ("◦ TODO: " ++ message ++ "\n\n")
 
 
-failuresToText : UseColor -> List String -> List Failure -> Text
+failuresToText : UseColor -> List String -> List ( Failure, DistributionReport ) -> Text
 failuresToText useColor labels failures =
     Text.concat (failureLabelsToText labels :: List.map (failureToText useColor) failures)
 
@@ -60,8 +74,8 @@ failureLabelsToText =
     formatLabels (dark << plain << withChar '↓') (red << withChar '✗') >> Text.concat
 
 
-failureToText : UseColor -> Results.Failure -> Text
-failureToText useColor { given, description, reason } =
+failureToText : UseColor -> ( Failure, DistributionReport ) -> Text
+failureToText useColor ( { given, description, reason }, distributionReport ) =
     let
         formatEquality =
             case useColor of
@@ -71,18 +85,23 @@ failureToText useColor { given, description, reason } =
                 UseColor ->
                     FormatColor.formatEquality
 
-        messageText =
-            plain ("\n" ++ indent (format formatEquality description reason) ++ "\n\n")
-    in
-    case given of
-        Nothing ->
-            messageText
+        distributionText =
+            distributionReportToString distributionReport
+                |> Maybe.map (\str -> dark (plain ("\n" ++ indent str ++ "\n")))
 
-        Just givenStr ->
-            [ dark (plain ("\nGiven " ++ givenStr ++ "\n"))
-            , messageText
-            ]
-                |> Text.concat
+        givenText =
+            given
+                |> Maybe.map (\str -> dark (plain ("\nGiven " ++ str ++ "\n")))
+
+        messageText =
+            plain <| "\n" ++ indent (format formatEquality description reason) ++ "\n\n"
+    in
+    [ distributionText
+    , givenText
+    , Just messageText
+    ]
+        |> List.filterMap identity
+        |> Text.concat
 
 
 textToValue : UseColor -> Text -> Value
@@ -103,30 +122,64 @@ reportBegin useColor { globs, fuzzRuns, testCount, initialSeed } =
                 ++ " --seed "
                 ++ String.fromInt initialSeed
     in
-    (String.join " " (prefix :: globs) ++ "\n")
-        |> plain
-        |> textToValue useColor
+    Encode.object
+        [ ( "type", Encode.string "begin" )
+        , ( "output"
+          , (String.join " " (prefix :: globs) ++ "\n")
+                |> plain
+                |> textToValue useColor
+          )
+        ]
         |> Just
+
+
+getStatus : Outcome -> String
+getStatus outcome =
+    case outcome of
+        Failed _ ->
+            "fail"
+
+        Todo _ ->
+            "todo"
+
+        Passed _ ->
+            "pass"
 
 
 reportComplete : UseColor -> Results.TestResult -> Value
 reportComplete useColor { labels, outcome } =
-    case outcome of
-        Passed ->
-            -- No failures of any kind.
-            Encode.null
+    Encode.object <|
+        ( "type", Encode.string "complete" )
+            :: ( "status", Encode.string (getStatus outcome) )
+            :: (case outcome of
+                    Passed distributionReport ->
+                        -- No failures of any kind.
+                        case distributionReportToString distributionReport of
+                            Nothing ->
+                                []
 
-        Failed failures ->
-            -- We have non-TODOs still failing; report them, not the TODOs.
-            failures
-                |> failuresToText useColor labels
-                |> textToValue useColor
+                            Just report ->
+                                [ ( "distributionReport"
+                                  , report
+                                        |> passedToText labels
+                                        |> textToValue useColor
+                                  )
+                                ]
 
-        Todo str ->
-            Encode.object
-                [ ( "todo", Encode.string str )
-                , ( "labels", Encode.list Encode.string labels )
-                ]
+                    Failed failures ->
+                        [ ( "failure"
+                          , -- We have non-TODOs still failing; report them, not the TODOs.
+                            failures
+                                |> failuresToText useColor labels
+                                |> textToValue useColor
+                          )
+                        ]
+
+                    Todo str ->
+                        [ ( "todo", Encode.string str )
+                        , ( "labels", Encode.list Encode.string labels )
+                        ]
+               )
 
 
 summarizeTodos : List ( List String, String ) -> Text
@@ -182,16 +235,21 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
             else
                 summarizeTodos (List.reverse todos)
     in
-    [ headline
-    , stat "Duration: " (formatDuration duration)
-    , stat "Passed:   " (String.fromInt passed)
-    , stat "Failed:   " (String.fromInt failed)
-    , todoStats
-    , individualTodos
-    ]
-        |> Text.concat
-        |> Text.render useColor
-        |> Encode.string
+    Encode.object
+        [ ( "type", Encode.string "summary" )
+        , ( "summary"
+          , [ headline
+            , stat "Duration: " (formatDuration duration)
+            , stat "Passed:   " (String.fromInt passed)
+            , stat "Failed:   " (String.fromInt failed)
+            , todoStats
+            , individualTodos
+            ]
+                |> Text.concat
+                |> Text.render useColor
+                |> Encode.string
+          )
+        ]
 
 
 stat : String -> String -> Text
@@ -205,3 +263,22 @@ stat label value =
 withChar : Char -> String -> String
 withChar icon str =
     String.fromChar icon ++ " " ++ str ++ "\n"
+
+
+distributionReportToString : DistributionReport -> Maybe String
+distributionReportToString distributionReport =
+    case distributionReport of
+        Test.Distribution.NoDistribution ->
+            Nothing
+
+        Test.Distribution.DistributionToReport r ->
+            Just (Test.Distribution.distributionReportTable r)
+
+        Test.Distribution.DistributionCheckSucceeded _ ->
+            {- Not reporting the table although the data is technically there.
+               We keep the full data dump for the JSON reporter.
+            -}
+            Nothing
+
+        Test.Distribution.DistributionCheckFailed r ->
+            Just (Test.Distribution.distributionReportTable r)

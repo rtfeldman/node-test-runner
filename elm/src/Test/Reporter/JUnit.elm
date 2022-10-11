@@ -1,6 +1,7 @@
 module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
+import Test.Distribution exposing (DistributionReport)
 import Test.Reporter.TestResults exposing (Failure, Outcome(..), SummaryInfo, TestResult)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
@@ -10,20 +11,65 @@ reportBegin _ =
     Nothing
 
 
+encodeDistributionReport : String -> ( String, Value )
+encodeDistributionReport reportText =
+    ( "system-out", Encode.string reportText )
+
+
+distributionReportToString : DistributionReport -> Maybe String
+distributionReportToString distributionReport =
+    case distributionReport of
+        Test.Distribution.NoDistribution ->
+            Nothing
+
+        Test.Distribution.DistributionToReport r ->
+            Just (Test.Distribution.distributionReportTable r)
+
+        Test.Distribution.DistributionCheckSucceeded _ ->
+            {- Not reporting the table to the JUnit stdout (similarly to the
+               Console reporter) although the data is technically there.
+               We keep the full data dump for the JSON reporter.
+            -}
+            Nothing
+
+        Test.Distribution.DistributionCheckFailed r ->
+            Just (Test.Distribution.distributionReportTable r)
+
+
 encodeOutcome : Outcome -> List ( String, Value )
 encodeOutcome outcome =
     case outcome of
-        Passed ->
-            []
+        Passed distributionReport ->
+            distributionReport
+                |> distributionReportToString
+                |> Maybe.map (encodeDistributionReport >> List.singleton)
+                |> Maybe.withDefault []
 
         Failed failures ->
             let
                 message =
                     failures
-                        |> List.map formatFailure
+                        |> List.map (Tuple.first >> formatFailure)
                         |> String.join "\n\n\n"
+
+                distributionReports : String
+                distributionReports =
+                    failures
+                        |> List.filterMap (Tuple.second >> distributionReportToString)
+                        |> String.join "\n\n\n"
+
+                nonemptyDistributionReports : Maybe String
+                nonemptyDistributionReports =
+                    if String.isEmpty distributionReports then
+                        Nothing
+
+                    else
+                        Just distributionReports
             in
-            [ encodeFailureTuple message ]
+            List.filterMap identity
+                [ Just (encodeFailureTuple message)
+                , Maybe.map encodeDistributionReport nonemptyDistributionReports
+                ]
 
         Todo message ->
             [ encodeFailureTuple ("TODO: " ++ message) ]
