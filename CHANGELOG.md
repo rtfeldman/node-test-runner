@@ -4,6 +4,13 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.1-revisionX of this project will be compatible with Elm 0.19.1.
 
+## 0.19.1-revision11 - 2023-01-02
+
+### Fixed
+
+- `elm-test init` now prints a working link to the `elm-explorations/test` package. Thanks to [Max Strübing](https://github.com/mstruebing)!
+- If you ever saw `RuntimeError: unreachable` when trying to use `elm-test`, that should not be possible to happen anymore. elm-test now depends on the latest version of `elm-solve-deps-wasm` which solved that problem. (Previously, you had to make sure you had that version installed yourself).
+
 ## 0.19.1-revision10 - 2022-10-11
 
 ⚠️ Updating to this version also requires upgrading to the just released [elm-explorations/test 2.0.0](https://github.com/elm-explorations/test/blob/master/CHANGELOG.md#changes-in-200)!
@@ -35,7 +42,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/). This proj
 ### Added
 
 - `elm-test install-unstable-test-master`
-  - which installs the `master` version of the [elm-explorations/test] library in place of the `1.2.2` version in your `ELM_HOME`
+  - which installs the `master` version of the `elm-explorations/test` library in place of the `1.2.2` version in your `ELM_HOME`
 - `elm-test uninstall-unstable-test-master`
   - which undoes that
 
