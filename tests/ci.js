@@ -292,6 +292,12 @@ describe('Testing elm-test on single Elm files', () => {
     }
   }
 
+  it(`Should not crash the junit reportor on invalid characters`, () => {
+    const itsPath = path.join('tests', 'InvalidXMLCharacter', 'Test.elm');
+    const runResult = execElmTest([itsPath, '--report', 'junit'], cwd);
+    assertTestSuccess(runResult);
+  });
+
   it(`Should run every file in tests/CompileError`, () => {
     const filesFound = readdir(path.join(cwd, 'tests', 'CompileError'));
     assert.deepStrictEqual(
