@@ -292,7 +292,7 @@ describe('Testing elm-test on single Elm files', () => {
     }
   }
 
-  it(`Should not crash the junit reportor on invalid characters`, () => {
+  it(`Should not crash the junit reporter on invalid characters`, () => {
     const itsPath = path.join('tests', 'InvalidXMLCharacter', 'Test.elm');
     const runResult = execElmTest([itsPath, '--report', 'junit'], cwd);
     assertTestSuccess(runResult);
