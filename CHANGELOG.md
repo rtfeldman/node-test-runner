@@ -4,6 +4,12 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.1-revisionX of this project will be compatible with Elm 0.19.1.
 
+## 0.19.1-revision12 - 2023-02-16
+
+### Fixed
+
+- `elm-test --report junit` now works with [elm-program-test](https://github.com/avh4/elm-program-test). The `junit` report is XML. `elm-program-test` uses some characters that are not allowed in XML. This version replaces such disallowed characters with an Elm-style escape sequence, instead of crashing like it did before. Thanks to [Christoph Hermann](https://github.com/stoeffel) for reporting and to [Ilias Van Peer](https://github.com/zwilias) for fixing!
+
 ## 0.19.1-revision11 - 2023-01-02
 
 ### Fixed
