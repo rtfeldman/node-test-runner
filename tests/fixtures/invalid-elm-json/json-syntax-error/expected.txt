@@ -1,3 +1,3 @@
 /full/path/to/elm.json
 Failed to read elm.json:
-Unexpected string in JSON at position 11
+(the JSON parse error)
