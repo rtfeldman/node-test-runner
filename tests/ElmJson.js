@@ -45,7 +45,8 @@ describe('handling invalid elm.json', () => {
           ElmJson.requireElmTestPackage(fullPath, elmJson);
         },
         {
-          message: expected,
+          message:
+            dir === 'json-syntax-error' ? new RegExp(expected) : expected,
         }
       );
     });
