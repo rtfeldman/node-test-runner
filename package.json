@@ -46,7 +46,7 @@
     "chalk": "^4.1.2",
     "chokidar": "^3.5.3",
     "commander": "^9.4.1",
-    "cross-spawn": "^7.0.3",
+    "cross-spawn": "^7.0.6",
     "elm-solve-deps-wasm": "^1.0.2",
     "glob": "^8.0.3",
     "graceful-fs": "^4.2.10",
