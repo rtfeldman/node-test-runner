@@ -13,27 +13,27 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        node-version: [18.x]
+        node-version: [22.x]
 
     env:
       ELM_HOME: '${{ github.workspace }}/elm-stuff/elm-home'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: '${{ matrix.node-version }}'
 
       - name: Cache node_modules
         id: cache-node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
 
       - name: Cache ELM_HOME
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: '${{ env.ELM_HOME }}'
           key: elm-${{ matrix.os }}-${{ hashFiles('elm-tooling.json', 'elm/**/elm.json', 'example-*/**/elm.json', 'tests/**/elm.json') }}
