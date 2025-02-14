@@ -1,7 +1,8 @@
 {
     "type": "application",
     "source-directories": [
-        "src"
+        "src",
+        "tests"
     ],
     "elm-version": "0.19.1",
     "dependencies": {
