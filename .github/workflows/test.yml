@@ -54,6 +54,10 @@ jobs:
         if: steps.cache-node_modules.outputs.cache-hit != 'true' && (matrix.node-version == '12.x' || matrix.node-version == '14.x')
         run: npm install glob@8
 
+      - name: install mocha 9
+        if: steps.cache-node_modules.outputs.cache-hit != 'true' && (matrix.node-version == '12.x' || matrix.node-version == '14.x' || matrix.node-version == '16.x')
+        run: npm install mocha@9
+
       - name: elm-tooling install
         run: npx --no-install elm-tooling install
 
