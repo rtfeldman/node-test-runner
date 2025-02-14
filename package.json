@@ -55,11 +55,13 @@
     "xmlbuilder": "^15.1.1"
   },
   "devDependencies": {
+    "@eslint/js": "9.20.0",
     "elm-review": "2.13.1",
     "elm-tooling": "1.15.1",
-    "eslint": "8.31.0",
-    "eslint-plugin-mocha": "10.1.0",
+    "eslint": "9.20.1",
+    "eslint-plugin-mocha": "10.5.0",
     "flow-bin": "0.180.0",
+    "globals": "15.15.0",
     "mocha": "11.1.0",
     "prettier": "2.8.1",
     "strip-ansi": "6.0.0",
