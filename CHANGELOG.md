@@ -4,6 +4,14 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.1-revisionX of this project will be compatible with Elm 0.19.1.
 
+## 0.19.1-revision13 - 2025-02-14
+
+### Fixed
+
+- elm-test no longer fails with an error about duplicate source directories if your `elm.json` contains `"source-directories": ["tests"]`.
+- The `glob` dependency version has been updated from `^8.0.3` to `^8.0.3 || ^9.0.0 || ^10.0.0 || ^11.0.0`. This allows npm (or your package manager of choice) to install the latest version of `glob` that works with your Node.js version. Versions 8 and 9 are deprecated. If you use Node.js 16 or later, this allows you to get rid of deprecation warnings.
+- The `elm-solve-deps-wasm` dependency version has been updated from `^1.0.2` to `^1.0.2 || ^2.0.0`, which is the same version constraint that elm-review 2.13.0 uses. If you install the latest version of both elm-test and elm-review, you only get one copy of elm-solve-deps-wasm in `node_modules/` instead of two, saving about 288 KB.
+
 ## 0.19.1-revision12 - 2023-02-16
 
 ### Fixed
