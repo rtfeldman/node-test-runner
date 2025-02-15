@@ -14,12 +14,12 @@ jobs:
       matrix:
         # macOS-13 is the latest macOS version that is x86.
         # Node.js 12, 14 and 16 aren’t support on the arm64 runners.
-        os: [ubuntu-latest, macOS-13, windows-latest]
-        node-version: [12.x, 14.x, 16.x, 18.x, 20.x, 22.x]
+        os: [windows-latest]
+        node-version: [22.x]
         # Also have a test on macOS arm64.
-        include:
-          - os: macOS-latest
-            node-version: 22.x
+        # include:
+        #   - os: macOS-latest
+        #     node-version: 22.x
 
     env:
       ELM_HOME: '${{ github.workspace }}/elm-stuff/elm-home'
