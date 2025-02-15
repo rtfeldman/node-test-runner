@@ -2,7 +2,7 @@
 
 const assert = require('assert');
 const path = require('path');
-const glob = require('glob');
+const { globSync } = require('tinyglobby');
 const spawn = require('cross-spawn');
 
 const { spawnOpts } = require('./util');
@@ -23,7 +23,7 @@ function execElm(args, cwd) {
   );
 }
 
-let examples = glob.sync(path.join(__dirname, '..', 'example*'));
+let examples = globSync(path.join(__dirname, '..', 'example*'));
 
 describe('examples quality', () => {
   describe('Each example has valid json', () => {
