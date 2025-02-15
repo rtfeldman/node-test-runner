@@ -4,6 +4,18 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.1-revisionX of this project will be compatible with Elm 0.19.1.
 
+## 0.19.1-revision15 - 2025-02-16
+
+### Fixed
+
+This version replaces the `glob` dependency with `tinyglobby`, which is used by elm-review, and many other popular projects. This has a couple of benefits:
+
+- Restores the Node.js 12 support lost in 0.19.1-revision13.
+- Fixes globs that resolve to directories on Windows. Regression since 0.19.1-revision13, due to the `glob` upgrade. The test suite was previously missing coverage for this.
+- `tinyglobby` is much smaller than `glob`, reducing the installation size and number of indirect dependencies.
+
+Thanks to [Jeroen Engels](https://github.com/jfmengels) for making the pull request fixing this, and to [@lishaduck](https://github.com/lishaduck) for introducing `tinyglobby` to elm-review and suggesting elm-test should use it too!
+
 ## 0.19.1-revision14 - 2025-02-15
 
 ### Fixed
