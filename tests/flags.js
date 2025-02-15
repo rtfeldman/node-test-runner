@@ -707,7 +707,6 @@ describe('flags', () => {
 
     it('Should find all Elm files inside the directory that a glob resolves to', () => {
       const runResult = execElmTest(['tests/Pass*']);
-      console.log(runResult);
       assert.strictEqual(runResult.status, 0);
     }).timeout(60000);
   });
