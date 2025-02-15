@@ -705,15 +705,12 @@ describe('flags', () => {
       assert.strictEqual(runResult.status, 0);
     }).timeout(60000);
 
-    it.only(
-      'Should find all Elm files inside the directory that a glob resolves to',
-      () => {
-        // This is nice if two globs accidentally intersect.
-        const runResult = execElmTest(['tests/Pass*']);
-        console.log(runResult);
-        assert.strictEqual(runResult.status, 0);
-      }
-    ).timeout(60000);
+    it('Should find all Elm files inside the directory that a glob resolves to', () => {
+      // This is nice if two globs accidentally intersect.
+      const runResult = execElmTest(['tests/Pass*']);
+      console.log(runResult);
+      assert.strictEqual(runResult.status, 0);
+    }).timeout(60000);
   });
 
   describe('unknown flags', () => {
