@@ -4,6 +4,16 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.1-revisionX of this project will be compatible with Elm 0.19.1.
 
+## 0.19.1-revision14 - 2025-02-15
+
+### Fixed
+
+0.19.1-revision13 unfortunately did not work out of the box in Node.js 12–18 due to a [bug in npm versions older than v10](https://github.com/npm/npm-pick-manifest/pull/33). This version is a quick-fix that restores support for Node.js 14–18, while still not causing deprecation warnings. Thanks to [@lishaduck](https://github.com/lishaduck) for reporting!
+
+Unfortunately, Node.js 12 is still broken. You need to stay on 0.19.1-revision12 if you use Node.js 12.
+
+(For those interested, the fix was changing the `glob` version range to `^8.0.3` to `^8.0.3 || ^9.0.0 || ^10.0.0`. `^11.0.0` was removed from it due to the linked npm bug.)
+
 ## 0.19.1-revision13 - 2025-02-14
 
 ### Fixed
