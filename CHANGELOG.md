@@ -4,6 +4,12 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.1-revisionX of this project will be compatible with Elm 0.19.1.
 
+## 0.19.1-revision16 - 2025-07-06
+
+### Fixed
+
+elm-test now works with an upcoming version of the Lamdera compiler. Lamdera has a [cool new optimization](https://github.com/lamdera/compiler/pull/41), that unfortunately made elm-test unable to find tests. Now that is fixed! Thanks to [Leonardo Taglialegne](https://github.com/miniBill)!
+
 ## 0.19.1-revision15 - 2025-02-16
 
 ### Fixed
