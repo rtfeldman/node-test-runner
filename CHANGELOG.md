@@ -4,6 +4,20 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.1-revisionX of this project will be compatible with Elm 0.19.1.
 
+## 0.19.1-revision17 - 2025-11-18
+
+### Fixed
+
+When running tests, elm-test needs to merge `"dependencies"` and `"test-dependencies"` in your elm.json. To do this, elm-test uses [elm-solve-deps](https://github.com/mpizenberg/elm-solve-deps).
+
+Previously, this merging step could result in ignoring the `"indirect"` parts of dependencies in elm.json, and getting a later (but still semver compatible) version instead. For example, you might have had `"elm/virtual-dom": "1.0.4"` in `"indirect"` in elm.json, but ended up getting 1.0.5 installed in tests.
+
+Now, elm-test prefers the version mentioned in `"indirect"` if possible, so that you end up getting the same code in your source code and in tests.
+
+See [issue 652](https://github.com/rtfeldman/node-test-runner/issues/652) for more details.
+
+Thanks to [Juliano Solanho](@omnibs) for reporting and fixing!
+
 ## 0.19.1-revision16 - 2025-07-06
 
 ### Fixed
