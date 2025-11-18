@@ -16,7 +16,7 @@ Now, elm-test prefers the version mentioned in `"indirect"` if possible, so that
 
 See [issue 652](https://github.com/rtfeldman/node-test-runner/issues/652) for more details.
 
-Thanks to [Juliano Solanho](@omnibs) for reporting and fixing!
+Thanks to [Juliano Solanho](https://github.com/omnibs) for reporting and fixing!
 
 ## 0.19.1-revision16 - 2025-07-06
 
