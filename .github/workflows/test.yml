@@ -14,11 +14,11 @@ jobs:
       matrix:
         # Node.js 12, 14 and 16 aren’t supported on the macOS arm64 runners.
         os: [ubuntu-latest, macOS-15-intel, windows-latest]
-        node-version: [12.x, 14.x, 16.x, 18.x, 20.x, 22.x]
+        node-version: [12.x, 14.x, 16.x, 18.x, 20.x, 22.x, 24.x]
         # Also have a test on macOS arm64.
         include:
           - os: macOS-latest
-            node-version: 22.x
+            node-version: 24.x
 
     env:
       ELM_HOME: '${{ github.workspace }}/elm-stuff/elm-home'
