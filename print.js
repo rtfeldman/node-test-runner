@@ -1,4 +1,6 @@
 console.log('\x1b[31mThis text is red\x1b[0m');
+console.log('\u001b[31mThis text is red\u001b[0m');
+console.log('\u001b[31m\nThis text is red\u001b[0m');
 console.log(
-  '\u001b[31m\nTEST RUN FAILED\u001b[39m\u001b[31m\n\n\u001b[39m\u001b[2mDuration: \u001b[22m154 ms\n\u001b[2mPassed:   \u001b[22m3\n\u001b[2mFailed:   \u001b[22m9\n\u001b[2mTodo:     \u001b[22m3\n'
+  '\u001b[31m\nTEST RUN FAILED\u001b[39m\u001b[31m\n\n\u001b[39m\u001b[2mDuration: \u001b[22m154 ms\n\u001b[2mPassed:   \u001b[22m3\n\u001b[2mFailed:   \u001b[22m9\n\u001b[2mTodo:     \u001b[22m3\n\x1b[0m'
 );
