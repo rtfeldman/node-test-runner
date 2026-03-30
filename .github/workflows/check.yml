@@ -46,5 +46,7 @@ jobs:
 
       - run: npx elm-tooling install
 
+      - run: node print.js
+
       - run: npx node ../bin/elm-test --color
         working-directory: example-application
