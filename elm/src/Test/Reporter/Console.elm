@@ -210,10 +210,10 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
         headline =
             case headlineResult of
                 Ok str ->
-                    underline (green ("\n" ++ str ++ "\n\n"))
+                    (green ("\n" ++ str ++ "\n\n"))
 
                 Err ( colorize, str, suffix ) ->
-                    [ underline (colorize ("\n" ++ str))
+                    [ (colorize ("\n" ++ str))
                     , colorize (suffix ++ "\n\n")
                     ]
                         |> Text.concat
