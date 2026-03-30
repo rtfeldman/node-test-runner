@@ -44,5 +44,5 @@ jobs:
         env:
           NO_ELM_TOOLING_INSTALL: 1
 
-      - run: ../bin/elm-test --color
+      - run: npx node ../bin/elm-test --color
         working-directory: example-application
