@@ -44,21 +44,5 @@ jobs:
         env:
           NO_ELM_TOOLING_INSTALL: 1
 
-      - name: elm-tooling install
-        run: npx --no-install elm-tooling install
-
-      - name: Flow
-        run: npx --no-install flow check
-
-      - name: ESLint
-        run: npx --no-install eslint --report-unused-disable-directives .
-
-      - name: Prettier
-        run: npx --no-install prettier --check .
-
-      - name: elm-format
-        run: npx --no-install elm-format --validate elm
-
-      - name: elm-review
-        run: npx --no-install elm-review
-        working-directory: elm
+      - run: ../bin/elm-test --color
+        working-directory: example-application
