@@ -1,3 +1,4 @@
+console.log('\u001B[7mThis text is inverted\u001B[27m');
 console.log('\x1b[31mThis text is red\x1b[0m');
 console.log('\u001b[31mThis text is red\u001b[0m');
 console.log('\u001b[31m\nThis text is red\u001b[0m');
