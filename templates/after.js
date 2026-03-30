@@ -19,6 +19,7 @@ client.on('data', function (msg) {
 
 // Use ports for inter-process communication.
 app.ports.elmTestPort__send.subscribe(function (msg) {
+  console.log('MSG', msg);
   // We split incoming messages on the socket on newlines. The gist is that node
   // is rather unpredictable in whether or not a single `write` will result in a
   // single `on('data')` callback. Sometimes it does, sometimes multiple writes
