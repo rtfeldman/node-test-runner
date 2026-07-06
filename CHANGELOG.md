@@ -2,7 +2,38 @@
 
 Notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.2-revisionX of this project will be compatible with Elm 0.19.2.
+The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.2-X of this project will be compatible with Elm 0.19.2. See [Versions](./README.md#versions) for details.
+
+## 0.19.2-0 - 2026-07-06
+
+### Breaking
+
+elm-test now requires [Elm 0.19.2](https://github.com/elm/compiler/releases/tag/0.19.2)!
+
+Note that if you install Elm 0.19.2, but forget to update elm-test, you’ll get an error like this:
+
+```
+-- ELM VERSION MISMATCH ----------------------------------------------- elm.json
+
+Your elm.json says this application needs a different version of Elm.
+
+It requires 0.19.1, but you are using 0.19.2 right now.
+
+
+`elm make` failed with exit code 1.
+```
+
+That error message is slightly confusing because it’s talking about a generated `elm.json` file deep in the `elm-stuff/` directory, not your own elm.json! But either way, the solution is to use the same version of `elm` and `elm-test`. See [Versions](./README.md#versions) for details.
+
+Thanks to [Harm](https://github.com/hahschaa) for helping with this!
+
+## Performance
+
+- elm-test no longer depends on the `chalk` package. [Jeroen Engels](https://github.com/jfmengels) noticed that all we used that package for was to color text blue and red, and made a PR simplifying that to just two functions (and a helper), instead of a whole package – with sub-dependencies. This removed 6 npm packages in total, and about 0.2 MB, from an elm-test install!
+
+- elm-test now starts up to ~40 ms faster in some cases, due to lazy loading of two npm packages. When not using the watch mode, or when not using the junit report, we now avoid loading a bunch of file watching and XML generating code. Thanks to [Jeroen Engels](https://github.com/jfmengels) for doing deep analysis on this!
+
+- When `Expect.equal` fails on two large, dissimilar strings, the reporter's character-level diff takes several seconds – just to realize that a diff cannot be displayed. [Matthieu Pizenberg](https://github.com/mpizenberg/) fixed this in [elm-test-rs](https://github.com/mpizenberg/elm-test-rs), which originally copied the code in question from this repo. The fix has now been copied back, so diffs stay sub-second, even for really large cases!
 
 ## 0.19.1-revision17 - 2025-11-18
 

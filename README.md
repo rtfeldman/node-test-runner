@@ -11,18 +11,28 @@ When people say “elm-test” they usually refer to either:
 
 ## Versions
 
-Not all versions of [elm-explorations/test] and this CLI tool work together!
+You need to keep the versions of these three things in sync:
+
+- This CLI tool.
+- The Elm compiler.
+- The [elm-explorations/test] package.
+
+When it comes to the first two it’s easy: Use the same version for both. If you use Elm 0.19.2, use version 0.19.2 of this CLI tool as well. Note that the npm packages for both `elm` and `elm-test` might have suffixes such as `-0` and `-1` etc. It’s totally OK to use `elm@0.19.2-0` with `elm-test@0.19.2-1`! The suffixes don’t need to match. The suffixes are all about bug fixes or features in the respective npm packages, while the base version says which compiler version we’re working with.
+
+When it comes to [elm-explorations/test]: Use at least version 2.0.0 with elm-test 0.19.2. If you’re on 0.19.1, see the following table:
 
 | elm-explorations/test | elm-test CLI         |
 | --------------------- | -------------------- |
 | >= 2.0.0              | >= 0.19.1-revision10 |
 | <= 1.2.2              | <= 0.19.1-revision9  |
 
+(For 0.19.1, the suffix used was for example `-revision9` instead of just `-9`. This was changed in 0.19.2 to match the `elm` npm package.)
+
 > **Unfortunate behavior of 0.19.1-revision9 and older**
 >
 > - `elm-test init` always installs the latest [elm-explorations/test]. This means that if you run `elm-test init` on version 0.19.1-revision9 or older, you will get elm-explorations/test 2.0.0 or later, which don’t work 100 % together (see the next point).
 > - elm-test 0.19.1-revision9 or older do _not_ validate that [elm-explorations/test] in your elm.json has a compatible version. If you upgrade to elm-explorations/test 2.0.0 or later but forget to upgrade the elm-test CLI, most things will still work, but test distribution diagrams (new in elm-explorations/test 2.0.0) won’t show up. So if you use `Test.fuzzWith` and wonder why distribution diagrams never show up – check your elm-test CLI version!
-> - There exists an elm-test CLI version called just "0.19.1". It should have been called "0.19.1-revision1", but unfortunately isn’t. Don’t make the mistake thinking it’s the latest version! You always want "0.19.1-revisionX".
+> - There exists an elm-test CLI version called just "0.19.1". It should have been called "0.19.1-revision1", but unfortunately isn’t. Don’t make the mistake thinking it’s the latest version! You always want "0.19.1-revisionX". (This is also why there is a version called "0.19.2-0" but no "0.19.2".)
 
 ## Installation
 
