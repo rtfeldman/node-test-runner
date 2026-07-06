@@ -20,9 +20,32 @@ resolve { fromHighlighted, fromPlain } highlightable =
 
 diffLists : List a -> List a -> List (Highlightable a)
 diffLists expected actual =
-    -- TODO make sure this looks reasonable for multiline strings
-    Diff.diff expected actual
-        |> List.concatMap fromDiff
+    let
+        ( prefix, restExpected, restActual ) =
+            trimPrefix [] expected actual
+
+        ( suffixRev, midExpectedRev, midActualRev ) =
+            trimPrefix [] (List.reverse restExpected) (List.reverse restActual)
+
+        middle =
+            Diff.diff (List.reverse midExpectedRev) (List.reverse midActualRev)
+                |> List.concatMap fromDiff
+    in
+    List.map Plain prefix ++ middle ++ List.map Plain (List.reverse suffixRev)
+
+
+trimPrefix : List a -> List a -> List a -> ( List a, List a, List a )
+trimPrefix acc a b =
+    case ( a, b ) of
+        ( x :: restA, y :: restB ) ->
+            if x == y then
+                trimPrefix (x :: acc) restA restB
+
+            else
+                ( List.reverse acc, a, b )
+
+        _ ->
+            ( List.reverse acc, a, b )
 
 
 map : (a -> b) -> Highlightable a -> Highlightable b
