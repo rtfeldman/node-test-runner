@@ -2,7 +2,7 @@
 
 Notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.1-revisionX of this project will be compatible with Elm 0.19.1.
+The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.2-revisionX of this project will be compatible with Elm 0.19.2.
 
 ## 0.19.1-revision17 - 2025-11-18
 
