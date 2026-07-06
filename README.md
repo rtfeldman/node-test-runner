@@ -201,7 +201,7 @@ If you want to run your tests on Travis CI, [here's a good starter `.travis.yml`
 ```yml
 language: elm
 elm:
-  - 0.19.1
+  - 0.19.2
 ```
 
 Here is an example [`travis.yml`](https://github.com/rtfeldman/elm-css/blob/master/.travis.yml) configuration file for running tests in CI.
