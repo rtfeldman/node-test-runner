@@ -1,6 +1,6 @@
 {
   "name": "elm-test",
-  "version": "0.19.2-revision1",
+  "version": "0.19.1-revision17",
   "description": "Run elm-test suites.",
   "main": "elm-test.js",
   "engines": {
@@ -56,7 +56,6 @@
   },
   "devDependencies": {
     "@eslint/js": "9.20.0",
-    "elm": "0.19.2-0",
     "elm-review": "2.13.1",
     "elm-tooling": "1.18.0",
     "eslint": "9.20.1",

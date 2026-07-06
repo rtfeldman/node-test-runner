@@ -4,12 +4,6 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.2-revisionX of this project will be compatible with Elm 0.19.2.
 
-## 0.19.2-revision1 - 2026-07-06
-
-### Changed
-
-- `elm-test` supports [elm 0.19.2](https://elm-lang.org/news/faster-builds).
-
 ## 0.19.1-revision17 - 2025-11-18
 
 ### Fixed
