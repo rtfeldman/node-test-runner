@@ -128,7 +128,7 @@ describe('--help', () => {
     assertTestSuccess(runResult);
     // ensure we have a non-empty output
     assert.ok(runResult.stdout.length > 0);
-  }).timeout(5000);
+  });
 });
 
 describe('--version', () => {
@@ -136,7 +136,7 @@ describe('--version', () => {
     const runResult = execElmTest(['--version']);
     assertTestSuccess(runResult);
     assert.strictEqual(elmTestVersion, runResult.stdout.trim());
-  }).timeout(5000);
+  });
 });
 
 /* Test examples */
@@ -148,18 +148,18 @@ describe('Testing elm-test on an example application', () => {
     const args = path.join('tests', '*Pass*.elm');
     const runResult = execElmTest([args], cwd);
     assertTestSuccess(runResult);
-  }).timeout(60000);
+  });
 
   it('Should fail for failing tests', () => {
     const args = path.join('tests', '*Fail*.elm');
     const runResult = execElmTest([args], cwd);
     assertTestFailure(runResult);
-  }).timeout(60000);
+  });
 
   it('Should successfully run `elm-test make`', () => {
     const runResult = execElmTest(['make'], cwd);
     assertTestSuccess(runResult);
-  }).timeout(60000);
+  });
 });
 
 describe('Testing elm-test on an example package', () => {
@@ -169,18 +169,18 @@ describe('Testing elm-test on an example package', () => {
     const args = path.join('tests', '*Pass*.elm');
     const runResult = execElmTest([args], cwd);
     assertTestSuccess(runResult);
-  }).timeout(60000);
+  });
 
   it('Should fail for failing tests', () => {
     const args = path.join('tests', '*Fail*.elm');
     const runResult = execElmTest([args], cwd);
     assertTestFailure(runResult);
-  }).timeout(60000);
+  });
 
   it('Should successfully run `elm-test make`', () => {
     const runResult = execElmTest(['make'], cwd);
     assertTestSuccess(runResult);
-  }).timeout(60000);
+  });
 });
 
 describe('Testing elm-test on example-application-src', () => {
@@ -189,7 +189,7 @@ describe('Testing elm-test on example-application-src', () => {
   it('Should pass successfully', () => {
     const runResult = execElmTest(['src'], cwd);
     assertTestSuccess(runResult);
-  }).timeout(60000);
+  });
 });
 
 describe('Testing elm-test on an application with no tests', () => {
@@ -198,7 +198,7 @@ describe('Testing elm-test on an application with no tests', () => {
   it('Should fail due to missing tests', () => {
     const runResult = execElmTest([], cwd);
     assertTestFailure(runResult);
-  }).timeout(60000);
+  });
 });
 
 /* ci tests on single elm files */
@@ -220,7 +220,7 @@ describe('Testing elm-test on single Elm files', () => {
       const itsPath = path.join('tests', 'Passing', testToRun);
       const runResult = execElmTest([itsPath], cwd);
       assertTestSuccess(runResult);
-    }).timeout(10000);
+    });
   }
 
   it(`Should run every file in tests/Passing`, () => {
@@ -245,7 +245,7 @@ describe('Testing elm-test on single Elm files', () => {
       const itsPath = path.join('tests', 'Failing', testToRun);
       const runResult = execElmTest([itsPath], cwd);
       assertTestFailure(runResult);
-    }).timeout(10000);
+    });
   }
 
   it(`Should run every file in tests/Failing`, () => {
@@ -261,7 +261,7 @@ describe('Testing elm-test on single Elm files', () => {
       const itsPath = path.join('tests', 'RuntimeException', testToRun);
       const runResult = execElmTest([itsPath], cwd);
       assertTestErrored(runResult);
-    }).timeout(10000);
+    });
   }
 
   it(`Should run every file in tests/RuntimeException`, () => {

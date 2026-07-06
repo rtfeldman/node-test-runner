@@ -76,7 +76,7 @@ describe('flags', () => {
       const runResult = execElmTest(['init', 'frontend/elm']);
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
 
     describe('for a PACKAGE', () => {
       it('Adds elm-explorations/test', (done) => {
@@ -102,7 +102,7 @@ describe('flags', () => {
 
           done();
         });
-      }).timeout(60000);
+      });
     });
 
     describe('for an APPLICATION', () => {
@@ -133,7 +133,7 @@ describe('flags', () => {
 
           done();
         });
-      }).timeout(60000);
+      });
     });
   });
 
@@ -146,19 +146,19 @@ describe('flags', () => {
       const runResult = execElmTest(['install']);
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
 
     it('should fail if given extra arguments', () => {
       const runResult = execElmTest(['install', 'elm/regex', 'elm/time']);
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
 
     it('should fail if no elm.json can be found', () => {
       const runResult = execElmTest(['install', 'elm/regex'], rootDir);
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
 
     it('should not allow command injection', () => {
       fs.copyFileSync(
@@ -175,19 +175,19 @@ describe('flags', () => {
       );
       assert(!runResult.stdout.includes('FINDME'));
       assert(!runResult.stderr.includes('FINDMETWICE'));
-    }).timeout(60000);
+    });
 
     it('should exit with success if package already installed', () => {
       const runResult = execElmTest(['install', 'elm-explorations/test']);
       assert.strictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
   });
 
   describe('elm-test make', () => {
     it('should exit with success for valid Elm code', () => {
       const runResult = execElmTest(['make', 'tests/Passing/One.elm']);
       assert.strictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
 
     it('should exit with non-success for invalid Elm code', () => {
       const runResult = execElmTest([
@@ -196,7 +196,7 @@ describe('flags', () => {
       ]);
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
 
     describe('--output', () => {
       it('should ignore --output flag when set to /dev/null', () => {
@@ -207,7 +207,7 @@ describe('flags', () => {
         ]);
 
         assert.strictEqual(runResult.status, 0);
-      }).timeout(60000);
+      });
 
       it('should fail if setting --output to anything other than /dev/null', () => {
         const runResult = execElmTest([
@@ -218,7 +218,7 @@ describe('flags', () => {
 
         assert.ok(Number.isInteger(runResult.status));
         assert.notStrictEqual(runResult.status, 0);
-      }).timeout(60000);
+      });
     });
   });
 
@@ -228,12 +228,12 @@ describe('flags', () => {
       // Checking against a fixture is brittle here
       // For now, check that the output is non-empty.
       assert.ok(runResult.stdout.length > 0);
-    }).timeout(60000);
+    });
 
     it('Should exit indicating success (see #359)', () => {
       const runResult = execElmTest(['--help']);
       assert.strictEqual(0, runResult.status);
-    }).timeout(60000);
+    });
   });
 
   describe('--report', () => {
@@ -246,7 +246,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should be able to report json lines', () => {
       const runResult = execElmTest([
@@ -266,7 +266,7 @@ describe('flags', () => {
       });
 
       assert.ok(linesReceived > 0);
-    }).timeout(60000);
+    });
 
     it('Should be able to report passing junit xml', (done) => {
       const runResult = execElmTest([
@@ -280,7 +280,7 @@ describe('flags', () => {
         assert.ok(data);
         done();
       });
-    }).timeout(60000);
+    });
 
     it('Should be able to report compilation errors', () => {
       const runResult = execElmTest([
@@ -289,7 +289,7 @@ describe('flags', () => {
       ]);
 
       assert.ok(runResult.stderr.match(/ENDLESS COMMENT/));
-    }).timeout(60000);
+    });
 
     it('Should be able to report failing junit xml', (done) => {
       const runResult = execElmTest([
@@ -303,7 +303,7 @@ describe('flags', () => {
         assert.ok(data);
         done();
       });
-    }).timeout(60000);
+    });
   });
 
   describe('--seed', () => {
@@ -316,7 +316,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should fail if given a negative integer', () => {
       const runResult = execElmTest([
@@ -327,7 +327,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should use and, thus, show the proper seed in the JSON report', () => {
       const runResult = execElmTest([
@@ -338,7 +338,7 @@ describe('flags', () => {
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
       assert.strictEqual('12345', firstOutput.initialSeed);
-    }).timeout(60000);
+    });
 
     it('Should allow 0', () => {
       const runResult = execElmTest([
@@ -349,7 +349,7 @@ describe('flags', () => {
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
       assert.strictEqual('0', firstOutput.initialSeed);
-    }).timeout(60000);
+    });
   });
 
   describe('--fuzz', () => {
@@ -362,7 +362,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should fail if given 0', () => {
       const runResult = execElmTest([
@@ -373,7 +373,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should fail if given a negative integer', () => {
       const runResult = execElmTest([
@@ -384,7 +384,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should default to 100', () => {
       const runResult = execElmTest([
@@ -394,7 +394,7 @@ describe('flags', () => {
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
       assert.strictEqual('100', firstOutput.fuzzRuns);
-    }).timeout(60000);
+    });
 
     it('Should use the provided value', () => {
       const runResult = execElmTest([
@@ -405,7 +405,7 @@ describe('flags', () => {
       const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
 
       assert.strictEqual('5', firstOutput.fuzzRuns);
-    }).timeout(60000);
+    });
   });
 
   describe('--compiler', () => {
@@ -426,7 +426,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it("Should fail if the given compiler can't be executed", () => {
       const runResult = execElmTest([
@@ -436,7 +436,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should work with different elm on PATH', () => {
       const runResult = execElmTest([
@@ -445,7 +445,7 @@ describe('flags', () => {
       ]);
 
       assert.strictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should work with local different elm', () => {
       const runResult = execElmTest([
@@ -454,7 +454,7 @@ describe('flags', () => {
       ]);
 
       assert.strictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
   });
 
   describe('--watch', () => {
@@ -466,7 +466,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should re-run tests when files are changed, added and removed', (done) => {
       const addedFile = path.join(
@@ -543,7 +543,7 @@ describe('flags', () => {
           done(e);
         }
       });
-    }).timeout(60000);
+    });
 
     it('Should re-run tests after install', (done) => {
       ensureEmptyDir(scratchDir);
@@ -626,7 +626,7 @@ describe('flags', () => {
           }
         });
       });
-    }).timeout(60000);
+    });
   });
 
   describe('color', () => {
@@ -684,7 +684,7 @@ describe('flags', () => {
       shouldHaveColor('Env var overrides flag (to color)', ['--no-color'], {
         FORCE_COLOR: '1',
       });
-    }).timeout(60000);
+    });
   });
 
   describe('mixed', () => {
@@ -694,7 +694,7 @@ describe('flags', () => {
         path.join(fixturesDir, 'tests', 'Passing')
       );
       assert.strictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
 
     it('Should deduplicate test files', () => {
       // This is nice if two globs accidentally intersect.
@@ -703,12 +703,12 @@ describe('flags', () => {
         'tests/**/!(Failing)/**/One.elm',
       ]);
       assert.strictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
 
     it('Should find all Elm files inside the directory that a glob resolves to', () => {
       const runResult = execElmTest(['tests/Pass*']);
       assert.strictEqual(runResult.status, 0);
-    }).timeout(60000);
+    });
   });
 
   describe('unknown flags', () => {
@@ -720,7 +720,7 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
 
     it('Should fail on unknown long flag', () => {
       const runResult = execElmTest([
@@ -730,6 +730,6 @@ describe('flags', () => {
 
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
-    }).timeout(5000);
+    });
   });
 });
