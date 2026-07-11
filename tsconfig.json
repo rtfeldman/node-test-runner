@@ -4,7 +4,7 @@
     "target": "esnext",
     "lib": ["esnext"],
     "types": ["node"],
-    "noUncheckedIndexedAccess": true,
+    "noUncheckedIndexedAccess": false, // Disabled during the migration from Flow to TypeScript.
     "exactOptionalPropertyTypes": true,
     "noImplicitReturns": true,
     "noImplicitOverride": true,
@@ -16,7 +16,7 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-    "useUnknownInCatchVariables": true,
+    "useUnknownInCatchVariables": false, // Disabled during the migration from Flow to TypeScript.
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,

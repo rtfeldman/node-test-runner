@@ -14,6 +14,7 @@ export default [
   {
     rules: {
       ...js.configs.recommended.rules,
+      'no-fallthrough': 'off', // Caught by TypeScript instead.
       'no-inner-declarations': 'off',
       'no-prototype-builtins': 'off',
       'no-unused-vars': ['error', { caughtErrorsIgnorePattern: '^_' }],
