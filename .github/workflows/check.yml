@@ -47,8 +47,8 @@ jobs:
       - name: elm-tooling install
         run: npx --no-install elm-tooling install
 
-      - name: Flow
-        run: npx --no-install flow check
+      - name: TypeScript
+        run: npx --no-install tsc
 
       - name: ESLint
         run: npx --no-install eslint --report-unused-disable-directives .

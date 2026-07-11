@@ -9,7 +9,6 @@ export default [
       '**/elm-stuff',
       '**/fixtures',
       '**/templates',
-      '**/flow-typed',
     ],
   },
   {
