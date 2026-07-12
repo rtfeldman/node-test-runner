@@ -168,6 +168,9 @@ Define how many times each fuzz-test should run. Defaults to `100`.
 
     elm-test --fuzz 500
 
+> [!NOTE]  
+> 100 iterations is pretty low for most fuzz tests – it might not be enough to find edge cases. It’s recommended to use [fuzzWith](https://package.elm-lang.org/packages/elm-explorations/test/latest/Test#fuzzWith) to choose an appropriate number of runs per fuzz test. When developing, increase the number until you don’t get any failures anymore and the test takes a long time. Then lower the number so the test covers enough and runs fast enough to make those who wait not go insane.
+
 ### --report
 
 Specify which format to use for reporting test results. Valid options are:
