@@ -41,7 +41,6 @@ function elmTestWithYes(args, callback) {
 }
 
 /**
- *
  * @param { Array<string> } args
  * @param { string } [cwd]
  * @param { import('child_process').SpawnOptions } extraOpts
