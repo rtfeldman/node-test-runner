@@ -46,7 +46,7 @@ describe('handling invalid elm.json', () => {
         },
         (error) => {
           assert.strictEqual(
-            error.message.replace(
+            /** @type { Error } */ (error).message.replace(
               // Handle slightly different JSON.parse error messages on different Node.js versions.
               /^.+ in JSON at position .+$/gm,
               '(the JSON parse error)'

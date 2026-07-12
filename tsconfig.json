@@ -3,7 +3,7 @@
     "module": "commonjs",
     "target": "esnext",
     "lib": ["esnext"],
-    "types": ["node"],
+    "types": ["node", "mocha"],
     "noUncheckedIndexedAccess": false, // Disabled during the migration from Flow to TypeScript.
     "exactOptionalPropertyTypes": true,
     "noImplicitReturns": true,
@@ -21,5 +21,6 @@
     "checkJs": true,
     "noEmit": true,
   },
-  "include": ["lib/**/*"],
+  "include": ["lib/**/*", "tests/**/*"],
+  "exclude": ["tests/fixtures/**/*"],
 }

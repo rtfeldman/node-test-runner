@@ -9,6 +9,10 @@ describe('DependencyProvider', () => {
   describe('prioritizePinnedIndirectVersion', () => {
     const versions = ['1.0.5', '1.0.4', '1.0.3', '1.0.2', '1.0.1', '1.0.0'];
 
+    /**
+     * @param { string | undefined } pinnedVersion
+     * @param { Array<string> } expectedResult
+     */
     const testPinning = (pinnedVersion, expectedResult) => {
       assert.deepStrictEqual(
         prioritizePinnedIndirectVersion(versions, pinnedVersion),

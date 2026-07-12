@@ -16,6 +16,10 @@ const elmTestPath = path.join(rootDir, 'bin', 'elm-test');
 const scratchDir = path.join(fixturesDir, 'scratch');
 const scratchElmJsonPath = path.join(scratchDir, 'elm.json');
 
+/**
+ * @param { Array<string> } args
+ * @param { (code: number | null) => void } callback
+ */
 function elmTestWithYes(args, callback) {
   const child = spawn(
     elmTestPath,
@@ -23,6 +27,11 @@ function elmTestWithYes(args, callback) {
     Object.assign({ encoding: 'utf-8', cwd: scratchDir }, spawnOpts)
   );
 
+  if (child.stdin === null) {
+    throw new Error('child.stdin is null!');
+  }
+
+  // @ts-expect-error TypeScript claims this method does not exist, but the code runs and the tests pass.
   child.stdin.setEncoding('utf-8');
   child.stdin.write(os.EOL);
   child.stdin.end();
@@ -31,14 +40,29 @@ function elmTestWithYes(args, callback) {
   });
 }
 
+/**
+ *
+ * @param { Array<string> } args
+ * @param { string } [cwd]
+ * @param { import('child_process').SpawnOptions } extraOpts
+ * @returns
+ */
 function execElmTest(args, cwd = fixturesDir, extraOpts = {}) {
   return spawn.sync(
     elmTestPath,
     args,
-    Object.assign({ encoding: 'utf-8', cwd }, spawnOpts, extraOpts)
+    Object.assign(
+      /** @type { const } */ ({ encoding: 'utf-8', cwd }),
+      spawnOpts,
+      extraOpts
+    )
   );
 }
 
+/**
+ * @param { string } dirPath
+ * @returns { void }
+ */
 function rimraf(dirPath) {
   // We can replace this with just `fs.rmSync(dirPath, { recursive: true, force: true })`
   // when Node.js 12 is EOL 2022-04-30 and support for Node.js 12 is dropped.
@@ -48,20 +72,34 @@ function rimraf(dirPath) {
   if (fs.rmSync !== undefined) {
     fs.rmSync(dirPath, { recursive: true, force: true });
   } else if (fs.existsSync(dirPath)) {
+    // @ts-expect-error TypeScript says that `rmdirSync` only takes one argument – because
+    // legacy versions of Node.js do – but we need to support those.
     fs.rmdirSync(dirPath, { recursive: true });
   }
 }
 
+/**
+ * @param { string } dirPath
+ * @returns { void }
+ */
 function ensureEmptyDir(dirPath) {
   rimraf(dirPath);
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+/**
+ * @param { string } filePath
+ * @returns { void }
+ */
 function touch(filePath) {
   const now = new Date();
   fs.utimesSync(filePath, now, now);
 }
 
+/**
+ * @param { string } filePath
+ * @returns { any }
+ */
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -169,7 +207,11 @@ describe('flags', () => {
         elmTestPath,
         ['install', "elm/regex; printf 'FINDME'; printf 'TWICE'"],
         Object.assign(
-          { encoding: 'utf-8', input: 'y\n', cwd: fixturesDir },
+          /** @type { const } */ ({
+            encoding: 'utf-8',
+            input: 'y\n',
+            cwd: fixturesDir,
+          }),
           spawnOpts
         )
       );
@@ -485,6 +527,10 @@ describe('flags', () => {
         Object.assign({ encoding: 'utf-8', cwd: fixturesDir }, spawnOpts)
       );
 
+      if (child.stdout === null) {
+        throw new Error('child.stdout is null!');
+      }
+
       child.on('close', (code, signal) => {
         // don't send error when killed after test passed
         if (code !== null || signal !== 'SIGTERM') {
@@ -563,6 +609,14 @@ describe('flags', () => {
           Object.assign({ encoding: 'utf-8', cwd: scratchDir }, spawnOpts)
         );
 
+        if (child.stdout === null) {
+          throw new Error('child.stdout is null!');
+        }
+
+        if (child.stderr === null) {
+          throw new Error('child.stderr is null!');
+        }
+
         child.on('close', (code, signal) => {
           // don't send error when killed after test passed
           if (code !== null || signal !== 'SIGTERM') {
@@ -634,7 +688,12 @@ describe('flags', () => {
       // Run with a constant seed so we can compare outputs (the seed is printed).
       const baseArgs = ['--seed=1', path.join('tests', 'Passing', 'One.elm')];
 
-      // Replace printed duration with a fixed value so we can compare outputs.
+      /**
+       * Replace printed duration with a fixed value so we can compare outputs.
+       *
+       * @param { string } string
+       * @returns { string }
+       */
       const fixDuration = (string) => string.replace(/\d+ ms/g, '123 ms');
 
       // This has no colors because in the tests `elm-test` is not connected to a terminal.
@@ -649,6 +708,12 @@ describe('flags', () => {
         'colorFlag.stdout should have color'
       );
 
+      /**
+       * @param { string } name
+       * @param { Array<string> } args
+       * @param { Record<string, string> } env
+       * @returns { void }
+       */
       const shouldNotHaveColor = (name, args, env) => {
         const runResult = execElmTest(baseArgs.concat(args), fixturesDir, {
           env: Object.assign({}, spawnOpts.env, env),
@@ -661,6 +726,12 @@ describe('flags', () => {
         );
       };
 
+      /**
+       * @param { string } name
+       * @param { Array<string> } args
+       * @param { Record<string, string> } env
+       * @returns { void }
+       */
       const shouldHaveColor = (name, args, env) => {
         const runResult = execElmTest(baseArgs.concat(args), fixturesDir, {
           env: Object.assign({}, spawnOpts.env, env),

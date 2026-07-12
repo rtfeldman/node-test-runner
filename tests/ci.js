@@ -17,14 +17,27 @@ const resultSuccess = 0;
 const resultErrored = 1;
 const resultFailureThreshold = 2;
 
+/**
+ * @param { Array<string> } args
+ * @param { string } cwd
+ * @returns { import('child_process').SpawnSyncReturns<string> }
+ */
 function execElmTest(args, cwd = '.') {
   return spawn.sync(
     elmtestPath,
     args,
-    Object.assign({ encoding: 'utf-8', cwd }, spawnOpts)
+    Object.assign(
+      /** @type { const } */ ({ encoding: 'utf-8', cwd }),
+      spawnOpts
+    )
   );
 }
 
+/**
+ * @param { string } message
+ * @param { import('child_process').SpawnSyncReturns<string> } runResult
+ * @returns { string }
+ */
 function getDetailedMessage(message, runResult) {
   return (
     message +
@@ -37,6 +50,10 @@ function getDetailedMessage(message, runResult) {
   );
 }
 
+/**
+ * @param { import('child_process').SpawnSyncReturns<string> } runResult
+ * @returns { void }
+ */
 function assertTestSuccess(runResult) {
   const msg =
     'Expected success (exit code ' +
@@ -50,6 +67,10 @@ function assertTestSuccess(runResult) {
   );
 }
 
+/**
+ * @param { import('child_process').SpawnSyncReturns<string> } runResult
+ * @returns { void }
+ */
 function assertTestErrored(runResult) {
   const msg =
     'Expected error (exit code ' +
@@ -63,6 +84,10 @@ function assertTestErrored(runResult) {
   );
 }
 
+/**
+ * @param { import('child_process').SpawnSyncReturns<string> } runResult
+ * @returns { void }
+ */
 function assertTestFailure(runResult) {
   const msg =
     'Expected failure (exit code >= ' +
@@ -70,11 +95,16 @@ function assertTestFailure(runResult) {
     '), but got ' +
     runResult.status;
   assert.ok(
-    runResult.status >= resultFailureThreshold,
+    runResult.status !== null && runResult.status >= resultFailureThreshold,
     getDetailedMessage(msg, runResult)
   );
 }
 
+/**
+ * @param { import('../lib/Report').Report} reporter
+ * @param { import('child_process').SpawnSyncReturns<string> } runResult
+ * @returns { void }
+ */
 function assertDistributionShown(reporter, runResult) {
   const msg = getDetailedMessage(
     'Expected to show distribution table',
@@ -95,6 +125,11 @@ function assertDistributionShown(reporter, runResult) {
   }
 }
 
+/**
+ * @param { import('../lib/Report').Report} reporter
+ * @param { import('child_process').SpawnSyncReturns<string> } runResult
+ * @returns { void }
+ */
 function assertDistributionNotShown(reporter, runResult) {
   const msg = getDetailedMessage(
     'Expected to show distribution table',
@@ -115,6 +150,10 @@ function assertDistributionNotShown(reporter, runResult) {
   }
 }
 
+/**
+ * @param { string } dir
+ * @returns { Array<string> }
+ */
 function readdir(dir) {
   return fs
     .readdirSync(dir)
@@ -309,6 +348,7 @@ describe('Testing elm-test on single Elm files', () => {
 
 describe('Distribution report tests', () => {
   const cwd = fixturesDir;
+  /** @type { Record<import('../lib/Report').Report, Record<string, { showDistribution: boolean }>> } */
   const distributionReportFiles = {
     console: {
       'ReportDistributionPassing.elm': { showDistribution: true },
@@ -333,7 +373,10 @@ describe('Distribution report tests', () => {
     },
   };
 
-  for (const [reporter, tests] of Object.entries(distributionReportFiles)) {
+  for (const [reporterKey, tests] of Object.entries(distributionReportFiles)) {
+    const reporter = /** @type { import('../lib/Report').Report } */ (
+      reporterKey
+    );
     for (const [test, { showDistribution }] of Object.entries(tests)) {
       const testFile = path.join(cwd, 'tests', 'Distribution', test);
       it(`Distribution report test for test: ${test}, reporter: ${reporter}`, () => {
