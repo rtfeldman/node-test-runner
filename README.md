@@ -203,15 +203,3 @@ To run a tool installed locally using `npm` you can use `npx`:
 `npx` adds the local `node_modules/.bin/` folder to `$PATH` when it executes the command passed to it. This means that if you have installed `elm` locally, `elm-test` will automatically find that local installation.
 
 As mentioned in [Installation](#installation) we recommend installing elm-test locally in every project. This ensures all contributors and CI use the same version, to avoid nasty “works on my computer” issues.
-
-## Travis CI
-
-If you want to run your tests on Travis CI, [here's a good starter `.travis.yml`](https://docs.travis-ci.com/user/languages/elm/):
-
-```yml
-language: elm
-elm:
-  - 0.19.2
-```
-
-Here is an example [`travis.yml`](https://github.com/rtfeldman/elm-css/blob/master/.travis.yml) configuration file for running tests in CI.
