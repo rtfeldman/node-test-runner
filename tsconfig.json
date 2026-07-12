@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "esnext",
+    "lib": ["esnext"],
+    "types": ["node", "mocha"],
+    "noUncheckedIndexedAccess": false, // Disabled during the migration from Flow to TypeScript.
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "useUnknownInCatchVariables": false, // Disabled during the migration from Flow to TypeScript.
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+  },
+  "include": ["lib/**/*", "tests/**/*"],
+  "exclude": ["tests/fixtures/**/*"],
+}

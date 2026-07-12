@@ -7,19 +7,35 @@ const spawn = require('cross-spawn');
 
 const { spawnOpts } = require('./util');
 
+/**
+ * @param { Array<string> } args
+ * @param { string } cwd
+ * @returns { import('child_process').SpawnSyncReturns<string> }
+ */
 function execElmJson(args, cwd) {
   return spawn.sync(
     'elm-json',
     args,
-    Object.assign({ encoding: 'utf-8', cwd: cwd }, spawnOpts)
+    Object.assign(
+      /** @type { const } */ ({ encoding: 'utf-8', cwd: cwd }),
+      spawnOpts
+    )
   );
 }
 
+/**
+ * @param { Array<string> } args
+ * @param { string } cwd
+ * @returns { import('child_process').SpawnSyncReturns<string> }
+ */
 function execElm(args, cwd) {
   return spawn.sync(
     'elm',
     args,
-    Object.assign({ encoding: 'utf-8', cwd: cwd }, spawnOpts)
+    Object.assign(
+      /** @type { const } */ ({ encoding: 'utf-8', cwd: cwd }),
+      spawnOpts
+    )
   );
 }
 

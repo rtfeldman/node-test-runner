@@ -4,14 +4,21 @@ const assert = require('assert');
 const stream = require('stream');
 const Parser = require('../lib/Parser');
 
+/**
+ * @param { string } elmCode
+ * @param { Array<string> } expectedExposedNames
+ */
 async function testParser(elmCode, expectedExposedNames) {
   const exposed = await Parser.extractExposedPossiblyTests(
     'SomeFile.elm',
     (_, options) => {
-      const readable = stream.Readable.from([elmCode], {
-        ...options,
-        autoDestroy: true,
-      });
+      const readable =
+        /** @type { import('stream').Readable & { close(): void } } */ (
+          stream.Readable.from([elmCode], {
+            ...options,
+            autoDestroy: true,
+          })
+        );
       readable.close = readable.destroy;
       return readable;
     }
