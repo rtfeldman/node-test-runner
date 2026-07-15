@@ -96,7 +96,7 @@ port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 type alias Fingerprints =
     { hash : String
-    , outcomes : Dict ( String, String ) { isFuzzTest : Bool, expectations : List Expectation }
+    , outcomes : Dict ( String, String ) { isFuzzTest : Bool, outcomes : List Outcome }
     }
 
 
@@ -124,7 +124,7 @@ dispatch model startTime =
 
         Just config ->
             let
-                maybeCachedExpectations =
+                maybeCachedOutcomes =
                     lastTwoReversed config.labels
                         |> Maybe.andThen
                             (\key ->
@@ -135,22 +135,20 @@ dispatch model startTime =
                                                 |> Maybe.andThen
                                                     (\fingerprints ->
                                                         if metadata.hash == fingerprints.hash then
-                                                            case Dict.get key fingerprints.outcomes of
-                                                                Just outcome ->
-                                                                    if
-                                                                        not outcome.isFuzzTest
-                                                                            || ((model.runInfo.fuzzRuns <= oldFuzzRuns)
-                                                                                    && (model.runInfo.initialSeed == oldInitialSeed)
-                                                                               )
-                                                                    then
-                                                                        Just outcome.expectations
+                                                            Dict.get key fingerprints.outcomes
+                                                                |> Maybe.andThen
+                                                                    (\outcome ->
+                                                                        if
+                                                                            not outcome.isFuzzTest
+                                                                                || ((model.runInfo.fuzzRuns <= oldFuzzRuns)
+                                                                                        && (model.runInfo.initialSeed == oldInitialSeed)
+                                                                                   )
+                                                                        then
+                                                                            Just outcome.outcomes
 
-                                                                    else
-                                                                        Nothing
-
-                                                                Nothing ->
-                                                                    -- TODO: Supposed to construct a pass without distribution report here, but don’t know how
-                                                                    Just []
+                                                                        else
+                                                                            Nothing
+                                                                    )
 
                                                         else
                                                             Nothing
@@ -158,16 +156,13 @@ dispatch model startTime =
                                         )
                             )
 
-                expectations =
-                    case maybeCachedExpectations of
-                        Just expectations_ ->
-                            expectations_
+                outcomes =
+                    case maybeCachedOutcomes of
+                        Just outcomes_ ->
+                            outcomes_
 
                         Nothing ->
-                            config.run ()
-
-                outcomes =
-                    outcomesFromExpectations expectations
+                            outcomesFromExpectations (config.run ())
             in
             Time.now
                 |> Task.perform (Complete config.labels outcomes startTime)
