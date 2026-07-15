@@ -352,13 +352,13 @@ with a version that returns `Just value` if `value` is a `Test`, otherwise `Noth
 If you rename or change this function you also need to update the regex that looks for it.
 
 -}
-check : a -> Maybe Test
+check : a -> String -> String -> Maybe Test
 check =
     checkHelperReplaceMe___
 
 
-checkHelperReplaceMe___ : a -> b
-checkHelperReplaceMe___ _ =
+checkHelperReplaceMe___ : a -> String -> String -> b
+checkHelperReplaceMe___ _ _ _ =
     Debug.todo "The regex for replacing this Debug.todo with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 
