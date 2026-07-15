@@ -13,6 +13,7 @@ passed and 2 if any failed. Returns 1 if something went wrong.
 -}
 
 import Dict exposing (Dict)
+import Expect exposing (Expectation)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Platform
@@ -42,6 +43,7 @@ type alias InitArgs =
     , fuzzRuns : Int
     , runners : SeededRunners
     , report : Report
+    , metadata : Metadata
     }
 
 
@@ -63,7 +65,12 @@ type alias Model =
     , processes : Int
     , nextTestToRun : TestId
     , autoFail : Maybe String
+    , metadata : Metadata
     }
+
+
+type alias Metadata =
+    Dict ( String, String ) { jsDefinitionName : String, hash : String }
 
 
 {-| A program which will run tests and report their results.
@@ -87,6 +94,27 @@ port elmTestPort__send : String -> Cmd msg
 port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 
+type alias Fingerprints =
+    { hash : String
+    , outcomes : Dict ( String, String ) { isFuzzTest : Bool, expectations : List Expectation }
+    }
+
+
+oldFuzzRuns : Int
+oldFuzzRuns =
+    0
+
+
+oldInitialSeed : Int
+oldInitialSeed =
+    0
+
+
+oldFingerprints : Dict String Fingerprints
+oldFingerprints =
+    Dict.empty
+
+
 dispatch : Model -> Posix -> Cmd Msg
 dispatch model startTime =
     case Dict.get model.nextTestToRun model.available of
@@ -96,11 +124,76 @@ dispatch model startTime =
 
         Just config ->
             let
+                maybeCachedExpectations =
+                    lastTwoReversed config.labels
+                        |> Maybe.andThen
+                            (\key ->
+                                Dict.get key model.metadata
+                                    |> Maybe.andThen
+                                        (\metadata ->
+                                            Dict.get metadata.jsDefinitionName oldFingerprints
+                                                |> Maybe.andThen
+                                                    (\fingerprints ->
+                                                        if metadata.hash == fingerprints.hash then
+                                                            case Dict.get key fingerprints.outcomes of
+                                                                Just outcome ->
+                                                                    if
+                                                                        not outcome.isFuzzTest
+                                                                            || ((model.runInfo.fuzzRuns <= oldFuzzRuns)
+                                                                                    && (model.runInfo.initialSeed == oldInitialSeed)
+                                                                               )
+                                                                    then
+                                                                        Just outcome.expectations
+
+                                                                    else
+                                                                        Nothing
+
+                                                                Nothing ->
+                                                                    -- TODO: Supposed to construct a pass without distribution report here, but don’t know how
+                                                                    Just []
+
+                                                        else
+                                                            Nothing
+                                                    )
+                                        )
+                            )
+
+                expectations =
+                    case maybeCachedExpectations of
+                        Just expectations_ ->
+                            expectations_
+
+                        Nothing ->
+                            config.run ()
+
                 outcomes =
-                    outcomesFromExpectations (config.run ())
+                    outcomesFromExpectations expectations
             in
             Time.now
                 |> Task.perform (Complete config.labels outcomes startTime)
+
+
+lastTwoReversed : List a -> Maybe ( a, a )
+lastTwoReversed list =
+    case list of
+        [ a, b ] ->
+            Just ( b, a )
+
+        _ :: rest ->
+            lastTwoReversed rest
+
+        _ ->
+            Nothing
+
+
+runTest config =
+    -- Replace with kernel code that:
+    -- looks up previous data
+    -- check hashes
+    -- if previous data says fuzz test, also check fuzz and seed
+    -- if ok, use previous expectations (Or Passed NoDistribution if no saved file)
+    -- if not ok, run tests and save outcome
+    config.run ()
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -266,7 +359,7 @@ sendBegin model =
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
+init { processes, globs, paths, fuzzRuns, initialSeed, report, runners, metadata } _ =
     let
         { indexedRunners, autoFail } =
             case runners of
@@ -296,6 +389,7 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
         testReporter =
             createReporter report
 
+        model : Model
         model =
             { available = Dict.fromList indexedRunners
             , runInfo =
@@ -310,6 +404,7 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
             , results = []
             , testReporter = testReporter
             , autoFail = autoFail
+            , metadata = metadata
             }
     in
     ( model, Cmd.none )
@@ -318,6 +413,7 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
 failInit : String -> Report -> Int -> ( Model, Cmd Msg )
 failInit message report _ =
     let
+        model : Model
         model =
             { available = Dict.empty
             , runInfo =
@@ -332,6 +428,7 @@ failInit message report _ =
             , results = []
             , testReporter = createReporter report
             , autoFail = Nothing
+            , metadata = Dict.empty
             }
 
         cmd =
@@ -346,13 +443,21 @@ failInit message report _ =
     ( model, cmd )
 
 
+type alias TestWithMetadata =
+    { test : Test
+    , jsDefinitionName : String
+    , hash : String
+    , label : String
+    }
+
+
 {-| The implementation of this function will be replaced in the generated JS
 with a version that returns `Just value` if `value` is a `Test`, otherwise `Nothing`.
 
 If you rename or change this function you also need to update the regex that looks for it.
 
 -}
-check : a -> String -> String -> Maybe Test
+check : a -> String -> String -> Maybe TestWithMetadata
 check =
     checkHelperReplaceMe___
 
@@ -364,23 +469,37 @@ checkHelperReplaceMe___ _ _ _ =
 
 {-| Run the tests.
 -}
-run : RunnerOptions -> List ( String, List (Maybe Test) ) -> Program Int Model Msg
+run : RunnerOptions -> List ( String, List (Maybe TestWithMetadata) ) -> Program Int Model Msg
 run { runs, seed, report, globs, paths, processes } possiblyTests =
     let
-        tests =
+        ( tests, metadata ) =
             possiblyTests
                 |> List.filterMap
                     (\( moduleName, maybeModuleTests ) ->
                         let
-                            moduleTests =
+                            moduleTestsWithMetadata =
                                 List.filterMap identity maybeModuleTests
+
+                            moduleTests =
+                                List.map .test moduleTestsWithMetadata
                         in
                         if List.isEmpty moduleTests then
                             Nothing
 
                         else
-                            Just (Test.describe moduleName moduleTests)
+                            Just
+                                ( Test.describe moduleName moduleTests
+                                , moduleTestsWithMetadata
+                                    |> List.map
+                                        (\data ->
+                                            ( ( moduleName, data.label )
+                                            , { jsDefinitionName = data.jsDefinitionName, hash = data.hash }
+                                            )
+                                        )
+                                )
                     )
+                |> List.unzip
+                |> Tuple.mapSecond (List.concat >> Dict.fromList)
     in
     if List.isEmpty tests then
         Platform.worker
@@ -403,6 +522,7 @@ run { runs, seed, report, globs, paths, processes } possiblyTests =
                     , fuzzRuns = runs
                     , runners = runners
                     , report = report
+                    , metadata = metadata
                     }
         in
         Platform.worker
