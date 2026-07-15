@@ -112,6 +112,14 @@ oldInitialSeed =
 
 oldFingerprints : Dict String Fingerprints
 oldFingerprints =
+    -- Have these three definitions in a separate file?
+    -- Could import a file with the hardcoded empty values and exposing (..)
+    -- then insert the real values in this file, they shadow the imports
+    -- Note: Can code-gen easily with Debug.toString
+    -- Update `sendResults` to also send what we need to build the file (Debug.toString-ed stuff)
+    -- When tests done, assemble everything we need
+    -- Also detect fuzz test. Patch fuzzLoop, make a wrapper function around `config.run ()`
+    -- that resets the global and reads it and returns
     Dict.empty
 
 
