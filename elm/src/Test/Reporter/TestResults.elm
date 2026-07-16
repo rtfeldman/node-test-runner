@@ -23,6 +23,8 @@ type alias TestResult =
     { labels : List String
     , outcome : Outcome
     , duration : Int -- in milliseconds
+    , jsDefinitionName : String
+    , isFuzzTest : Bool
     }
 
 

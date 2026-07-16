@@ -283,15 +283,27 @@ update msg ({ testReporter } as model) =
         Dispatch startTime ->
             ( model, dispatch model startTime )
 
-        -- TODO: Also use metadata and .isFuzzTest
         Complete metadata labels outcome2 startTime endTime ->
             let
                 duration =
                     Time.posixToMillis endTime - Time.posixToMillis startTime
 
                 prependOutcome outcome rest =
+                    -- NOTE: This can add multiple results with the same test ID.
+                    -- Later in `sendResults` we encode the results as a JSON object
+                    -- keyed by test ID. When parsing that JSON, the last one of
+                    -- each duplicate key wins. All in all, the code gives the
+                    -- impression of that a single test somehow can result in multiple
+                    -- outcomes, and for a while the code supports that, but then we
+                    -- implicitly decided there is a single outcome and forget about
+                    -- the rest. If there ever were any. I’m not sure.
                     ( model.nextTestToRun
-                    , { labels = labels, outcome = outcome, duration = duration }
+                    , { labels = labels
+                      , outcome = outcome
+                      , duration = duration
+                      , jsDefinitionName = metadata.jsDefinitionName
+                      , isFuzzTest = outcome2.isFuzzTest
+                      }
                     )
                         :: rest
 
@@ -342,6 +354,17 @@ sendResults isFinished testReporter results =
             -- These are coming in in reverse order. Doing a foldl with ::
             -- means we reverse the list again, while also doing the conversion!
             ( String.fromInt testId, testReporter.reportComplete result ) :: list
+
+        encodeNewStuff ( _, result ) =
+            let
+                dictTuple : ( List String, Outcome2 )
+                dictTuple =
+                    ( result.labels, { isFuzzTest = result.isFuzzTest, outcomes = [ result.outcome ] } )
+            in
+            Encode.object
+                [ ( "jsDefinitionName", Encode.string result.jsDefinitionName )
+                , ( "dictTupleElmCode", Encode.string (Debug.toString dictTuple) )
+                ]
     in
     Encode.object
         [ ( "type", Encode.string typeStr )
@@ -350,6 +373,7 @@ sendResults isFinished testReporter results =
                 |> List.foldl addToKeyValues []
                 |> Encode.object
           )
+        , ( "newStuff", Encode.list encodeNewStuff results )
         ]
         |> Encode.encode 0
         |> elmTestPort__send

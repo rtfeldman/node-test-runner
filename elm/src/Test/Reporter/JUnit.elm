@@ -128,7 +128,13 @@ reportComplete { labels, duration, outcome } =
 
 encodeExtraFailure : String -> Value
 encodeExtraFailure _ =
-    reportComplete { labels = [], duration = 0, outcome = Failed [] }
+    reportComplete
+        { labels = []
+        , duration = 0
+        , outcome = Failed []
+        , jsDefinitionName = ""
+        , isFuzzTest = False
+        }
 
 
 reportSummary : SummaryInfo -> Maybe String -> Value
