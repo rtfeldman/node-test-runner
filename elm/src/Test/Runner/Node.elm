@@ -21,7 +21,7 @@ import Random
 import Task
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome, TestResult, isFailure, outcomesFromExpectations)
+import Test.Reporter.TestResults exposing (Outcome, TestResult, isFailure, outcomeFromExpectations)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Time exposing (Posix)
@@ -108,7 +108,7 @@ type alias Fingerprints =
 
 type alias Outcome2 =
     { isFuzzTest : Bool
-    , outcomes : List Outcome
+    , outcome : Outcome
     }
 
 
@@ -208,7 +208,7 @@ runTestAndCheckIfFuzzTest run_ =
     -- Resets global `isFuzzTest` var to `false`
     -- Reads it again instead of `False` below
     -- + patch `fuzzLoop` to set `isFuzzTest` to `true`
-    { outcomes = outcomesFromExpectations (run_ ())
+    { outcome = outcomeFromExpectations (run_ ())
     , isFuzzTest = False
     }
 
@@ -288,27 +288,16 @@ update msg ({ testReporter } as model) =
                 duration =
                     Time.posixToMillis endTime - Time.posixToMillis startTime
 
-                prependOutcome outcome rest =
-                    -- NOTE: This can add multiple results with the same test ID.
-                    -- Later in `sendResults` we encode the results as a JSON object
-                    -- keyed by test ID. When parsing that JSON, the last one of
-                    -- each duplicate key wins. All in all, the code gives the
-                    -- impression of that a single test somehow can result in multiple
-                    -- outcomes, and for a while the code supports that, but then we
-                    -- implicitly decided there is a single outcome and forget about
-                    -- the rest. If there ever were any. I’m not sure.
+                results =
                     ( model.nextTestToRun
                     , { labels = labels
-                      , outcome = outcome
+                      , outcome = outcome2.outcome
                       , duration = duration
                       , jsDefinitionName = metadata.jsDefinitionName
                       , isFuzzTest = outcome2.isFuzzTest
                       }
                     )
-                        :: rest
-
-                results =
-                    List.foldl prependOutcome model.results outcome2.outcomes
+                        :: model.results
 
                 nextTestToRun =
                     model.nextTestToRun + model.processes
@@ -316,7 +305,7 @@ update msg ({ testReporter } as model) =
                 isFinished =
                     nextTestToRun >= model.runInfo.testCount
             in
-            if isFinished || List.any isFailure outcome2.outcomes then
+            if isFinished || isFailure outcome2.outcome then
                 let
                     cmd =
                         sendResults isFinished testReporter results
@@ -359,7 +348,7 @@ sendResults isFinished testReporter results =
             let
                 dictTuple : ( List String, Outcome2 )
                 dictTuple =
-                    ( result.labels, { isFuzzTest = result.isFuzzTest, outcomes = [ result.outcome ] } )
+                    ( result.labels, { isFuzzTest = result.isFuzzTest, outcome = result.outcome } )
             in
             Encode.object
                 [ ( "jsDefinitionName", Encode.string result.jsDefinitionName )
