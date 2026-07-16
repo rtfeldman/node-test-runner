@@ -171,7 +171,13 @@ dispatch model startTime =
                             outcome_
 
                         Nothing ->
-                            runTestAndCheckIfFuzzTest config.run
+                            let
+                                ( expectations, isFuzzTest ) =
+                                    detectFuzzTest config.run
+                            in
+                            { outcome = outcomeFromExpectations expectations
+                            , isFuzzTest = isFuzzTest
+                            }
             in
             Time.now
                 |> Task.perform (Complete metadata config.labels outcome startTime)
@@ -190,15 +196,21 @@ lastTwoReversed list =
             Nothing
 
 
-runTestAndCheckIfFuzzTest : (() -> List Expectation) -> Outcome2
-runTestAndCheckIfFuzzTest run_ =
-    -- Replace with kernel code that:
-    -- Resets global `isFuzzTest` var to `false`
-    -- Reads it again instead of `False` below
-    -- + patch `fuzzLoop` to set `isFuzzTest` to `true`
-    { outcome = outcomeFromExpectations (run_ ())
-    , isFuzzTest = False
-    }
+{-| The implementation of this function will be replaced in the generated JS
+with a version that returns calls the passed function, and detects if it was
+a fuzz test.
+
+If you rename or change this function you also need to update the regex that looks for it.
+
+-}
+detectFuzzTest : (() -> a) -> ( a, Bool )
+detectFuzzTest =
+    detectFuzzTestHelperReplaceMe___
+
+
+detectFuzzTestHelperReplaceMe___ : (() -> a) -> ( a, Bool )
+detectFuzzTestHelperReplaceMe___ _ =
+    Debug.todo "The regex for replacing this Debug.todo in detectFuzzTestHelperReplaceMe___ with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -489,7 +501,7 @@ check =
 
 checkHelperReplaceMe___ : a -> String -> String -> b
 checkHelperReplaceMe___ _ _ _ =
-    Debug.todo "The regex for replacing this Debug.todo with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
+    Debug.todo "The regex for replacing this Debug.todo in checkHelperReplaceMe___ with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 
 {-| Run the tests.
