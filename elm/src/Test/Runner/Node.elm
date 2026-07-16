@@ -82,7 +82,7 @@ type alias TestProgram =
 type Msg
     = Receive Decode.Value
     | Dispatch Posix
-    | Complete (List String) (List Outcome) Posix Posix
+    | Complete (List String) Outcome2 Posix Posix
 
 
 {-| The port names are prefixed to reduce the likelihood of the project
@@ -96,7 +96,13 @@ port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 type alias Fingerprints =
     { hash : String
-    , outcomes : Dict (List String) { isFuzzTest : Bool, outcomes : List Outcome }
+    , outcomes : Dict (List String) Outcome2
+    }
+
+
+type alias Outcome2 =
+    { isFuzzTest : Bool
+    , outcomes : List Outcome
     }
 
 
@@ -112,14 +118,13 @@ oldInitialSeed =
 
 oldFingerprints : Dict String Fingerprints
 oldFingerprints =
-    -- Have these three definitions in a separate file?
+    -- TODO:
+    -- Have these three definitions in a separate file? Or pass around?
     -- Could import a file with the hardcoded empty values and exposing (..)
     -- then insert the real values in this file, they shadow the imports
     -- Note: Can code-gen easily with Debug.toString
     -- Update `sendResults` to also send what we need to build the file (Debug.toString-ed stuff)
     -- When tests done, assemble everything we need
-    -- Also detect fuzz test. Patch fuzzLoop, make a wrapper function around `config.run ()`
-    -- that resets the global and reads it and returns
     Dict.empty
 
 
@@ -132,7 +137,7 @@ dispatch model startTime =
 
         Just config ->
             let
-                maybeCachedOutcomes =
+                maybeCachedOutcome =
                     lastTwoReversed config.labels
                         |> Maybe.andThen
                             (\key ->
@@ -145,14 +150,14 @@ dispatch model startTime =
                                                         if metadata.hash == fingerprints.hash then
                                                             Dict.get config.labels fingerprints.outcomes
                                                                 |> Maybe.andThen
-                                                                    (\outcome ->
+                                                                    (\outcome_ ->
                                                                         if
-                                                                            not outcome.isFuzzTest
+                                                                            not outcome_.isFuzzTest
                                                                                 || ((model.runInfo.fuzzRuns <= oldFuzzRuns)
                                                                                         && (model.runInfo.initialSeed == oldInitialSeed)
                                                                                    )
                                                                         then
-                                                                            Just outcome.outcomes
+                                                                            Just outcome_
 
                                                                         else
                                                                             Nothing
@@ -164,16 +169,16 @@ dispatch model startTime =
                                         )
                             )
 
-                outcomes =
-                    case maybeCachedOutcomes of
-                        Just outcomes_ ->
-                            outcomes_
+                outcome =
+                    case maybeCachedOutcome of
+                        Just outcome_ ->
+                            outcome_
 
                         Nothing ->
-                            outcomesFromExpectations (config.run ())
+                            runTestAndCheckIfFuzzTest config.run
             in
             Time.now
-                |> Task.perform (Complete config.labels outcomes startTime)
+                |> Task.perform (Complete config.labels outcome startTime)
 
 
 lastTwoReversed : List a -> Maybe ( a, a )
@@ -189,14 +194,15 @@ lastTwoReversed list =
             Nothing
 
 
-runTest config =
+runTestAndCheckIfFuzzTest : (() -> List Expectation) -> Outcome2
+runTestAndCheckIfFuzzTest run_ =
     -- Replace with kernel code that:
-    -- looks up previous data
-    -- check hashes
-    -- if previous data says fuzz test, also check fuzz and seed
-    -- if ok, use previous expectations (Or Passed NoDistribution if no saved file)
-    -- if not ok, run tests and save outcome
-    config.run ()
+    -- Resets global `isFuzzTest` var to `false`
+    -- Reads it again instead of `False` below
+    -- + patch `fuzzLoop` to set `isFuzzTest` to `true`
+    { outcomes = outcomesFromExpectations (run_ ())
+    , isFuzzTest = False
+    }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -269,7 +275,8 @@ update msg ({ testReporter } as model) =
         Dispatch startTime ->
             ( model, dispatch model startTime )
 
-        Complete labels outcomes startTime endTime ->
+        -- TODO: Also use .isFuzzTest
+        Complete labels outcome2 startTime endTime ->
             let
                 duration =
                     Time.posixToMillis endTime - Time.posixToMillis startTime
@@ -281,7 +288,7 @@ update msg ({ testReporter } as model) =
                         :: rest
 
                 results =
-                    List.foldl prependOutcome model.results outcomes
+                    List.foldl prependOutcome model.results outcome2.outcomes
 
                 nextTestToRun =
                     model.nextTestToRun + model.processes
@@ -289,7 +296,7 @@ update msg ({ testReporter } as model) =
                 isFinished =
                     nextTestToRun >= model.runInfo.testCount
             in
-            if isFinished || List.any isFailure outcomes then
+            if isFinished || List.any isFailure outcome2.outcomes then
                 let
                     cmd =
                         sendResults isFinished testReporter results
