@@ -350,8 +350,6 @@ sendResults isFinished testReporter results =
                 |> List.foldl addToKeyValues []
                 |> Encode.object
           )
-
-        -- TODO: Actually care about this in Supervisor
         , ( "newStuff", Encode.list encodeNewStuff results )
         ]
         |> Encode.encode 0
