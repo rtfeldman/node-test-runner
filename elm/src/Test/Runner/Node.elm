@@ -96,7 +96,7 @@ port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 type alias Fingerprints =
     { hash : String
-    , outcomes : Dict ( String, String ) { isFuzzTest : Bool, outcomes : List Outcome }
+    , outcomes : Dict (List String) { isFuzzTest : Bool, outcomes : List Outcome }
     }
 
 
@@ -143,7 +143,7 @@ dispatch model startTime =
                                                 |> Maybe.andThen
                                                     (\fingerprints ->
                                                         if metadata.hash == fingerprints.hash then
-                                                            Dict.get key fingerprints.outcomes
+                                                            Dict.get config.labels fingerprints.outcomes
                                                                 |> Maybe.andThen
                                                                     (\outcome ->
                                                                         if
