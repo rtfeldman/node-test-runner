@@ -4,7 +4,7 @@ module Test.Reporter.TestResults exposing
     , SummaryInfo
     , TestResult
     , isFailure
-    , outcomesFromExpectations
+    , outcomeFromExpectations
     )
 
 import Expect exposing (Expectation)
@@ -52,75 +52,26 @@ isFailure outcome =
             False
 
 
-outcomesFromExpectations : List Expectation -> List Outcome
-outcomesFromExpectations expectations =
+outcomeFromExpectations : List Expectation -> Outcome
+outcomeFromExpectations expectations =
     case expectations of
-        expectation :: [] ->
-            -- Most often we'll get exactly 1 pass, so try that case first!
+        -- The type of test runner functions says that they return `List Expectation`,
+        -- but in practice they only ever return lists with exactly one item:
+        -- https://github.com/elm-explorations/test/pull/244
+        -- That PR was reverted because it unfortunately was a breaking change for the package:
+        -- https://github.com/elm-explorations/test/commit/11f70d5fc0b6fdc88d7a34ea1d10f56969890493
+        -- But to keep things simpler here, we only support exactly one expectation.
+        [ expectation ] ->
             case Test.Runner.getFailureReason expectation of
                 Nothing ->
-                    [ Passed (Test.Runner.getDistributionReport expectation) ]
+                    Passed (Test.Runner.getDistributionReport expectation)
 
                 Just failure ->
                     if Test.Runner.isTodo expectation then
-                        [ Todo failure.description ]
+                        Todo failure.description
 
                     else
-                        [ Failed
-                            [ ( failure, Test.Runner.getDistributionReport expectation ) ]
-                        ]
+                        Failed [ ( failure, Test.Runner.getDistributionReport expectation ) ]
 
-        _ :: _ ->
-            let
-                builder =
-                    List.foldl outcomesFromExpectationsHelp
-                        { passes = [], todos = [], failures = [] }
-                        expectations
-
-                failuresList =
-                    case builder.failures of
-                        [] ->
-                            []
-
-                        failures ->
-                            [ Failed failures ]
-            in
-            List.concat
-                [ List.map Passed builder.passes
-                , List.map Todo builder.todos
-                , failuresList
-                ]
-
-        [] ->
-            []
-
-
-type alias OutcomeBuilder =
-    { passes : List DistributionReport
-    , todos : List String
-    , failures : List ( Failure, DistributionReport )
-    }
-
-
-outcomesFromExpectationsHelp : Expectation -> OutcomeBuilder -> OutcomeBuilder
-outcomesFromExpectationsHelp expectation builder =
-    case Test.Runner.getFailureReason expectation of
-        Just failure ->
-            if Test.Runner.isTodo expectation then
-                { builder | todos = failure.description :: builder.todos }
-
-            else
-                { builder
-                    | failures =
-                        ( failure
-                        , Test.Runner.getDistributionReport expectation
-                        )
-                            :: builder.failures
-                }
-
-        Nothing ->
-            { builder
-                | passes =
-                    Test.Runner.getDistributionReport expectation
-                        :: builder.passes
-            }
+        _ ->
+            Debug.todo ("A test somehow did not return exactly 1 expectation, it returned " ++ String.fromInt (List.length expectations) ++ "!")
