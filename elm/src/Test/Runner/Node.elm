@@ -70,7 +70,13 @@ type alias Model =
 
 
 type alias Metadata =
-    Dict ( String, String ) { jsDefinitionName : String, hash : String }
+    Dict ( String, String ) MetadataItem
+
+
+type alias MetadataItem =
+    { jsDefinitionName : String
+    , hash : String
+    }
 
 
 {-| A program which will run tests and report their results.
@@ -82,7 +88,7 @@ type alias TestProgram =
 type Msg
     = Receive Decode.Value
     | Dispatch Posix
-    | Complete (List String) Outcome2 Posix Posix
+    | Complete MetadataItem (List String) Outcome2 Posix Posix
 
 
 {-| The port names are prefixed to reduce the likelihood of the project
@@ -137,36 +143,38 @@ dispatch model startTime =
 
         Just config ->
             let
+                metadata =
+                    case lastTwoReversed config.labels |> Maybe.andThen (\key -> Dict.get key model.metadata) of
+                        Just metadata_ ->
+                            metadata_
+
+                        -- This should not happen: All tests should have metadata.
+                        -- TODO: Can we get here for `Test.todo`?
+                        Nothing ->
+                            { jsDefinitionName = "MISSING:" ++ Debug.toString config.labels, hash = "" }
+
                 maybeCachedOutcome =
-                    lastTwoReversed config.labels
+                    Dict.get metadata.jsDefinitionName oldFingerprints
                         |> Maybe.andThen
-                            (\key ->
-                                Dict.get key model.metadata
-                                    |> Maybe.andThen
-                                        (\metadata ->
-                                            Dict.get metadata.jsDefinitionName oldFingerprints
-                                                |> Maybe.andThen
-                                                    (\fingerprints ->
-                                                        if metadata.hash == fingerprints.hash then
-                                                            Dict.get config.labels fingerprints.outcomes
-                                                                |> Maybe.andThen
-                                                                    (\outcome_ ->
-                                                                        if
-                                                                            not outcome_.isFuzzTest
-                                                                                || ((model.runInfo.fuzzRuns <= oldFuzzRuns)
-                                                                                        && (model.runInfo.initialSeed == oldInitialSeed)
-                                                                                   )
-                                                                        then
-                                                                            Just outcome_
+                            (\fingerprints ->
+                                if metadata.hash == fingerprints.hash then
+                                    Dict.get config.labels fingerprints.outcomes
+                                        |> Maybe.andThen
+                                            (\outcome_ ->
+                                                if
+                                                    not outcome_.isFuzzTest
+                                                        || ((model.runInfo.fuzzRuns <= oldFuzzRuns)
+                                                                && (model.runInfo.initialSeed == oldInitialSeed)
+                                                           )
+                                                then
+                                                    Just outcome_
 
-                                                                        else
-                                                                            Nothing
-                                                                    )
+                                                else
+                                                    Nothing
+                                            )
 
-                                                        else
-                                                            Nothing
-                                                    )
-                                        )
+                                else
+                                    Nothing
                             )
 
                 outcome =
@@ -178,7 +186,7 @@ dispatch model startTime =
                             runTestAndCheckIfFuzzTest config.run
             in
             Time.now
-                |> Task.perform (Complete config.labels outcome startTime)
+                |> Task.perform (Complete metadata config.labels outcome startTime)
 
 
 lastTwoReversed : List a -> Maybe ( a, a )
@@ -275,8 +283,8 @@ update msg ({ testReporter } as model) =
         Dispatch startTime ->
             ( model, dispatch model startTime )
 
-        -- TODO: Also use .isFuzzTest
-        Complete labels outcome2 startTime endTime ->
+        -- TODO: Also use metadata and .isFuzzTest
+        Complete metadata labels outcome2 startTime endTime ->
             let
                 duration =
                     Time.posixToMillis endTime - Time.posixToMillis startTime
