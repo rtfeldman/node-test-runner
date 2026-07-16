@@ -44,6 +44,7 @@ type alias InitArgs =
     , runners : SeededRunners
     , report : Report
     , metadata : Metadata
+    , previousRun : PreviousRun
     }
 
 
@@ -54,6 +55,7 @@ type alias RunnerOptions =
     , globs : List String
     , paths : List String
     , processes : Int
+    , previousRun : PreviousRun
     }
 
 
@@ -66,6 +68,7 @@ type alias Model =
     , nextTestToRun : TestId
     , autoFail : Maybe String
     , metadata : Metadata
+    , previousRun : PreviousRun
     }
 
 
@@ -76,6 +79,13 @@ type alias Metadata =
 type alias MetadataItem =
     { jsDefinitionName : String
     , hash : String
+    }
+
+
+type alias PreviousRun =
+    { fuzzRuns : Int
+    , initialSeed : Int
+    , fingerprints : Dict String Fingerprints
     }
 
 
@@ -112,28 +122,6 @@ type alias Outcome2 =
     }
 
 
-oldFuzzRuns : Int
-oldFuzzRuns =
-    0
-
-
-oldInitialSeed : Int
-oldInitialSeed =
-    0
-
-
-oldFingerprints : Dict String Fingerprints
-oldFingerprints =
-    -- TODO:
-    -- Have these three definitions in a separate file? Or pass around?
-    -- Could import a file with the hardcoded empty values and exposing (..)
-    -- then insert the real values in this file, they shadow the imports
-    -- Note: Can code-gen easily with Debug.toString
-    -- Update `sendResults` to also send what we need to build the file (Debug.toString-ed stuff)
-    -- When tests done, assemble everything we need
-    Dict.empty
-
-
 dispatch : Model -> Posix -> Cmd Msg
 dispatch model startTime =
     case Dict.get model.nextTestToRun model.available of
@@ -154,7 +142,7 @@ dispatch model startTime =
                             { jsDefinitionName = "MISSING:" ++ Debug.toString config.labels, hash = "" }
 
                 maybeCachedOutcome =
-                    Dict.get metadata.jsDefinitionName oldFingerprints
+                    Dict.get metadata.jsDefinitionName model.previousRun.fingerprints
                         |> Maybe.andThen
                             (\fingerprints ->
                                 if metadata.hash == fingerprints.hash then
@@ -163,8 +151,8 @@ dispatch model startTime =
                                             (\outcome_ ->
                                                 if
                                                     not outcome_.isFuzzTest
-                                                        || ((model.runInfo.fuzzRuns <= oldFuzzRuns)
-                                                                && (model.runInfo.initialSeed == oldInitialSeed)
+                                                        || ((model.runInfo.fuzzRuns <= model.previousRun.fuzzRuns)
+                                                                && (model.runInfo.initialSeed == model.previousRun.initialSeed)
                                                            )
                                                 then
                                                     Just outcome_
@@ -362,6 +350,8 @@ sendResults isFinished testReporter results =
                 |> List.foldl addToKeyValues []
                 |> Encode.object
           )
+
+        -- TODO: Actually care about this in Supervisor
         , ( "newStuff", Encode.list encodeNewStuff results )
         ]
         |> Encode.encode 0
@@ -390,7 +380,7 @@ sendBegin model =
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, globs, paths, fuzzRuns, initialSeed, report, runners, metadata } _ =
+init { processes, globs, paths, fuzzRuns, initialSeed, report, runners, metadata, previousRun } _ =
     let
         { indexedRunners, autoFail } =
             case runners of
@@ -436,6 +426,7 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners, metadata
             , testReporter = testReporter
             , autoFail = autoFail
             , metadata = metadata
+            , previousRun = previousRun
             }
     in
     ( model, Cmd.none )
@@ -460,6 +451,11 @@ failInit message report _ =
             , testReporter = createReporter report
             , autoFail = Nothing
             , metadata = Dict.empty
+            , previousRun =
+                { fuzzRuns = 0
+                , initialSeed = 0
+                , fingerprints = Dict.empty
+                }
             }
 
         cmd =
@@ -501,7 +497,7 @@ checkHelperReplaceMe___ _ _ _ =
 {-| Run the tests.
 -}
 run : RunnerOptions -> List ( String, List (Maybe TestWithMetadata) ) -> Program Int Model Msg
-run { runs, seed, report, globs, paths, processes } possiblyTests =
+run { runs, seed, report, globs, paths, processes, previousRun } possiblyTests =
     let
         ( tests, metadata ) =
             possiblyTests
@@ -554,6 +550,7 @@ run { runs, seed, report, globs, paths, processes } possiblyTests =
                     , runners = runners
                     , report = report
                     , metadata = metadata
+                    , previousRun = previousRun
                     }
         in
         Platform.worker
