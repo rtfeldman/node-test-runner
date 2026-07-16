@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (check, run, TestProgram)
+port module Test.Runner.Node exposing (check, run, TestProgram, PreviousRun)
 
 {-|
 
@@ -8,7 +8,7 @@ port module Test.Runner.Node exposing (check, run, TestProgram)
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs check, run, TestProgram
+@docs check, run, TestProgram, PreviousRun
 
 -}
 
