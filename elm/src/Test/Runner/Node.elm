@@ -286,9 +286,7 @@ update msg ({ testReporter } as model) =
         Complete metadata labels outcome2 startTime endTime ->
             let
                 duration =
-                    Time.posixToMillis endTime
-                        - Time.posixToMillis startTime
-                        |> Debug.log "duration"
+                    Time.posixToMillis endTime - Time.posixToMillis startTime
 
                 results =
                     ( model.nextTestToRun
