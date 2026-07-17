@@ -138,9 +138,11 @@ dispatch model startTime =
                         Just metadata_ ->
                             metadata_
 
-                        -- TODO: We can get here for a bare `Test.todo`. Needs to be handled somehow.
+                        -- A `Test.todo` not nested under any `Test.describe` ends up here (`config.labels` only
+                        -- contains _one_ label – the one added automatically to each module).
+                        -- Luckily, there is not really much speed gain to caching `Test.todo`s.
                         Nothing ->
-                            { jsDefinitionName = "MISSING:" ++ Debug.toString config.labels, hash = "" }
+                            { jsDefinitionName = "", hash = "" }
 
                 maybeCachedOutcome =
                     Dict.get metadata.jsDefinitionName model.previousRun.fingerprints
