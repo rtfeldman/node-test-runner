@@ -25,6 +25,7 @@ type alias TestResult =
     , duration : Int -- in milliseconds
     , jsDefinitionName : String
     , isFuzzTest : Bool
+    , usedDebugLog : Bool
     }
 
 

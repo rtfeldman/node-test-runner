@@ -134,6 +134,7 @@ encodeExtraFailure _ =
         , outcome = Failed []
         , jsDefinitionName = ""
         , isFuzzTest = False
+        , usedDebugLog = False
         }
 
 

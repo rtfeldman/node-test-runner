@@ -117,8 +117,9 @@ type alias Fingerprints =
 
 
 type alias Outcome2 =
-    { isFuzzTest : Bool
-    , outcome : Outcome
+    { outcome : Outcome
+    , isFuzzTest : Bool
+    , usedDebugLog : Bool
     }
 
 
@@ -150,9 +151,11 @@ dispatch model startTime =
                                         |> Maybe.andThen
                                             (\outcome_ ->
                                                 if
-                                                    not outcome_.isFuzzTest
-                                                        || ((model.runInfo.fuzzRuns <= model.previousRun.fuzzRuns)
-                                                                && (model.runInfo.initialSeed == model.previousRun.initialSeed)
+                                                    not outcome_.usedDebugLog
+                                                        && (not outcome_.isFuzzTest
+                                                                || ((model.runInfo.fuzzRuns <= model.previousRun.fuzzRuns)
+                                                                        && (model.runInfo.initialSeed == model.previousRun.initialSeed)
+                                                                   )
                                                            )
                                                 then
                                                     Just outcome_
@@ -172,11 +175,12 @@ dispatch model startTime =
 
                         Nothing ->
                             let
-                                ( expectations, isFuzzTest ) =
-                                    detectFuzzTest config.run
+                                ( expectations, isFuzzTest, usedDebugLog ) =
+                                    detectFuzzTestAndDebugLog config.run
                             in
                             { outcome = outcomeFromExpectations expectations
                             , isFuzzTest = isFuzzTest
+                            , usedDebugLog = usedDebugLog
                             }
             in
             Time.now
@@ -203,14 +207,14 @@ a fuzz test.
 If you rename or change this function you also need to update the regex that looks for it.
 
 -}
-detectFuzzTest : (() -> a) -> ( a, Bool )
-detectFuzzTest =
-    detectFuzzTestHelperReplaceMe___
+detectFuzzTestAndDebugLog : (() -> a) -> ( a, Bool, Bool )
+detectFuzzTestAndDebugLog =
+    detectFuzzTestAndDebugLogHelperReplaceMe___
 
 
-detectFuzzTestHelperReplaceMe___ : (() -> a) -> ( a, Bool )
-detectFuzzTestHelperReplaceMe___ _ =
-    Debug.todo "The regex for replacing this Debug.todo in detectFuzzTestHelperReplaceMe___ with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
+detectFuzzTestAndDebugLogHelperReplaceMe___ : (() -> a) -> ( a, Bool, Bool )
+detectFuzzTestAndDebugLogHelperReplaceMe___ _ =
+    Debug.todo "The regex for replacing this Debug.todo in detectFuzzTestAndDebugLogHelperReplaceMe___ with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -295,6 +299,7 @@ update msg ({ testReporter } as model) =
                       , duration = duration
                       , jsDefinitionName = metadata.jsDefinitionName
                       , isFuzzTest = outcome2.isFuzzTest
+                      , usedDebugLog = outcome2.usedDebugLog
                       }
                     )
                         :: model.results
@@ -348,7 +353,12 @@ sendResults isFinished testReporter results =
             let
                 dictTuple : ( List String, Outcome2 )
                 dictTuple =
-                    ( result.labels, { isFuzzTest = result.isFuzzTest, outcome = result.outcome } )
+                    ( result.labels
+                    , { outcome = result.outcome
+                      , isFuzzTest = result.isFuzzTest
+                      , usedDebugLog = result.usedDebugLog
+                      }
+                    )
             in
             Encode.object
                 [ ( "jsDefinitionName", Encode.string result.jsDefinitionName )
