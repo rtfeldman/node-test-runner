@@ -18,6 +18,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Platform
 import Random
+import Set exposing (Set)
 import Task
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
@@ -137,8 +138,7 @@ dispatch model startTime =
                         Just metadata_ ->
                             metadata_
 
-                        -- This should not happen: All tests should have metadata.
-                        -- TODO: Can we get here for `Test.todo`?
+                        -- TODO: We can get here for a bare `Test.todo`. Needs to be handled somehow.
                         Nothing ->
                             { jsDefinitionName = "MISSING:" ++ Debug.toString config.labels, hash = "" }
 
@@ -494,7 +494,7 @@ type alias TestWithMetadata =
     { test : Test
     , jsDefinitionName : String
     , hash : String
-    , label : String
+    , labels : Set String
     }
 
 
@@ -537,11 +537,16 @@ run { runs, seed, report, globs, paths, processes, previousRun } possiblyTests =
                             Just
                                 ( Test.describe moduleName moduleTests
                                 , moduleTestsWithMetadata
-                                    |> List.map
+                                    |> List.concatMap
                                         (\data ->
-                                            ( ( moduleName, data.label )
-                                            , { jsDefinitionName = data.jsDefinitionName, hash = data.hash }
-                                            )
+                                            data.labels
+                                                |> Set.toList
+                                                |> List.map
+                                                    (\label ->
+                                                        ( ( moduleName, label )
+                                                        , { jsDefinitionName = data.jsDefinitionName, hash = data.hash }
+                                                        )
+                                                    )
                                         )
                                 )
                     )
