@@ -11,7 +11,7 @@ client.setEncoding('utf8');
 client.setNoDelay(true);
 
 // Run the Elm app.
-var app = Elm.Test.Generated.Main.init({ flags: Date.now() });
+var app = Elm.Test.Generated.Main.init({ flags: Number(process.argv[2]) });
 
 client.on('data', function (msg) {
   app.ports.elmTestPort__receive.send(JSON.parse(msg));

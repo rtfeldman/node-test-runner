@@ -145,22 +145,6 @@ update msg ({ testReporter } as model) =
                     in
                     ( model, cmd )
 
-                Ok (Test index) ->
-                    let
-                        cmd =
-                            Task.perform Dispatch Time.now
-                    in
-                    ( { model | nextTestToRun = index }
-                    , Cmd.batch
-                        [ cmd
-                        , if index == 0 then
-                            sendBegin model
-
-                          else
-                            Cmd.none
-                        ]
-                    )
-
                 Err err ->
                     let
                         cmd =
@@ -266,7 +250,7 @@ sendBegin model =
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
+init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } index =
     let
         { indexedRunners, autoFail } =
             case runners of
@@ -306,13 +290,25 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners } _ =
                 , initialSeed = initialSeed
                 }
             , processes = processes
-            , nextTestToRun = 0
+            , nextTestToRun = index
             , results = []
             , testReporter = testReporter
             , autoFail = autoFail
             }
+
+        cmd =
+            Task.perform Dispatch Time.now
     in
-    ( model, Cmd.none )
+    ( model
+    , Cmd.batch
+        [ cmd
+        , if index == 0 then
+            sendBegin model
+
+          else
+            Cmd.none
+        ]
+    )
 
 
 failInit : String -> Report -> Int -> ( Model, Cmd Msg )
