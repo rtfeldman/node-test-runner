@@ -20,7 +20,7 @@ import Random
 import Task
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome, TestResult, isFailure, outcomesFromExpectations)
+import Test.Reporter.TestResults exposing (Outcome, TestResult, isFailure, outcomeFromExpectations)
 import Test.Runner exposing (Runner, SeededRunners(..))
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Time exposing (Posix)
@@ -75,7 +75,7 @@ type alias TestProgram =
 type Msg
     = Receive Decode.Value
     | Dispatch Posix
-    | Complete (List String) (List Outcome) Posix Posix
+    | Complete (List String) Outcome Posix Posix
 
 
 {-| The port names are prefixed to reduce the likelihood of the project
@@ -96,11 +96,11 @@ dispatch model startTime =
 
         Just config ->
             let
-                outcomes =
-                    outcomesFromExpectations (config.run ())
+                outcome =
+                    outcomeFromExpectations (config.run ())
             in
             Time.now
-                |> Task.perform (Complete config.labels outcomes startTime)
+                |> Task.perform (Complete config.labels outcome startTime)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -173,19 +173,16 @@ update msg ({ testReporter } as model) =
         Dispatch startTime ->
             ( model, dispatch model startTime )
 
-        Complete labels outcomes startTime endTime ->
+        Complete labels outcome startTime endTime ->
             let
                 duration =
                     Time.posixToMillis endTime - Time.posixToMillis startTime
 
-                prependOutcome outcome rest =
+                results =
                     ( model.nextTestToRun
                     , { labels = labels, outcome = outcome, duration = duration }
                     )
-                        :: rest
-
-                results =
-                    List.foldl prependOutcome model.results outcomes
+                        :: model.results
 
                 nextTestToRun =
                     model.nextTestToRun + model.processes
@@ -193,7 +190,7 @@ update msg ({ testReporter } as model) =
                 isFinished =
                     nextTestToRun >= model.runInfo.testCount
             in
-            if isFinished || List.any isFailure outcomes then
+            if isFinished || isFailure outcome then
                 let
                     cmd =
                         sendResults isFinished testReporter results
