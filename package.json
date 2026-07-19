@@ -44,7 +44,6 @@
   "dependencies": {
     "chokidar": "^3.5.3",
     "commander": "^9.4.1",
-    "cross-spawn": "^7.0.6",
     "elm-solve-deps-wasm": "^1.0.2 || ^2.0.0",
     "graceful-fs": "^4.2.10",
     "split": "^1.0.1",
@@ -54,7 +53,6 @@
   },
   "devDependencies": {
     "@eslint/js": "9.20.0",
-    "@types/cross-spawn": "6.0.6",
     "@types/graceful-fs": "4.1.9",
     "@types/mocha": "10.0.10",
     "@types/node": "26.0.1",

@@ -1,13 +1,13 @@
 'use strict';
 
 const assert = require('assert');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const spawn = require('cross-spawn');
 
 const { fixturesDir, spawnOpts } = require('./util');
 
-const elmtestPath = path.join(__dirname, '..', 'bin', 'elm-test');
+const elmTestPath = path.join(__dirname, '..', 'bin', 'elm-test');
 
 const packageInfo = require('../package.json');
 const elmTestVersion = packageInfo.version;
@@ -23,9 +23,9 @@ const resultFailureThreshold = 2;
  * @returns { import('child_process').SpawnSyncReturns<string> }
  */
 function execElmTest(args, cwd = '.') {
-  return spawn.sync(
-    elmtestPath,
-    args,
+  return spawnSync(
+    'node',
+    [elmTestPath, ...args],
     Object.assign(
       /** @type { const } */ ({ encoding: 'utf-8', cwd }),
       spawnOpts

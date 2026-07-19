@@ -1,8 +1,8 @@
 'use strict';
 
 const assert = require('assert');
+const { fork, spawnSync } = require('child_process');
 const path = require('path');
-const spawn = require('cross-spawn');
 const fs = require('fs');
 const os = require('os');
 const xml2js = require('xml2js');
@@ -21,7 +21,7 @@ const scratchElmJsonPath = path.join(scratchDir, 'elm.json');
  * @param { (code: number | null) => void } callback
  */
 function elmTestWithYes(args, callback) {
-  const child = spawn(
+  const child = fork(
     elmTestPath,
     args,
     Object.assign({ encoding: 'utf-8', cwd: scratchDir }, spawnOpts)
@@ -47,9 +47,9 @@ function elmTestWithYes(args, callback) {
  * @returns
  */
 function execElmTest(args, cwd = fixturesDir, extraOpts = {}) {
-  return spawn.sync(
-    elmTestPath,
-    args,
+  return spawnSync(
+    'node',
+    [elmTestPath, ...args],
     Object.assign(
       /** @type { const } */ ({ encoding: 'utf-8', cwd }),
       spawnOpts,
@@ -202,9 +202,9 @@ describe('flags', () => {
         path.join(fixturesDir, 'templates', 'application', 'elm.json'),
         scratchElmJsonPath
       );
-      const runResult = spawn.sync(
-        elmTestPath,
-        ['install', "elm/regex; printf 'FINDME'; printf 'TWICE'"],
+      const runResult = spawnSync(
+        'node',
+        [elmTestPath, 'install', "elm/regex; printf 'FINDME'; printf 'TWICE'"],
         Object.assign(
           /** @type { const } */ ({
             encoding: 'utf-8',
@@ -520,7 +520,7 @@ describe('flags', () => {
         fs.unlinkSync(addedFile);
       }
 
-      const child = spawn(
+      const child = fork(
         elmTestPath,
         ['--report=json', '--watch', path.join('tests', 'Passing', 'One.elm')],
         Object.assign({ encoding: 'utf-8', cwd: fixturesDir }, spawnOpts)
@@ -602,7 +602,7 @@ describe('flags', () => {
       elmTestWithYes(['init'], (code) => {
         assert.strictEqual(code, 0);
 
-        const child = spawn(
+        const child = fork(
           elmTestPath,
           ['--report=json', '--watch'],
           Object.assign({ encoding: 'utf-8', cwd: scratchDir }, spawnOpts)
