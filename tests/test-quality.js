@@ -3,7 +3,7 @@
 const assert = require('assert');
 const path = require('path');
 const { globSync } = require('tinyglobby');
-const spawn = require('cross-spawn');
+const Spawn = require('../lib/Spawn');
 
 const { spawnOpts } = require('./util');
 
@@ -13,7 +13,7 @@ const { spawnOpts } = require('./util');
  * @returns { import('child_process').SpawnSyncReturns<string> }
  */
 function execElmJson(args, cwd) {
-  return spawn.sync(
+  return Spawn.spawnSync(
     'elm-json',
     args,
     Object.assign(
@@ -29,7 +29,7 @@ function execElmJson(args, cwd) {
  * @returns { import('child_process').SpawnSyncReturns<string> }
  */
 function execElm(args, cwd) {
-  return spawn.sync(
+  return Spawn.spawnSync(
     'elm',
     args,
     Object.assign(
