@@ -1,29 +1,26 @@
 'use strict';
 
 const assert = require('assert');
-const stream = require('stream');
 const Parser = require('../lib/Parser');
 
 /**
  * @param { string } elmCode
  * @param { Array<string> } expectedExposedNames
  */
-async function testParser(elmCode, expectedExposedNames) {
-  const exposed = await Parser.extractExposedPossiblyTests(
+function testParser(elmCode, expectedExposedNames) {
+  const exposed = Parser.extractExposedPossiblyTests(
     'SomeFile.elm',
-    (_, options) => {
-      const readable =
-        /** @type { import('stream').Readable & { close(): void } } */ (
-          stream.Readable.from([elmCode], {
-            ...options,
-            autoDestroy: true,
-          })
-        );
-      readable.close = readable.destroy;
-      return readable;
-    }
+    readChunked(elmCode)
   );
   assert.deepStrictEqual(exposed, expectedExposedNames);
+}
+
+/**
+ * @param { string } string
+ * @returns { Generator<Buffer, void> }
+ */
+function* readChunked(string) {
+  yield Buffer.from(string);
 }
 
 describe('Parser', () => {
@@ -210,11 +207,12 @@ One = 1
       testParser('module "string" Main exposing (one)', []));
 
     it('treats `effect module` as a critical error', () =>
-      assert.rejects(
-        testParser(
-          'effect module Example where { subscription = MySub } exposing (..)',
-          ['should', 'not', 'succeed']
-        ),
+      assert.throws(
+        () =>
+          testParser(
+            'effect module Example where { subscription = MySub } exposing (..)',
+            ['should', 'not', 'succeed']
+          ),
         {
           message:
             'This file is problematic:\n\nSomeFile.elm\n\nIt starts with `effect module`. Effect modules can only exist inside src/ in elm and elm-explorations packages. They cannot contain tests.',
