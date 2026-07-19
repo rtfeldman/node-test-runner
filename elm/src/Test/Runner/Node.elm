@@ -150,13 +150,16 @@ update msg ({ testReporter } as model) =
                         cmd =
                             Task.perform Dispatch Time.now
                     in
-                    if index == -1 then
-                        ( { model | nextTestToRun = index + model.processes }
-                        , Cmd.batch [ cmd, sendBegin model ]
-                        )
+                    ( { model | nextTestToRun = index }
+                    , Cmd.batch
+                        [ cmd
+                        , if index == 0 then
+                            sendBegin model
 
-                    else
-                        ( { model | nextTestToRun = index }, cmd )
+                          else
+                            Cmd.none
+                        ]
+                    )
 
                 Err err ->
                     let
