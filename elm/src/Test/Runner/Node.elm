@@ -81,7 +81,7 @@ type Msg
 {-| The port names are prefixed to reduce the likelihood of the project
 having a port with the same name, which is a compile error.
 -}
-port elmTestPort__send : String -> Cmd msg
+port elmTestPort__send : Decode.Value -> Cmd msg
 
 
 port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
@@ -140,7 +140,6 @@ update msg ({ testReporter } as model) =
                                 , ( "exitCode", Encode.int exitCode )
                                 , ( "message", summary )
                                 ]
-                                |> Encode.encode 0
                                 |> elmTestPort__send
                     in
                     ( model, cmd )
@@ -152,7 +151,6 @@ update msg ({ testReporter } as model) =
                                 [ ( "type", Encode.string "ERROR" )
                                 , ( "message", Encode.string (Decode.errorToString err) )
                                 ]
-                                |> Encode.encode 0
                                 |> elmTestPort__send
                     in
                     ( model, cmd )
@@ -224,7 +222,6 @@ sendResults isFinished testReporter results =
                 |> Encode.object
           )
         ]
-        |> Encode.encode 0
         |> elmTestPort__send
 
 
@@ -245,7 +242,6 @@ sendBegin model =
                     []
     in
     Encode.object (baseFields ++ extraFields)
-        |> Encode.encode 0
         |> elmTestPort__send
 
 
@@ -336,7 +332,6 @@ failInit message report _ =
                 , ( "exitCode", Encode.int 1 )
                 , ( "message", Encode.string message )
                 ]
-                |> Encode.encode 0
                 |> elmTestPort__send
     in
     ( model, cmd )
