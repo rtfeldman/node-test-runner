@@ -183,6 +183,9 @@ Specify which format to use for reporting test results. Valid options are:
 elm-test --report json
 ```
 
+> [!NOTE]  
+> With `--report json` you’ll see `"failures"` and `"distributionReports"` fields, which are arrays. `"failures"` is always the empty array for passing tests, and contains one single failure for failing tests. `"distributionReports"` always contains exactly one report. They are arrays for backwards compatibility reasons.
+
 ### --no-color
 
 Disable colored console output.

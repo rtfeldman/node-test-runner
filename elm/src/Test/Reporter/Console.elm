@@ -64,9 +64,9 @@ todoToChalk message =
     plain ("◦ TODO: " ++ message ++ "\n\n")
 
 
-failuresToText : UseColor -> List String -> List ( Failure, DistributionReport ) -> Text
-failuresToText useColor labels failures =
-    Text.concat (failureLabelsToText labels :: List.map (failureToText useColor) failures)
+failureWithLabelsToText : UseColor -> List String -> ( Failure, DistributionReport ) -> Text
+failureWithLabelsToText useColor labels failure =
+    Text.concat [ failureLabelsToText labels, failureToText useColor failure ]
 
 
 failureLabelsToText : List String -> Text
@@ -166,11 +166,11 @@ reportComplete useColor { labels, outcome } =
                                   )
                                 ]
 
-                    Failed failures ->
+                    Failed failure ->
                         [ ( "failure"
                           , -- We have non-TODOs still failing; report them, not the TODOs.
-                            failures
-                                |> failuresToText useColor labels
+                            failure
+                                |> failureWithLabelsToText useColor labels
                                 |> textToValue useColor
                           )
                         ]

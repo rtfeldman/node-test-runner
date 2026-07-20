@@ -16,7 +16,7 @@ import Test.Runner.Failure exposing (Reason)
 type Outcome
     = Passed DistributionReport
     | Todo String
-    | Failed (List ( Failure, DistributionReport ))
+    | Failed ( Failure, DistributionReport )
 
 
 type alias TestResult =
@@ -71,7 +71,7 @@ outcomeFromExpectations expectations =
                         Todo failure.description
 
                     else
-                        Failed [ ( failure, Test.Runner.getDistributionReport expectation ) ]
+                        Failed ( failure, Test.Runner.getDistributionReport expectation )
 
         _ ->
             Debug.todo ("A test somehow did not return exactly 1 expectation, it returned " ++ String.fromInt (List.length expectations) ++ "!")
