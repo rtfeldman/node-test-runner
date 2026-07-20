@@ -171,6 +171,16 @@ Define how many times each fuzz-test should run. Defaults to `100`.
 > [!NOTE]  
 > 100 iterations is pretty low for most fuzz tests – it might not be enough to find edge cases. It’s recommended to use [fuzzWith](https://package.elm-lang.org/packages/elm-explorations/test/latest/Test#fuzzWith) to choose an appropriate number of runs per fuzz test. When developing, increase the number until you don’t get any failures anymore and the test takes a long time. Then lower the number so the test covers enough and runs fast enough to make those who wait not go insane.
 
+### --workers
+
+Choose how many workers elm-test should use to run tests in parallel. Defaults to the number of “logical CPU cores” of the machine you run the tests on.
+
+    elm-test --workers 4
+
+Your computer might say that it has 12 logical CPU cores. Then dividing up the tests between 12 parallel workers is the theoretical optimum for running the tests as quickly as possible. But in practice your tests might run faster with just 4 workers in parallel due to overhead. Play around with it and see what is the fastest for your test suite on your computer!
+
+To see the number of logical CPU cores on your machine, run `node -p "os.cpus().length"` (it’s also shown in `elm-test --help`).
+
 ### --report
 
 Specify which format to use for reporting test results. Valid options are:

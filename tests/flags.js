@@ -443,6 +443,41 @@ describe('flags', () => {
     });
   });
 
+  describe('--workers', () => {
+    it('Should fail if given non-digits', () => {
+      const runResult = execElmTest([
+        '--workers',
+        '0xaf',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    });
+
+    it('Should fail if given 0', () => {
+      const runResult = execElmTest([
+        '--workers',
+        '0',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    });
+
+    it('Should fail if given a negative integer', () => {
+      const runResult = execElmTest([
+        '--workers',
+        '-5',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    });
+  });
+
   describe('--compiler', () => {
     before(() => {
       const elmExe = path.resolve(which.sync('elm'));
