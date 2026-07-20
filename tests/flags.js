@@ -6,7 +6,6 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const readline = require('readline');
-const stripAnsi = require('strip-ansi');
 const which = require('which');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
@@ -537,7 +536,7 @@ describe('flags', () => {
 
       reader.on('line', (line) => {
         try {
-          const parsedLine = JSON.parse(stripAnsi('' + line));
+          const parsedLine = JSON.parse(line);
           if (parsedLine.event !== 'runComplete') return;
           runsExecuted++;
           switch (runsExecuted) {
@@ -642,7 +641,7 @@ describe('flags', () => {
 
         reader.on('line', (line) => {
           try {
-            const parsedLine = JSON.parse(stripAnsi('' + line));
+            const parsedLine = JSON.parse(line);
             if (parsedLine.event !== 'runComplete') return;
             runsExecuted++;
             switch (runsExecuted) {
