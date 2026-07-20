@@ -315,6 +315,11 @@ describe('flags', () => {
         path.join('tests', 'Passing', 'One.elm'),
       ]);
 
+      assert.strictEqual(
+        runResult.stdout.replace(/time="[^"]+"/g, `time="1337"`),
+        '<?xml version="1.0"?><testsuite name="elm-test" package="elm-test" tests="1" failures="0" errors="0" time="1337"><testcase classname="Passing.One" name="this should pass" time="1337"/></testsuite>\n'
+      );
+
       xml2js.parseString(runResult.stdout, (err, data) => {
         if (err) throw err;
 
@@ -337,6 +342,11 @@ describe('flags', () => {
         '--report=junit',
         path.join('tests', 'Failing', 'One.elm'),
       ]);
+
+      assert.strictEqual(
+        runResult.stdout.replace(/time="[^"]+"/g, `time="1337"`),
+        '<?xml version="1.0"?><testsuite name="elm-test" package="elm-test" tests="1" failures="1" errors="0" time="1337"><testcase classname="Failing.One" name="intentional failure" time="1337"><failure>This should fail!</failure></testcase></testsuite>\n'
+      );
 
       xml2js.parseString(runResult.stdout, (err, data) => {
         if (err) throw err;
