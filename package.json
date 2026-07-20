@@ -55,7 +55,6 @@
     "@types/node": "26.0.1",
     "@types/split": "1.0.5",
     "@types/which": "3.0.4",
-    "@types/xml2js": "0.4.14",
     "elm-review": "2.13.1",
     "elm-tooling": "1.18.0",
     "eslint": "9.20.1",
@@ -64,7 +63,6 @@
     "mocha": "11.1.0",
     "prettier": "2.8.1",
     "strip-ansi": "6.0.0",
-    "typescript": "7.0.2",
-    "xml2js": "0.5.0"
+    "typescript": "7.0.2"
   }
 }

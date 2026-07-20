@@ -5,7 +5,6 @@ const { fork, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const xml2js = require('xml2js');
 const readline = require('readline');
 const stripAnsi = require('strip-ansi');
 const which = require('which');
@@ -309,7 +308,7 @@ describe('flags', () => {
       assert.ok(linesReceived > 0);
     });
 
-    it('Should be able to report passing junit xml', (done) => {
+    it('Should be able to report passing junit xml', () => {
       const runResult = execElmTest([
         '--report=junit',
         path.join('tests', 'Passing', 'One.elm'),
@@ -319,13 +318,6 @@ describe('flags', () => {
         runResult.stdout.replace(/time="[^"]+"/g, `time="1337"`),
         '<?xml version="1.0"?><testsuite name="elm-test" package="elm-test" tests="1" failures="0" errors="0" time="1337"><testcase classname="Passing.One" name="this should pass" time="1337"/></testsuite>\n'
       );
-
-      xml2js.parseString(runResult.stdout, (err, data) => {
-        if (err) throw err;
-
-        assert.ok(data);
-        done();
-      });
     });
 
     it('Should be able to report compilation errors', () => {
@@ -337,7 +329,7 @@ describe('flags', () => {
       assert.ok(runResult.stderr.match(/ENDLESS COMMENT/));
     });
 
-    it('Should be able to report failing junit xml', (done) => {
+    it('Should be able to report failing junit xml', () => {
       const runResult = execElmTest([
         '--report=junit',
         path.join('tests', 'Failing', 'One.elm'),
@@ -347,13 +339,6 @@ describe('flags', () => {
         runResult.stdout.replace(/time="[^"]+"/g, `time="1337"`),
         '<?xml version="1.0"?><testsuite name="elm-test" package="elm-test" tests="1" failures="1" errors="0" time="1337"><testcase classname="Failing.One" name="intentional failure" time="1337"><failure>This should fail!</failure></testcase></testsuite>\n'
       );
-
-      xml2js.parseString(runResult.stdout, (err, data) => {
-        if (err) throw err;
-
-        assert.ok(data);
-        done();
-      });
     });
   });
 
