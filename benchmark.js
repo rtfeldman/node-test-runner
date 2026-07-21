@@ -12,6 +12,7 @@ const net = require('net');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const readline = require('readline');
 
 const SMALL_ITERATIONS = 10_000;
 const BIG_ITERATIONS = 1_000;
@@ -190,40 +191,37 @@ async function benchmarkUnixSocket(generator) {
       const socket = net.createConnection(pipeName);
 
       let iterations = 0;
-      let buffer = '';
 
       socket.setEncoding('utf8');
       socket.setNoDelay(true);
 
-      socket.on('data', (chunk) => {
-        buffer += chunk;
+      // https://nodejs.org/api/readline.html#example-read-file-stream-line-by-line
+      const rl = readline.createInterface({
+        input: socket,
+        crlfDelay: Infinity,
+      });
 
-        while (true) {
-          const idx = buffer.indexOf('\n');
-          if (idx === -1) break;
+      rl.on('line', (line) => {
+        JSON.parse(line);
 
-          JSON.parse(buffer.slice(0, idx));
-          buffer = buffer.slice(idx + 1);
+        iterations++;
+        const r = generator.next();
 
-          iterations++;
-          const r = generator.next();
+        if (r.done) {
+          const totalMs = hrMs(start);
 
-          if (r.done) {
-            const totalMs = hrMs(start);
+          socket.destroy();
+          child.kill();
 
-            socket.destroy();
-            child.kill();
+          resolve({
+            totalMs,
+            avgMs: totalMs / iterations,
+          });
 
-            resolve({
-              totalMs,
-              avgMs: totalMs / iterations,
-            });
-
-            return;
-          }
-
-          socket.write(JSON.stringify(r.value) + '\n');
+          return;
         }
+
+        socket.write(JSON.stringify(r.value) + '\n');
       });
 
       socket.on('error', reject);
@@ -370,24 +368,19 @@ else if (process.argv[2] === 'fork-socket') {
   }
 
   const server = net.createServer((socket) => {
-    let buffer = '';
-
     socket.setEncoding('utf8');
+    socket.setNoDelay(true);
 
-    socket.on('data', (chunk) => {
-      buffer += chunk;
+    // https://nodejs.org/api/readline.html#example-read-file-stream-line-by-line
+    const rl = readline.createInterface({
+      input: socket,
+      crlfDelay: Infinity,
+    });
 
-      while (true) {
-        const idx = buffer.indexOf('\n');
-        if (idx === -1) break;
+    rl.on('line', (line) => {
+      const obj = JSON.parse(line);
 
-        const line = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 1);
-
-        const obj = JSON.parse(line);
-
-        socket.write(JSON.stringify(obj) + '\n');
-      }
+      socket.write(JSON.stringify(obj) + '\n');
     });
   });
 
