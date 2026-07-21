@@ -35,8 +35,8 @@ reportComplete { duration, labels, outcome } =
 encodeFailures : Outcome -> List Value
 encodeFailures outcome =
     case outcome of
-        Failed failures ->
-            List.map (Tuple.first >> encodeFailure) failures
+        Failed ( failure, _ ) ->
+            [ encodeFailure failure ]
 
         Todo str ->
             [ Encode.string str ]
@@ -48,8 +48,8 @@ encodeFailures outcome =
 encodeDistributionReports : Outcome -> List Value
 encodeDistributionReports outcome =
     case outcome of
-        Failed failures ->
-            List.map (Tuple.second >> encodeDistributionReport) failures
+        Failed ( _, distributionReport ) ->
+            [ encodeDistributionReport distributionReport ]
 
         Todo _ ->
             []

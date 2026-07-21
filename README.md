@@ -171,6 +171,18 @@ Define how many times each fuzz-test should run. Defaults to `100`.
 > [!NOTE]  
 > 100 iterations is pretty low for most fuzz tests – it might not be enough to find edge cases. It’s recommended to use [fuzzWith](https://package.elm-lang.org/packages/elm-explorations/test/latest/Test#fuzzWith) to choose an appropriate number of runs per fuzz test. When developing, increase the number until you don’t get any failures anymore and the test takes a long time. Then lower the number so the test covers enough and runs fast enough to make those who wait not go insane.
 
+### --workers
+
+Choose how many workers elm-test should use to run tests in parallel. Defaults to the number of “logical CPU cores” of the machine you run the tests on.
+
+    elm-test --workers 4
+
+Your computer might say that it has 12 logical CPU cores. Then dividing up the tests between 12 parallel workers is the theoretical optimum for running the tests as quickly as possible. But in practice your tests might run faster with just 4 workers in parallel due to overhead. Play around with it and see what is the fastest for your test suite on your computer!
+
+To see the number of logical CPU cores on your machine, run `node -p "os.cpus().length"` (it’s also shown in `elm-test --help`).
+
+If you pass `--workers 1`, elm-test won’t even start a new thread for running the tests in – it’ll do everything in the main thread (single-threaded mode).
+
 ### --report
 
 Specify which format to use for reporting test results. Valid options are:
@@ -182,6 +194,9 @@ Specify which format to use for reporting test results. Valid options are:
 ```
 elm-test --report json
 ```
+
+> [!NOTE]  
+> With `--report json` you’ll see `"failures"` and `"distributionReports"` fields, which are arrays. `"failures"` is always the empty array for passing tests, and contains one single failure for failing tests. `"distributionReports"` always contains exactly one report. They are arrays for backwards compatibility reasons.
 
 ### --no-color
 

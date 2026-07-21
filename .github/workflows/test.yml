@@ -12,13 +12,19 @@ jobs:
 
     strategy:
       matrix:
-        # Node.js 12, 14 and 16 aren’t supported on the macOS arm64 runners.
-        os: [ubuntu-latest, macOS-15-intel, windows-latest]
-        node-version: [12.x, 14.x, 16.x, 18.x, 20.x, 22.x, 24.x, 26.x]
-        # Also have a test on macOS arm64.
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        # Test non-EOL versions:
+        node-version: [22, 24, 26]
+        # Also test the oldest version we support:
         include:
-          - os: macOS-latest
-            node-version: 26.x
+          - os: ubuntu-latest
+            node-version: 12
+          # Node.js 12 isn’t supported on the macOS arm64 runners, only Intel.
+          # It’s good to have a macOS Intel test, too.
+          - os: macOS-26-intel
+            node-version: 12
+          - os: windows-latest
+            node-version: 12
 
     env:
       ELM_HOME: '${{ github.workspace }}/elm-stuff/elm-home'
@@ -50,7 +56,7 @@ jobs:
           NO_ELM_TOOLING_INSTALL: 1
 
       - name: install mocha 9
-        if: steps.cache-node_modules.outputs.cache-hit != 'true' && (matrix.node-version == '12.x' || matrix.node-version == '14.x' || matrix.node-version == '16.x')
+        if: steps.cache-node_modules.outputs.cache-hit != 'true' && matrix.node-version == '12'
         run: npm install mocha@9
 
       - name: elm-tooling install

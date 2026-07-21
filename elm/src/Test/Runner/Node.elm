@@ -13,7 +13,6 @@ passed and 2 if any failed. Returns 1 if something went wrong.
 -}
 
 import Dict exposing (Dict)
-import Expect exposing (Expectation)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Platform
@@ -105,7 +104,7 @@ type Msg
 {-| The port names are prefixed to reduce the likelihood of the project
 having a port with the same name, which is a compile error.
 -}
-port elmTestPort__send : String -> Cmd msg
+port elmTestPort__send : Decode.Value -> Cmd msg
 
 
 port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
@@ -256,23 +255,9 @@ update msg ({ testReporter } as model) =
                                 , ( "exitCode", Encode.int exitCode )
                                 , ( "message", summary )
                                 ]
-                                |> Encode.encode 0
                                 |> elmTestPort__send
                     in
                     ( model, cmd )
-
-                Ok (Test index) ->
-                    let
-                        cmd =
-                            Task.perform Dispatch Time.now
-                    in
-                    if index == -1 then
-                        ( { model | nextTestToRun = index + model.processes }
-                        , Cmd.batch [ cmd, sendBegin model ]
-                        )
-
-                    else
-                        ( { model | nextTestToRun = index }, cmd )
 
                 Err err ->
                     let
@@ -281,7 +266,6 @@ update msg ({ testReporter } as model) =
                                 [ ( "type", Encode.string "ERROR" )
                                 , ( "message", Encode.string (Decode.errorToString err) )
                                 ]
-                                |> Encode.encode 0
                                 |> elmTestPort__send
                     in
                     ( model, cmd )
@@ -376,7 +360,6 @@ sendResults isFinished testReporter results =
           )
         , ( "newStuff", Encode.list encodeNewStuff results )
         ]
-        |> Encode.encode 0
         |> elmTestPort__send
 
 
@@ -397,12 +380,11 @@ sendBegin model =
                     []
     in
     Encode.object (baseFields ++ extraFields)
-        |> Encode.encode 0
         |> elmTestPort__send
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, globs, paths, fuzzRuns, initialSeed, report, runners, metadata, previousRun } _ =
+init { processes, globs, paths, fuzzRuns, initialSeed, report, runners, metadata, previousRun } index =
     let
         { indexedRunners, autoFail } =
             case runners of
@@ -443,15 +425,27 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners, metadata
                 , initialSeed = initialSeed
                 }
             , processes = processes
-            , nextTestToRun = 0
+            , nextTestToRun = index
             , results = []
             , testReporter = testReporter
             , autoFail = autoFail
             , metadata = metadata
             , previousRun = previousRun
             }
+
+        cmd =
+            Task.perform Dispatch Time.now
     in
-    ( model, Cmd.none )
+    ( model
+    , Cmd.batch
+        [ cmd
+        , if index == 0 then
+            sendBegin model
+
+          else
+            Cmd.none
+        ]
+    )
 
 
 failInit : String -> Report -> Int -> ( Model, Cmd Msg )
@@ -486,7 +480,6 @@ failInit message report _ =
                 , ( "exitCode", Encode.int 1 )
                 , ( "message", Encode.string message )
                 ]
-                |> Encode.encode 0
                 |> elmTestPort__send
     in
     ( model, cmd )

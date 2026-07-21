@@ -1,13 +1,11 @@
 'use strict';
 
 const assert = require('assert');
+const { fork, spawnSync } = require('child_process');
 const path = require('path');
-const spawn = require('cross-spawn');
 const fs = require('fs');
 const os = require('os');
-const xml2js = require('xml2js');
 const readline = require('readline');
-const stripAnsi = require('strip-ansi');
 const which = require('which');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
 
@@ -21,7 +19,7 @@ const scratchElmJsonPath = path.join(scratchDir, 'elm.json');
  * @param { (code: number | null) => void } callback
  */
 function elmTestWithYes(args, callback) {
-  const child = spawn(
+  const child = fork(
     elmTestPath,
     args,
     Object.assign({ encoding: 'utf-8', cwd: scratchDir }, spawnOpts)
@@ -47,9 +45,9 @@ function elmTestWithYes(args, callback) {
  * @returns
  */
 function execElmTest(args, cwd = fixturesDir, extraOpts = {}) {
-  return spawn.sync(
-    elmTestPath,
-    args,
+  return spawnSync(
+    'node',
+    [elmTestPath, ...args],
     Object.assign(
       /** @type { const } */ ({ encoding: 'utf-8', cwd }),
       spawnOpts,
@@ -202,9 +200,9 @@ describe('flags', () => {
         path.join(fixturesDir, 'templates', 'application', 'elm.json'),
         scratchElmJsonPath
       );
-      const runResult = spawn.sync(
-        elmTestPath,
-        ['install', "elm/regex; printf 'FINDME'; printf 'TWICE'"],
+      const runResult = spawnSync(
+        'node',
+        [elmTestPath, 'install', "elm/regex; printf 'FINDME'; printf 'TWICE'"],
         Object.assign(
           /** @type { const } */ ({
             encoding: 'utf-8',
@@ -309,18 +307,16 @@ describe('flags', () => {
       assert.ok(linesReceived > 0);
     });
 
-    it('Should be able to report passing junit xml', (done) => {
+    it('Should be able to report passing junit xml', () => {
       const runResult = execElmTest([
         '--report=junit',
         path.join('tests', 'Passing', 'One.elm'),
       ]);
 
-      xml2js.parseString(runResult.stdout, (err, data) => {
-        if (err) throw err;
-
-        assert.ok(data);
-        done();
-      });
+      assert.strictEqual(
+        runResult.stdout.replace(/time="[^"]+"/g, `time="1337"`),
+        '<?xml version="1.0"?><testsuite name="elm-test" package="elm-test" tests="1" failures="0" errors="0" time="1337"><testcase classname="Passing.One" name="this should pass" time="1337"/></testsuite>\n'
+      );
     });
 
     it('Should be able to report compilation errors', () => {
@@ -332,18 +328,16 @@ describe('flags', () => {
       assert.ok(runResult.stderr.match(/ENDLESS COMMENT/));
     });
 
-    it('Should be able to report failing junit xml', (done) => {
+    it('Should be able to report failing junit xml', () => {
       const runResult = execElmTest([
         '--report=junit',
         path.join('tests', 'Failing', 'One.elm'),
       ]);
 
-      xml2js.parseString(runResult.stdout, (err, data) => {
-        if (err) throw err;
-
-        assert.ok(data);
-        done();
-      });
+      assert.strictEqual(
+        runResult.stdout.replace(/time="[^"]+"/g, `time="1337"`),
+        '<?xml version="1.0"?><testsuite name="elm-test" package="elm-test" tests="1" failures="1" errors="0" time="1337"><testcase classname="Failing.One" name="intentional failure" time="1337"><failure>This should fail!</failure></testcase></testsuite>\n'
+      );
     });
   });
 
@@ -449,6 +443,51 @@ describe('flags', () => {
     });
   });
 
+  describe('--workers', () => {
+    it('Should fail if given non-digits', () => {
+      const runResult = execElmTest([
+        '--workers',
+        '0xaf',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    });
+
+    it('Should fail if given 0', () => {
+      const runResult = execElmTest([
+        '--workers',
+        '0',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    });
+
+    it('Should fail if given a negative integer', () => {
+      const runResult = execElmTest([
+        '--workers',
+        '-5',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+    });
+
+    it('should work in single-threaded mode', () => {
+      const runResult = execElmTest([
+        '--workers',
+        '1',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+      console.log(runResult);
+      assert.strictEqual(runResult.status, 0);
+    });
+  });
+
   describe('--compiler', () => {
     before(() => {
       const elmExe = path.resolve(which.sync('elm'));
@@ -520,7 +559,7 @@ describe('flags', () => {
         fs.unlinkSync(addedFile);
       }
 
-      const child = spawn(
+      const child = fork(
         elmTestPath,
         ['--report=json', '--watch', path.join('tests', 'Passing', 'One.elm')],
         Object.assign({ encoding: 'utf-8', cwd: fixturesDir }, spawnOpts)
@@ -542,7 +581,7 @@ describe('flags', () => {
 
       reader.on('line', (line) => {
         try {
-          const parsedLine = JSON.parse(stripAnsi('' + line));
+          const parsedLine = JSON.parse(line);
           if (parsedLine.event !== 'runComplete') return;
           runsExecuted++;
           switch (runsExecuted) {
@@ -602,7 +641,7 @@ describe('flags', () => {
       elmTestWithYes(['init'], (code) => {
         assert.strictEqual(code, 0);
 
-        const child = spawn(
+        const child = fork(
           elmTestPath,
           ['--report=json', '--watch'],
           Object.assign({ encoding: 'utf-8', cwd: scratchDir }, spawnOpts)
@@ -647,7 +686,7 @@ describe('flags', () => {
 
         reader.on('line', (line) => {
           try {
-            const parsedLine = JSON.parse(stripAnsi('' + line));
+            const parsedLine = JSON.parse(line);
             if (parsedLine.event !== 'runComplete') return;
             runsExecuted++;
             switch (runsExecuted) {

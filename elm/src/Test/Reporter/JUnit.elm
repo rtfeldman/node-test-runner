@@ -1,7 +1,7 @@
 module Test.Reporter.JUnit exposing (reportBegin, reportComplete, reportSummary)
 
 import Json.Encode as Encode exposing (Value)
-import Test.Distribution exposing (DistributionReport)
+import Test.Distribution exposing (DistributionReport(..))
 import Test.Reporter.TestResults exposing (Failure, Outcome(..), SummaryInfo, TestResult)
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
@@ -45,30 +45,10 @@ encodeOutcome outcome =
                 |> Maybe.map (encodeDistributionReport >> List.singleton)
                 |> Maybe.withDefault []
 
-        Failed failures ->
-            let
-                message =
-                    failures
-                        |> List.map (Tuple.first >> formatFailure)
-                        |> String.join "\n\n\n"
-
-                distributionReports : String
-                distributionReports =
-                    failures
-                        |> List.filterMap (Tuple.second >> distributionReportToString)
-                        |> String.join "\n\n\n"
-
-                nonemptyDistributionReports : Maybe String
-                nonemptyDistributionReports =
-                    if String.isEmpty distributionReports then
-                        Nothing
-
-                    else
-                        Just distributionReports
-            in
+        Failed ( failure, distributionReport ) ->
             List.filterMap identity
-                [ Just (encodeFailureTuple message)
-                , Maybe.map encodeDistributionReport nonemptyDistributionReports
+                [ Just (encodeFailureTuple (formatFailure failure))
+                , Maybe.map encodeDistributionReport (distributionReportToString distributionReport)
                 ]
 
         Todo message ->
@@ -131,7 +111,14 @@ encodeExtraFailure _ =
     reportComplete
         { labels = []
         , duration = 0
-        , outcome = Failed []
+        , outcome =
+            Failed
+                ( { given = Nothing
+                  , description = ""
+                  , reason = Custom
+                  }
+                , NoDistribution
+                )
         , jsDefinitionName = ""
         , isFuzzTest = False
         , usedDebugLog = False
