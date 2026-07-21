@@ -181,6 +181,8 @@ Your computer might say that it has 12 logical CPU cores. Then dividing up the t
 
 To see the number of logical CPU cores on your machine, run `node -p "os.cpus().length"` (it’s also shown in `elm-test --help`).
 
+If you pass `--workers 1`, elm-test won’t even start a new thread for running the tests in – it’ll do everything in the main thread (single-threaded mode).
+
 ### --report
 
 Specify which format to use for reporting test results. Valid options are:
