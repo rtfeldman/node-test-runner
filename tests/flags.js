@@ -476,6 +476,16 @@ describe('flags', () => {
       assert.ok(Number.isInteger(runResult.status));
       assert.notStrictEqual(runResult.status, 0);
     });
+
+    it('should work in single-threaded mode', () => {
+      const runResult = execElmTest([
+        '--workers',
+        '1',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+      console.log(runResult);
+      assert.strictEqual(runResult.status, 0);
+    });
   });
 
   describe('--compiler', () => {
