@@ -86,7 +86,7 @@ const expectedWrittenElmJson = `{
     "test-dependencies": {
         "direct": {
             "elm/regex": "1.0.0",
-            "elm-explorations/test": "2.0.0"
+            "elm-explorations/test": "2.2.1"
         },
         "indirect": {
             "elm/html": "1.0.0",
