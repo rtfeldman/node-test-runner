@@ -10,7 +10,7 @@
             "elm/json": "1.1.3",
             "elm/random": "1.0.0",
             "elm/time": "1.0.0",
-            "elm-explorations/test": "2.0.0"
+            "elm-explorations/test": "2.2.1"
         },
         "indirect": {
             "elm/bytes": "1.0.8",

@@ -20,7 +20,7 @@
     },
     "test-dependencies": {
         "direct": {
-            "elm-explorations/test": "2.0.0"
+            "elm-explorations/test": "2.2.1"
         },
         "indirect": {
             "elm/bytes": "1.0.8",
