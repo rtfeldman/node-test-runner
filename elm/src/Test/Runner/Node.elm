@@ -1,4 +1,4 @@
-module Test.Runner.Node exposing (foo, run, TestProgram, PreviousRun)
+module Test.Runner.Node exposing (checkTagged, run, TestProgram, PreviousRun)
 
 {-|
 
@@ -8,7 +8,7 @@ module Test.Runner.Node exposing (foo, run, TestProgram, PreviousRun)
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs foo, run, TestProgram, PreviousRun
+@docs checkTagged, run, TestProgram, PreviousRun
 
 -}
 
@@ -468,8 +468,8 @@ toIndexedDict list =
         |> Dict.fromList
 
 
-foo : a -> JsDefinitionName -> Maybe Test
-foo value jsDefinitionName =
+checkTagged : a -> JsDefinitionName -> Maybe Test
+checkTagged value jsDefinitionName =
     check value
         |> Maybe.map (Test.Runner.tagTest jsDefinitionName)
 
