@@ -35,7 +35,7 @@ sendBegin unitTests fuzzTests maybeReport =
         )
 
 
-sendResult : Int -> String -> List String -> String -> Decode.Value -> Decode.Value -> Cmd msg
+sendResult : Int -> String -> List String -> Maybe String -> Decode.Value -> Decode.Value -> Cmd msg
 sendResult testId jsDefinitionName labels expectationElmCode debugLogs report =
     elmTestPort__send
         (Encode.object
@@ -43,7 +43,7 @@ sendResult testId jsDefinitionName labels expectationElmCode debugLogs report =
             , ( "testId", Encode.int testId )
             , ( "jsDefinitionName", Encode.string jsDefinitionName )
             , ( "labels", Encode.list Encode.string labels )
-            , ( "expectationElmCode", Encode.string expectationElmCode )
+            , ( "expectationElmCode", encodeMaybe Encode.string expectationElmCode )
             , ( "debugLogs", debugLogs )
 
             -- Test reporter specific:
@@ -75,6 +75,16 @@ sendError message =
         )
 
 
+encodeMaybe : (a -> Encode.Value) -> Maybe a -> Encode.Value
+encodeMaybe encoder maybe =
+    case maybe of
+        Just a ->
+            encoder a
+
+        Nothing ->
+            Encode.null
+
+
 type JsMessage
     = RunUnitTest Int
     | RunFuzzTest Int
@@ -90,11 +100,11 @@ decoder =
 decodeMessageFromType : String -> Decoder JsMessage
 decodeMessageFromType messageType =
     case messageType of
-        "RunUnitTest" ->
+        "UNIT" ->
             Decode.map RunUnitTest
                 (Decode.field "testId" Decode.int)
 
-        "RunFuzzTest" ->
+        "FUZZ" ->
             Decode.map RunFuzzTest
                 (Decode.field "testId" Decode.int)
 
