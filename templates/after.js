@@ -1,5 +1,7 @@
 function run(index, receive) {
   var app = Elm.Test.Generated.Main.init({ flags: index });
+  // Without this, each run leaks memory in single-threaded mode:
+  Elm = null;
   app.ports.elmTestPort__send.subscribe(receive);
   return app.ports.elmTestPort__receive.send;
 }
