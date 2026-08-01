@@ -43,7 +43,6 @@ type alias InitArgs =
     , fuzzRuns : Int
     , tests : Tests
     , report : Report
-    , hashes : Hashes
     , previousRun : PreviousRun
     }
 
@@ -55,13 +54,12 @@ type alias RunnerOptions =
     , globs : List String
     , paths : List String
     , processes : Int
-    , hashes : Hashes
     , previousRun : PreviousRun
     }
 
 
 type alias Model =
-    { unitTests : Dict TestId UnitTest
+    { unitTests : List UnitTest
     , fuzzTests : Dict TestId FuzzTest
     , runInfo : RunInfo
     , testReporter : TestReporter
@@ -69,14 +67,8 @@ type alias Model =
     , processes : Int
     , nextTestToRun : TestId
     , autoFail : Maybe String
-    , hashes : Hashes
     , previousRun : PreviousRun
     }
-
-
-type alias Hashes =
-    -- jsDefinitionName to hash
-    Dict String String
 
 
 type alias PreviousRun =
@@ -174,7 +166,7 @@ dispatch model startTime =
                         Nothing ->
                             let
                                 ( expectations, isFuzzTest, usedDebugLog ) =
-                                    detectFuzzTestAndDebugLog config.run
+                                    config.run ()
                             in
                             { outcome = outcomeFromExpectations expectations
                             , isFuzzTest = isFuzzTest
@@ -196,23 +188,6 @@ lastTwoReversed list =
 
         _ ->
             Nothing
-
-
-{-| The implementation of this function will be replaced in the generated JS
-with a version that returns calls the passed function, and detects if it was
-a fuzz test.
-
-If you rename or change this function you also need to update the regex that looks for it.
-
--}
-detectFuzzTestAndDebugLog : (() -> a) -> ( a, Bool, Bool )
-detectFuzzTestAndDebugLog =
-    detectFuzzTestAndDebugLogHelperReplaceMe___
-
-
-detectFuzzTestAndDebugLogHelperReplaceMe___ : (() -> a) -> ( a, Bool, Bool )
-detectFuzzTestAndDebugLogHelperReplaceMe___ _ =
-    Debug.todo "The regex for replacing this Debug.todo in detectFuzzTestAndDebugLogHelperReplaceMe___ with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -381,7 +356,7 @@ sendBegin model =
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, hashes, previousRun } index =
+init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } index =
     let
         autoFail =
             case ( tests.seenOnly, tests.seenSkip ) of
@@ -405,7 +380,7 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, hashes, pr
 
         model : Model
         model =
-            { unitTests = toIndexedDict tests.unitTests
+            { unitTests = tests.unitTests
             , fuzzTests = toIndexedDict tests.fuzzTests
             , runInfo =
                 { testCount = testCount
@@ -419,7 +394,6 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, hashes, pr
             , results = []
             , testReporter = testReporter
             , autoFail = autoFail
-            , hashes = hashes
             , previousRun = previousRun
             }
 
@@ -457,7 +431,6 @@ failInit message report _ =
             , results = []
             , testReporter = createReporter report
             , autoFail = Nothing
-            , hashes = Dict.empty
             , previousRun =
                 { fuzzRuns = 0
                 , initialSeed = 0
@@ -489,27 +462,49 @@ foo value jsDefinitionName =
         |> Maybe.map (Test.Runner.tagTest jsDefinitionName)
 
 
-{-| The implementation of this function will be replaced in the generated JS
-with a version that returns `Just value` if `value` is a `Test`, otherwise `Nothing`.
-
-If you rename or change this function you also need to update the regex that looks for it.
-
+{-| Returns `Just value` if `value` is a `Test`, otherwise `Nothing`.
 -}
 check : a -> Maybe Test
 check =
-    checkHelperReplaceMe___
+    placeholderReplaceMe___ "check"
 
 
-checkHelperReplaceMe___ : a -> b
-checkHelperReplaceMe___ _ =
-    Debug.todo "The regex for replacing this Debug.todo in checkHelperReplaceMe___ with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
+{-| Returns all debug logs created since the beginning,
+or last time this function was called.
+
+The `Bool` is set to `True` for fuzz tests, and pauses
+`Debug.log` - logging is not supported for passing fuzz
+tests. If the fuzz test fails, the failing run is run
+again and that time we do collect logs.
+
+-}
+getAndClearDebugLogs : Bool -> Decode.Value
+getAndClearDebugLogs =
+    placeholderReplaceMe___ "getAndClearDebugLogs"
+
+
+{-| Takes a `jsDefinitionName` and returns its hash.
+-}
+getHash : String -> String
+getHash =
+    placeholderReplaceMe___ "getHash"
+
+
+{-| The implementation of functions calling this one will be replaced in the generated JS
+with versions that do something not normally possible in Elm.
+
+If you rename or change this function, or any function that calls it, you also need to update the regexes that looks for it.
+
+-}
+placeholderReplaceMe___ : String -> a
+placeholderReplaceMe___ name =
+    Debug.todo ("The regex for replacing this Debug.todo for '" ++ name ++ "' with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n")
 
 
 {-| Run the tests.
 -}
 run : RunnerOptions -> List ( String, List (Maybe Test) ) -> Program Int Model Msg
-run { runs, seed, report, globs, paths, processes, hashes, previousRun } possiblyTests =
-    -- TODO: Codegen the hashes.
+run { runs, seed, report, globs, paths, processes, previousRun } possiblyTests =
     let
         testsList =
             possiblyTests
@@ -547,7 +542,6 @@ run { runs, seed, report, globs, paths, processes, hashes, previousRun } possibl
                     , fuzzRuns = runs
                     , tests = tests
                     , report = report
-                    , hashes = hashes
                     , previousRun = previousRun
                     }
         in
