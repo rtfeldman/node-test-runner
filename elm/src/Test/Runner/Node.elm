@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (check, run, TestProgram, PreviousRun)
+port module Test.Runner.Node exposing (foo, run, TestProgram, PreviousRun)
 
 {-|
 
@@ -8,7 +8,7 @@ port module Test.Runner.Node exposing (check, run, TestProgram, PreviousRun)
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs check, run, TestProgram, PreviousRun
+@docs foo, run, TestProgram, PreviousRun
 
 -}
 
@@ -22,7 +22,7 @@ import Task
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Outcome, TestResult, isFailure, outcomeFromExpectations)
-import Test.Runner exposing (Runner, SeededRunners(..))
+import Test.Runner exposing (FuzzTest, Tests, UnitTest)
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Time exposing (Posix)
 
@@ -41,9 +41,9 @@ type alias InitArgs =
     , globs : List String
     , paths : List String
     , fuzzRuns : Int
-    , runners : SeededRunners
+    , tests : Tests
     , report : Report
-    , metadata : Metadata
+    , hashes : Hashes
     , previousRun : PreviousRun
     }
 
@@ -55,31 +55,28 @@ type alias RunnerOptions =
     , globs : List String
     , paths : List String
     , processes : Int
+    , hashes : Hashes
     , previousRun : PreviousRun
     }
 
 
 type alias Model =
-    { available : Dict TestId Runner
+    { unitTests : Dict TestId UnitTest
+    , fuzzTests : Dict TestId FuzzTest
     , runInfo : RunInfo
     , testReporter : TestReporter
     , results : List ( TestId, TestResult )
     , processes : Int
     , nextTestToRun : TestId
     , autoFail : Maybe String
-    , metadata : Metadata
+    , hashes : Hashes
     , previousRun : PreviousRun
     }
 
 
-type alias Metadata =
-    Dict ( String, String ) MetadataItem
-
-
-type alias MetadataItem =
-    { jsDefinitionName : String
-    , hash : String
-    }
+type alias Hashes =
+    -- jsDefinitionName to hash
+    Dict String String
 
 
 type alias PreviousRun =
@@ -98,7 +95,7 @@ type alias TestProgram =
 type Msg
     = Receive Decode.Value
     | Dispatch Posix
-    | Complete MetadataItem (List String) Outcome2 Posix Posix
+    | Complete String {- MetadataItem -} (List String) Outcome2 Posix Posix
 
 
 {-| The port names are prefixed to reduce the likelihood of the project
@@ -384,39 +381,32 @@ sendBegin model =
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, globs, paths, fuzzRuns, initialSeed, report, runners, metadata, previousRun } index =
+init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, hashes, previousRun } index =
     let
-        { indexedRunners, autoFail } =
-            case runners of
-                Plain runnerList ->
-                    { indexedRunners = List.indexedMap (\a b -> ( a, b )) runnerList
-                    , autoFail = Nothing
-                    }
+        autoFail =
+            case ( tests.seenOnly, tests.seenSkip ) of
+                ( False, False ) ->
+                    Nothing
 
-                Only runnerList ->
-                    { indexedRunners = List.indexedMap (\a b -> ( a, b )) runnerList
-                    , autoFail = Just "Test.only was used"
-                    }
+                ( True, False ) ->
+                    Just "Test.only was used"
 
-                Skipping runnerList ->
-                    { indexedRunners = List.indexedMap (\a b -> ( a, b )) runnerList
-                    , autoFail = Just "Test.skip was used"
-                    }
+                ( False, True ) ->
+                    Just "Test.skip was used"
 
-                Invalid str ->
-                    { indexedRunners = []
-                    , autoFail = Just str
-                    }
+                ( True, True ) ->
+                    Just "Test.only and Test.skip were used"
 
         testCount =
-            List.length indexedRunners
+            List.length tests.unitTests + List.length tests.fuzzTests
 
         testReporter =
             createReporter report
 
         model : Model
         model =
-            { available = Dict.fromList indexedRunners
+            { unitTests = toIndexedDict tests.unitTests
+            , fuzzTests = toIndexedDict tests.fuzzTests
             , runInfo =
                 { testCount = testCount
                 , globs = globs
@@ -429,7 +419,7 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, runners, metadata
             , results = []
             , testReporter = testReporter
             , autoFail = autoFail
-            , metadata = metadata
+            , hashes = hashes
             , previousRun = previousRun
             }
 
@@ -453,7 +443,8 @@ failInit message report _ =
     let
         model : Model
         model =
-            { available = Dict.empty
+            { unitTests = Dict.empty
+            , fuzzTests = Dict.empty
             , runInfo =
                 { testCount = 0
                 , globs = []
@@ -466,7 +457,7 @@ failInit message report _ =
             , results = []
             , testReporter = createReporter report
             , autoFail = Nothing
-            , metadata = Dict.empty
+            , hashes = Dict.empty
             , previousRun =
                 { fuzzRuns = 0
                 , initialSeed = 0
@@ -485,12 +476,17 @@ failInit message report _ =
     ( model, cmd )
 
 
-type alias TestWithMetadata =
-    { test : Test
-    , jsDefinitionName : String
-    , hash : String
-    , labels : Set String
-    }
+toIndexedDict : List a -> Dict Int a
+toIndexedDict list =
+    list
+        |> List.indexedMap Tuple.pair
+        |> Dict.fromList
+
+
+foo : a -> String -> Maybe Test
+foo value jsDefinitionName =
+    check value
+        |> Maybe.map (Test.Runner.tagTest jsDefinitionName)
 
 
 {-| The implementation of this function will be replaced in the generated JS
@@ -499,56 +495,38 @@ with a version that returns `Just value` if `value` is a `Test`, otherwise `Noth
 If you rename or change this function you also need to update the regex that looks for it.
 
 -}
-check : a -> String -> String -> Maybe TestWithMetadata
+check : a -> Maybe Test
 check =
     checkHelperReplaceMe___
 
 
-checkHelperReplaceMe___ : a -> String -> String -> b
-checkHelperReplaceMe___ _ _ _ =
+checkHelperReplaceMe___ : a -> b
+checkHelperReplaceMe___ _ =
     Debug.todo "The regex for replacing this Debug.todo in checkHelperReplaceMe___ with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 
 {-| Run the tests.
 -}
-run : RunnerOptions -> List ( String, List (Maybe TestWithMetadata) ) -> Program Int Model Msg
-run { runs, seed, report, globs, paths, processes, previousRun } possiblyTests =
+run : RunnerOptions -> List ( String, List (Maybe Test) ) -> Program Int Model Msg
+run { runs, seed, report, globs, paths, processes, hashes, previousRun } possiblyTests =
+    -- TODO: Codegen the hashes.
     let
-        ( tests, metadata ) =
+        testsList =
             possiblyTests
                 |> List.filterMap
                     (\( moduleName, maybeModuleTests ) ->
                         let
-                            moduleTestsWithMetadata =
-                                List.filterMap identity maybeModuleTests
-
                             moduleTests =
-                                List.map .test moduleTestsWithMetadata
+                                List.filterMap identity maybeModuleTests
                         in
                         if List.isEmpty moduleTests then
                             Nothing
 
                         else
-                            Just
-                                ( Test.describe moduleName moduleTests
-                                , moduleTestsWithMetadata
-                                    |> List.concatMap
-                                        (\data ->
-                                            data.labels
-                                                |> Set.toList
-                                                |> List.map
-                                                    (\label ->
-                                                        ( ( moduleName, label )
-                                                        , { jsDefinitionName = data.jsDefinitionName, hash = data.hash }
-                                                        )
-                                                    )
-                                        )
-                                )
+                            Just (Test.describe moduleName moduleTests)
                     )
-                |> List.unzip
-                |> Tuple.mapSecond (List.concat >> Dict.fromList)
     in
-    if List.isEmpty tests then
+    if List.isEmpty testsList then
         Platform.worker
             { init = failInit (noTestsFoundError globs) report
             , update = \_ model -> ( model, Cmd.none )
@@ -557,8 +535,8 @@ run { runs, seed, report, globs, paths, processes, previousRun } possiblyTests =
 
     else
         let
-            runners =
-                Test.Runner.fromTest runs (Random.initialSeed seed) (Test.concat tests)
+            tests =
+                Test.Runner.toTests (Test.concat testsList)
 
             wrappedInit =
                 init
@@ -567,9 +545,9 @@ run { runs, seed, report, globs, paths, processes, previousRun } possiblyTests =
                     , globs = globs
                     , paths = paths
                     , fuzzRuns = runs
-                    , runners = runners
+                    , tests = tests
                     , report = report
-                    , metadata = metadata
+                    , hashes = hashes
                     , previousRun = previousRun
                     }
         in
