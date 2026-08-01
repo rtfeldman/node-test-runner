@@ -28,7 +28,7 @@ reportComplete { duration, labels, outcome } =
         , ( "labels", encodeLabels labels )
         , ( "failures", Encode.list identity (encodeFailures outcome) )
         , ( "distributionReports", Encode.list identity (encodeDistributionReports outcome) )
-        , ( "duration", Encode.string <| String.fromInt duration )
+        , ( "duration", Encode.string <| String.fromInt (round duration) )
         ]
 
 

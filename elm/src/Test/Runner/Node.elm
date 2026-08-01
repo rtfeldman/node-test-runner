@@ -1,4 +1,4 @@
-port module Test.Runner.Node exposing (foo, run, TestProgram, PreviousRun)
+module Test.Runner.Node exposing (foo, run, TestProgram, PreviousRun)
 
 {-|
 
@@ -20,12 +20,12 @@ import Random
 import Set exposing (Set)
 import Task
 import Test exposing (Test)
+import Test.Distribution exposing (DistributionReport(..))
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome, TestResult, isFailure, outcomeFromExpectations)
+import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, outcomeFromExpectations)
 import Test.Runner exposing (FuzzTest, FuzzTestExpectation(..), Tests, UnitTest, UnitTestExpectation(..))
-import Test.Runner.Failure exposing (Reason)
-import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
-import Time exposing (Posix)
+import Test.Runner.Failure exposing (Reason(..))
+import Test.Runner.Ports as Ports exposing (JsMessage(..))
 
 
 
@@ -68,7 +68,7 @@ type alias RunnerOptions =
 
 
 type alias Model =
-    { unitTests : List UnitTest
+    { unitTests : Dict TestId UnitTest
     , fuzzTests : Dict TestId FuzzTest
     , runInfo : RunInfo
     , testReporter : TestReporter
@@ -92,18 +92,7 @@ type alias TestProgram =
 
 
 type Msg
-    = Receive Decode.Value
-    | DispatchUnitTest Posix
-    | Complete String (List String) UnitTestExpectation DebugLogs (List UnitTest) Posix Posix
-
-
-{-| The port names are prefixed to reduce the likelihood of the project
-having a port with the same name, which is a compile error.
--}
-port elmTestPort__send : Decode.Value -> Cmd msg
-
-
-port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
+    = Receive (Result Decode.Error JsMessage)
 
 
 type alias CachedTests =
@@ -122,59 +111,93 @@ noDebugLogs =
     Encode.list never []
 
 
-dispatchUnitTest : Model -> Posix -> Cmd Msg
-dispatchUnitTest model startTime =
-    case model.unitTests of
-        [] ->
-            -- We're finished! Nothing left to run.
-            -- TODO: Send new message: finished but no data
-            sendResults True model.testReporter model.results
+dispatchUnitTest : TestId -> Model -> ( Model, Cmd Msg )
+dispatchUnitTest testId model =
+    case Dict.get testId model.unitTests of
+        Nothing ->
+            ( model
+            , Ports.sendError ("Unit test not found: " ++ String.fromInt testId)
+            )
 
-        unitTest :: remainingUnitTests ->
+        Just unitTest ->
             let
+                jsDefinitionName =
+                    unitTest.tag
+
                 hash =
-                    getHash unitTest.tag
+                    getHash jsDefinitionName
 
                 maybeCached =
-                    Dict.get unitTest.tag model.previousRun.cachedTests
+                    Dict.get jsDefinitionName model.previousRun.cachedTests
                         |> Maybe.andThen
                             (\cachedTests ->
                                 if hash == cachedTests.hash then
                                     Dict.get unitTest.labels cachedTests.unitTests
                                         -- As an optimization, passing unit tests without debug logs are not stored.
                                         |> Maybe.withDefault ( UnitTestPass, noDebugLogs )
+                                        |> Just
 
                                 else
                                     Nothing
                             )
 
-                ( expectation, debugLogs ) =
+                ( ( expectation, duration ), debugLogs ) =
                     case maybeCached of
-                        Just cached ->
-                            cached
+                        Just ( expectation_, debugLogs_ ) ->
+                            ( ( expectation_, 0 ), debugLogs_ )
 
                         Nothing ->
-                            ( unitTest.thunk (), getAndClearDebugLogs False )
+                            ( runWithDuration unitTest.thunk, getAndClearDebugLogs False )
+
+                outcome =
+                    case expectation of
+                        UnitTestPass ->
+                            Passed NoDistribution
+
+                        UnitTestFail { description, reason } ->
+                            if reason == TODO then
+                                Todo description
+
+                            else
+                                Failed
+                                    ( { given = Nothing
+                                      , description = description
+                                      , reason = reason
+                                      }
+                                    , NoDistribution
+                                    )
+
+                result : TestResult
+                result =
+                    { labels = unitTest.labels
+                    , outcome = outcome
+                    , duration = duration
+                    }
+
+                report =
+                    model.testReporter.reportComplete result
+
+                expectationElmCode =
+                    Debug.toString expectation
             in
-            Time.now
-                |> Task.perform (Complete hash unitTest.labels expectation debugLogs remainingUnitTests startTime)
+            ( model
+            , Ports.sendResult testId jsDefinitionName unitTest.labels expectationElmCode debugLogs report
+            )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ testReporter } as model) =
     case msg of
-        Receive val ->
-            case Decode.decodeValue JsMessage.decoder val of
-                Ok RunUnitTests ->
-                    ( model
-                    , Task.perform DispatchUnitTest Time.now
-                    )
+        Receive (Ok jsMessage) ->
+            case jsMessage of
+                RunUnitTest testId ->
+                    dispatchUnitTest testId model
 
-                Ok (RunFuzzTest testId) ->
+                RunFuzzTest testId ->
                     -- TODO: Run fuzz test
                     ( model, Cmd.none )
 
-                Ok (Summary duration failed todos) ->
+                Summary duration failed todos ->
                     let
                         testCount =
                             model.runInfo.testCount
@@ -201,122 +224,12 @@ update msg ({ testReporter } as model) =
                                 3
 
                         cmd =
-                            Encode.object
-                                [ ( "type", Encode.string "SUMMARY" )
-                                , ( "exitCode", Encode.int exitCode )
-                                , ( "message", summary )
-                                ]
-                                |> elmTestPort__send
+                            Ports.sendSummary exitCode summary
                     in
                     ( model, cmd )
 
-                Err err ->
-                    let
-                        cmd =
-                            Encode.object
-                                [ ( "type", Encode.string "ERROR" )
-                                , ( "message", Encode.string (Decode.errorToString err) )
-                                ]
-                                |> elmTestPort__send
-                    in
-                    ( model, cmd )
-
-        DispatchUnitTest startTime ->
-            ( model, dispatchUnitTest model startTime )
-
-        Complete hash labels expectation debugLogs remainingUnitTests startTime endTime ->
-            let
-                duration =
-                    Time.posixToMillis endTime - Time.posixToMillis startTime
-
-                results =
-                    ( model.nextTestToRun
-                    , { labels = labels
-                      , outcome = outcome2.outcome
-                      , duration = duration
-                      , jsDefinitionName = metadata.jsDefinitionName
-                      , isFuzzTest = outcome2.isFuzzTest
-                      , usedDebugLog = outcome2.usedDebugLog
-                      }
-                    )
-                        :: model.results
-
-                nextTestToRun =
-                    model.nextTestToRun + model.processes
-
-                isFinished =
-                    nextTestToRun >= model.runInfo.testCount
-            in
-            ( { model | unitTests = remainingUnitTests }
-            , Cmd.batch
-                [ cmd
-                , sendResults isFinished testReporter results
-                ]
-            )
-
-
-sendResults : TestReporter -> List ( TestId, TestResult ) -> Cmd msg
-sendResults testReporter results =
-    let
-        typeStr =
-            if isFinished then
-                "FINISHED"
-
-            else
-                "RESULTS"
-
-        addToKeyValues ( testId, result ) list =
-            -- These are coming in in reverse order. Doing a foldl with ::
-            -- means we reverse the list again, while also doing the conversion!
-            ( String.fromInt testId, testReporter.reportComplete result ) :: list
-
-        encodeNewStuff ( _, result ) =
-            let
-                dictTuple : ( List String, Outcome2 )
-                dictTuple =
-                    ( result.labels
-                    , { outcome = result.outcome
-                      , isFuzzTest = result.isFuzzTest
-                      , usedDebugLog = result.usedDebugLog
-                      }
-                    )
-            in
-            Encode.object
-                [ ( "jsDefinitionName", Encode.string result.jsDefinitionName )
-                , ( "dictTupleElmCode", Encode.string (Debug.toString dictTuple) )
-                ]
-    in
-    Encode.object
-        [ ( "type", Encode.string typeStr )
-        , ( "results"
-          , results
-                |> List.foldl addToKeyValues []
-                |> Encode.object
-          )
-        , ( "newStuff", Encode.list encodeNewStuff results )
-        ]
-        |> elmTestPort__send
-
-
-sendBegin : Model -> Cmd msg
-sendBegin model =
-    let
-        extraFields =
-            case model.testReporter.reportBegin model.runInfo of
-                Just report ->
-                    [ ( "message", report ) ]
-
-                Nothing ->
-                    []
-
-        fields =
-            ( "type", Encode.string "BEGIN" )
-                :: ( "testCount", Encode.int model.runInfo.testCount )
-                :: ( "fuzzTests", Encode.list Encode.int (Dict.keys model.fuzzTests) )
-                :: extraFields
-    in
-    Encode.object fields
-        |> elmTestPort__send
+        Receive (Err err) ->
+            ( model, Ports.sendError (Decode.errorToString err) )
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
@@ -344,7 +257,7 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, previousRu
 
         model : Model
         model =
-            { unitTests = tests.unitTests
+            { unitTests = toIndexedDict tests.unitTests
             , fuzzTests = toIndexedDict tests.fuzzTests
             , runInfo =
                 { testCount = testCount
@@ -354,24 +267,21 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, previousRu
                 , initialSeed = initialSeed
                 }
             , processes = processes
-            , results = []
             , testReporter = testReporter
             , autoFail = autoFail
             , previousRun = previousRun
             }
-
-        cmd =
-            Task.perform DispatchUnitTest Time.now
     in
     ( model
-    , Cmd.batch
-        [ cmd
-        , if index == 0 then
-            sendBegin model
+      -- TODO: `index` doesn't really make sense anymore.
+    , if index == 0 then
+        Ports.sendBegin
+            (Dict.size model.unitTests)
+            (Dict.size model.fuzzTests)
+            (model.testReporter.reportBegin model.runInfo)
 
-          else
-            Cmd.none
-        ]
+      else
+        Cmd.none
     )
 
 
@@ -380,7 +290,7 @@ failInit message report _ =
     let
         model : Model
         model =
-            { unitTests = []
+            { unitTests = Dict.empty
             , fuzzTests = Dict.empty
             , runInfo =
                 { testCount = 0
@@ -390,23 +300,18 @@ failInit message report _ =
                 , initialSeed = 0
                 }
             , processes = 0
-            , results = []
             , testReporter = createReporter report
             , autoFail = Nothing
             , previousRun =
                 { fuzzRuns = 0
                 , initialSeed = 0
-                , fingerprints = Dict.empty
+                , cachedTests = Dict.empty
                 }
             }
 
         cmd =
-            Encode.object
-                [ ( "type", Encode.string "SUMMARY" )
-                , ( "exitCode", Encode.int 1 )
-                , ( "message", Encode.string message )
-                ]
-                |> elmTestPort__send
+            -- TODO: This isn't using the reporter? How does that work?
+            Ports.sendSummary 1 (Encode.string message)
     in
     ( model, cmd )
 
@@ -450,6 +355,11 @@ getAndClearDebugLogs =
 getHash : JsDefinitionName -> String
 getHash =
     placeholderReplaceMe___ "getHash"
+
+
+runWithDuration : (() -> a) -> ( a, Float )
+runWithDuration =
+    placeholderReplaceMe___ "runWithDuration"
 
 
 {-| The implementation of functions calling this one will be replaced in the generated JS
@@ -510,7 +420,7 @@ run { runs, seed, report, globs, paths, processes, previousRun } possiblyTests =
         Platform.worker
             { init = wrappedInit
             , update = update
-            , subscriptions = \_ -> elmTestPort__receive Receive
+            , subscriptions = \_ -> Ports.receive Receive
             }
 
 
