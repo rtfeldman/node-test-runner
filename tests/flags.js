@@ -483,7 +483,6 @@ describe('flags', () => {
         '1',
         path.join('tests', 'Passing', 'One.elm'),
       ]);
-      console.log(runResult);
       assert.strictEqual(runResult.status, 0);
     });
   });
