@@ -4,7 +4,9 @@ import Json.Decode as Decode exposing (Decoder)
 
 
 type JsMessage
-    = Summary Float Int (List ( List String, String ))
+    = RunUnitTests
+    | RunFuzzTest Int
+    | Summary Float Int (List ( List String, String ))
 
 
 decoder : Decoder JsMessage
@@ -16,6 +18,13 @@ decoder =
 decodeMessageFromType : String -> Decoder JsMessage
 decodeMessageFromType messageType =
     case messageType of
+        "RunUnitTests" ->
+            Decode.succeed RunUnitTests
+
+        "RunFuzzTest" ->
+            Decode.map RunFuzzTest
+                (Decode.field "testId" Decode.int)
+
         "SUMMARY" ->
             Decode.map3 Summary
                 (Decode.field "duration" Decode.float)

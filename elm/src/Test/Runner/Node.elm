@@ -22,7 +22,8 @@ import Task
 import Test exposing (Test)
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Outcome, TestResult, isFailure, outcomeFromExpectations)
-import Test.Runner exposing (FuzzTest, Tests, UnitTest)
+import Test.Runner exposing (FuzzTest, FuzzTestExpectation(..), Tests, UnitTest, UnitTestExpectation(..))
+import Test.Runner.Failure exposing (Reason)
 import Test.Runner.JsMessage as JsMessage exposing (JsMessage(..))
 import Time exposing (Posix)
 
@@ -33,6 +34,14 @@ import Time exposing (Posix)
 
 type alias TestId =
     Int
+
+
+type alias JsDefinitionName =
+    String
+
+
+type alias DebugLogs =
+    Decode.Value
 
 
 type alias InitArgs =
@@ -63,9 +72,7 @@ type alias Model =
     , fuzzTests : Dict TestId FuzzTest
     , runInfo : RunInfo
     , testReporter : TestReporter
-    , results : List ( TestId, TestResult )
     , processes : Int
-    , nextTestToRun : TestId
     , autoFail : Maybe String
     , previousRun : PreviousRun
     }
@@ -74,7 +81,7 @@ type alias Model =
 type alias PreviousRun =
     { fuzzRuns : Int
     , initialSeed : Int
-    , fingerprints : Dict String Fingerprints
+    , cachedTests : Dict JsDefinitionName CachedTests
     }
 
 
@@ -86,8 +93,8 @@ type alias TestProgram =
 
 type Msg
     = Receive Decode.Value
-    | Dispatch Posix
-    | Complete String {- MetadataItem -} (List String) Outcome2 Posix Posix
+    | DispatchUnitTest Posix
+    | Complete String (List String) UnitTestExpectation DebugLogs (List UnitTest) Posix Posix
 
 
 {-| The port names are prefixed to reduce the likelihood of the project
@@ -99,95 +106,58 @@ port elmTestPort__send : Decode.Value -> Cmd msg
 port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 
-type alias Fingerprints =
+type alias CachedTests =
     { hash : String
-    , outcomes : Dict (List String) Outcome2
+
+    -- As an optimization, passing unit tests without debug logs are not stored.
+    , unitTests : Dict (List String) ( UnitTestExpectation, DebugLogs )
+
+    -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
+    , fuzzTests : Dict (List String) ( FuzzTestExpectation, DebugLogs )
     }
 
 
-type alias Outcome2 =
-    { outcome : Outcome
-    , isFuzzTest : Bool
-    , usedDebugLog : Bool
-    }
+noDebugLogs : DebugLogs
+noDebugLogs =
+    Encode.list never []
 
 
-dispatch : Model -> Posix -> Cmd Msg
-dispatch model startTime =
-    case Dict.get model.nextTestToRun model.available of
-        Nothing ->
+dispatchUnitTest : Model -> Posix -> Cmd Msg
+dispatchUnitTest model startTime =
+    case model.unitTests of
+        [] ->
             -- We're finished! Nothing left to run.
+            -- TODO: Send new message: finished but no data
             sendResults True model.testReporter model.results
 
-        Just config ->
+        unitTest :: remainingUnitTests ->
             let
-                metadata =
-                    case lastTwoReversed config.labels |> Maybe.andThen (\key -> Dict.get key model.metadata) of
-                        Just metadata_ ->
-                            metadata_
+                hash =
+                    getHash unitTest.tag
 
-                        -- A `Test.todo` not nested under any `Test.describe` ends up here (`config.labels` only
-                        -- contains _one_ label – the one added automatically to each module).
-                        -- Luckily, there is not really much speed gain to caching `Test.todo`s.
-                        Nothing ->
-                            { jsDefinitionName = "", hash = "" }
-
-                maybeCachedOutcome =
-                    Dict.get metadata.jsDefinitionName model.previousRun.fingerprints
+                maybeCached =
+                    Dict.get unitTest.tag model.previousRun.cachedTests
                         |> Maybe.andThen
-                            (\fingerprints ->
-                                if metadata.hash == fingerprints.hash then
-                                    Dict.get config.labels fingerprints.outcomes
-                                        |> Maybe.andThen
-                                            (\outcome_ ->
-                                                if
-                                                    not outcome_.usedDebugLog
-                                                        && (not outcome_.isFuzzTest
-                                                                || ((model.runInfo.fuzzRuns <= model.previousRun.fuzzRuns)
-                                                                        && (model.runInfo.initialSeed == model.previousRun.initialSeed)
-                                                                   )
-                                                           )
-                                                then
-                                                    Just outcome_
-
-                                                else
-                                                    Nothing
-                                            )
+                            (\cachedTests ->
+                                if hash == cachedTests.hash then
+                                    Dict.get unitTest.labels cachedTests.unitTests
+                                        -- As an optimization, passing unit tests without debug logs are not stored.
+                                        |> Maybe.withDefault ( UnitTestPass, noDebugLogs )
 
                                 else
                                     Nothing
                             )
 
-                outcome =
-                    case maybeCachedOutcome of
-                        Just outcome_ ->
-                            outcome_
+                ( expectation, debugLogs ) =
+                    case maybeCached of
+                        Just cached ->
+                            cached
 
                         Nothing ->
-                            let
-                                ( expectations, isFuzzTest, usedDebugLog ) =
-                                    config.run ()
-                            in
-                            { outcome = outcomeFromExpectations expectations
-                            , isFuzzTest = isFuzzTest
-                            , usedDebugLog = usedDebugLog
-                            }
+                            ( unitTest.thunk (), getAndClearDebugLogs False )
             in
             Time.now
-                |> Task.perform (Complete metadata config.labels outcome startTime)
-
-
-lastTwoReversed : List a -> Maybe ( a, a )
-lastTwoReversed list =
-    case list of
-        [ a, b ] ->
-            Just ( b, a )
-
-        _ :: rest ->
-            lastTwoReversed rest
-
-        _ ->
-            Nothing
+                |> Task.perform (Complete hash unitTest.labels expectation debugLogs remainingUnitTests startTime)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -195,6 +165,15 @@ update msg ({ testReporter } as model) =
     case msg of
         Receive val ->
             case Decode.decodeValue JsMessage.decoder val of
+                Ok RunUnitTests ->
+                    ( model
+                    , Task.perform DispatchUnitTest Time.now
+                    )
+
+                Ok (RunFuzzTest testId) ->
+                    -- TODO: Run fuzz test
+                    ( model, Cmd.none )
+
                 Ok (Summary duration failed todos) ->
                     let
                         testCount =
@@ -242,10 +221,10 @@ update msg ({ testReporter } as model) =
                     in
                     ( model, cmd )
 
-        Dispatch startTime ->
-            ( model, dispatch model startTime )
+        DispatchUnitTest startTime ->
+            ( model, dispatchUnitTest model startTime )
 
-        Complete metadata labels outcome2 startTime endTime ->
+        Complete hash labels expectation debugLogs remainingUnitTests startTime endTime ->
             let
                 duration =
                     Time.posixToMillis endTime - Time.posixToMillis startTime
@@ -268,32 +247,16 @@ update msg ({ testReporter } as model) =
                 isFinished =
                     nextTestToRun >= model.runInfo.testCount
             in
-            if isFinished || isFailure outcome2.outcome then
-                let
-                    cmd =
-                        sendResults isFinished testReporter results
-                in
-                if isFinished then
-                    -- Don't bother updating the model, since we're done
-                    ( model, cmd )
-
-                else
-                    -- Clear out the results, now that we've flushed them.
-                    ( { model | nextTestToRun = nextTestToRun, results = [] }
-                    , Cmd.batch
-                        [ cmd
-                        , Task.perform Dispatch Time.now
-                        ]
-                    )
-
-            else
-                ( { model | nextTestToRun = nextTestToRun, results = results }
-                , Task.perform Dispatch Time.now
-                )
+            ( { model | unitTests = remainingUnitTests }
+            , Cmd.batch
+                [ cmd
+                , sendResults isFinished testReporter results
+                ]
+            )
 
 
-sendResults : Bool -> TestReporter -> List ( TestId, TestResult ) -> Cmd msg
-sendResults isFinished testReporter results =
+sendResults : TestReporter -> List ( TestId, TestResult ) -> Cmd msg
+sendResults testReporter results =
     let
         typeStr =
             if isFinished then
@@ -338,11 +301,6 @@ sendResults isFinished testReporter results =
 sendBegin : Model -> Cmd msg
 sendBegin model =
     let
-        baseFields =
-            [ ( "type", Encode.string "BEGIN" )
-            , ( "testCount", Encode.int model.runInfo.testCount )
-            ]
-
         extraFields =
             case model.testReporter.reportBegin model.runInfo of
                 Just report ->
@@ -350,8 +308,14 @@ sendBegin model =
 
                 Nothing ->
                     []
+
+        fields =
+            ( "type", Encode.string "BEGIN" )
+                :: ( "testCount", Encode.int model.runInfo.testCount )
+                :: ( "fuzzTests", Encode.list Encode.int (Dict.keys model.fuzzTests) )
+                :: extraFields
     in
-    Encode.object (baseFields ++ extraFields)
+    Encode.object fields
         |> elmTestPort__send
 
 
@@ -390,7 +354,6 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, previousRu
                 , initialSeed = initialSeed
                 }
             , processes = processes
-            , nextTestToRun = index
             , results = []
             , testReporter = testReporter
             , autoFail = autoFail
@@ -398,7 +361,7 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, previousRu
             }
 
         cmd =
-            Task.perform Dispatch Time.now
+            Task.perform DispatchUnitTest Time.now
     in
     ( model
     , Cmd.batch
@@ -417,7 +380,7 @@ failInit message report _ =
     let
         model : Model
         model =
-            { unitTests = Dict.empty
+            { unitTests = []
             , fuzzTests = Dict.empty
             , runInfo =
                 { testCount = 0
@@ -427,7 +390,6 @@ failInit message report _ =
                 , initialSeed = 0
                 }
             , processes = 0
-            , nextTestToRun = 0
             , results = []
             , testReporter = createReporter report
             , autoFail = Nothing
@@ -456,7 +418,7 @@ toIndexedDict list =
         |> Dict.fromList
 
 
-foo : a -> String -> Maybe Test
+foo : a -> JsDefinitionName -> Maybe Test
 foo value jsDefinitionName =
     check value
         |> Maybe.map (Test.Runner.tagTest jsDefinitionName)
@@ -478,14 +440,14 @@ tests. If the fuzz test fails, the failing run is run
 again and that time we do collect logs.
 
 -}
-getAndClearDebugLogs : Bool -> Decode.Value
+getAndClearDebugLogs : Bool -> DebugLogs
 getAndClearDebugLogs =
     placeholderReplaceMe___ "getAndClearDebugLogs"
 
 
 {-| Takes a `jsDefinitionName` and returns its hash.
 -}
-getHash : String -> String
+getHash : JsDefinitionName -> String
 getHash =
     placeholderReplaceMe___ "getHash"
 
