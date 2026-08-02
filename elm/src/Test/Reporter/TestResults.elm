@@ -3,8 +3,6 @@ module Test.Reporter.TestResults exposing
     , Outcome(..)
     , SummaryInfo
     , TestResult
-    , isFailure
-    , outcomeFromExpectations
     )
 
 import Expect exposing (Expectation)
@@ -23,6 +21,7 @@ type alias TestResult =
     { labels : List String
     , outcome : Outcome
     , duration : Float -- in milliseconds
+    , hasDebugLogs : Bool
     }
 
 
@@ -40,38 +39,3 @@ type alias Failure =
     , description : String
     , reason : Reason
     }
-
-
-isFailure : Outcome -> Bool
-isFailure outcome =
-    case outcome of
-        Failed _ ->
-            True
-
-        _ ->
-            False
-
-
-outcomeFromExpectations : List Expectation -> Outcome
-outcomeFromExpectations expectations =
-    case expectations of
-        -- The type of test runner functions says that they return `List Expectation`,
-        -- but in practice they only ever return lists with exactly one item:
-        -- https://github.com/elm-explorations/test/pull/244
-        -- That PR was reverted because it unfortunately was a breaking change for the package:
-        -- https://github.com/elm-explorations/test/commit/11f70d5fc0b6fdc88d7a34ea1d10f56969890493
-        -- But to keep things simpler here, we only support exactly one expectation.
-        [ expectation ] ->
-            case Test.Runner.getFailureReason expectation of
-                Nothing ->
-                    Passed (Test.Runner.getDistributionReport expectation)
-
-                Just failure ->
-                    if Test.Runner.isTodo expectation then
-                        Todo failure.description
-
-                    else
-                        Failed ( failure, Test.Runner.getDistributionReport expectation )
-
-        _ ->
-            Debug.todo ("A test somehow did not return exactly 1 expectation, it returned " ++ String.fromInt (List.length expectations) ++ "!")

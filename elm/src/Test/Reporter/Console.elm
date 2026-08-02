@@ -147,7 +147,7 @@ getStatus outcome =
 
 
 reportComplete : UseColor -> Results.TestResult -> Value
-reportComplete useColor { labels, outcome } =
+reportComplete useColor { labels, outcome, hasDebugLogs } =
     Encode.object <|
         ( "type", Encode.string "complete" )
             :: ( "status", Encode.string (getStatus outcome) )
@@ -156,10 +156,18 @@ reportComplete useColor { labels, outcome } =
                         -- No failures of any kind.
                         case distributionReportToString distributionReport of
                             Nothing ->
-                                []
+                                if hasDebugLogs then
+                                    [ ( "message"
+                                      , passedLabelsToText labels
+                                            |> textToValue useColor
+                                      )
+                                    ]
+
+                                else
+                                    []
 
                             Just report ->
-                                [ ( "distributionReport"
+                                [ ( "message"
                                   , report
                                         |> passedToText labels
                                         |> textToValue useColor

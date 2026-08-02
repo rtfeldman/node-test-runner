@@ -22,7 +22,7 @@ import Task
 import Test exposing (Test)
 import Test.Distribution exposing (DistributionReport(..))
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome(..), TestResult, isFailure, outcomeFromExpectations)
+import Test.Reporter.TestResults exposing (Outcome(..), TestResult)
 import Test.Runner exposing (FuzzTest, FuzzTestExpectation(..), Tests, UnitTest, UnitTestExpectation(..))
 import Test.Runner.Failure exposing (Reason(..))
 import Test.Runner.Ports as Ports exposing (JsMessage(..))
@@ -154,6 +154,9 @@ dispatchUnitTest testId model =
                         Nothing ->
                             ( runWithDuration unitTest.thunk, getAndClearDebugLogs False )
 
+                hasDebugLogs =
+                    isEmptyDebugLogs debugLogs
+
                 outcome =
                     case expectation of
                         UnitTestPass ->
@@ -177,13 +180,14 @@ dispatchUnitTest testId model =
                     { labels = unitTest.labels
                     , outcome = outcome
                     , duration = duration
+                    , hasDebugLogs = hasDebugLogs
                     }
 
                 report =
                     model.testReporter.reportComplete result
 
                 expectationElmCode =
-                    if expectation == UnitTestPass && isEmptyDebugLogs debugLogs then
+                    if expectation == UnitTestPass && hasDebugLogs then
                         Nothing
 
                     else
@@ -289,6 +293,9 @@ dispatchFuzzTest testId model =
                                                 )
                                    )
 
+                hasDebugLogs =
+                    isEmptyDebugLogs debugLogs
+
                 outcome =
                     case expectation of
                         FuzzTestPass { distributionReport } ->
@@ -308,13 +315,14 @@ dispatchFuzzTest testId model =
                     { labels = fuzzTest.labels
                     , outcome = outcome
                     , duration = duration
+                    , hasDebugLogs = hasDebugLogs
                     }
 
                 report =
                     model.testReporter.reportComplete result
 
                 expectationElmCode =
-                    if expectation == FuzzTestPass { distributionReport = NoDistribution } && isEmptyDebugLogs debugLogs then
+                    if expectation == FuzzTestPass { distributionReport = NoDistribution } && hasDebugLogs then
                         Nothing
 
                     else

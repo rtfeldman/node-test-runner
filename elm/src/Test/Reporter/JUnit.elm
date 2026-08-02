@@ -119,6 +119,7 @@ encodeExtraFailure _ =
                   }
                 , NoDistribution
                 )
+        , hasDebugLogs = False
         }
 
 
