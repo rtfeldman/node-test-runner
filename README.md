@@ -178,6 +178,8 @@ Run with a specific fuzzer seed, rather than a randomly generated seed. This all
 
     elm-test --seed 336948560956134
 
+On top of that, if you run elm-test without the `--seed` flag, elm-test will automatically use the same seed as the last run if there was a fuzz test failure, letting you reproduce errors without doing anything. It even tries to fast-forward you through the fuzzing. So if it took some time for the fuzzer to find the problem the first time, the next run should be instant.
+
 ### --fuzz
 
 Define how many times each fuzz-test should run. Defaults to `100`.

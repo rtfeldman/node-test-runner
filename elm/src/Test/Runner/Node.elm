@@ -1,4 +1,4 @@
-module Test.Runner.Node exposing (checkTagged, run, TestProgram, PreviousRun)
+module Test.Runner.Node exposing (checkTagged, run, TestProgram, PreviousRun, SeedChoice(..))
 
 {-|
 
@@ -8,7 +8,7 @@ module Test.Runner.Node exposing (checkTagged, run, TestProgram, PreviousRun)
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs checkTagged, run, TestProgram, PreviousRun
+@docs checkTagged, run, TestProgram, PreviousRun, SeedChoice
 
 -}
 
@@ -43,25 +43,22 @@ type alias DebugLogs =
     Decode.Value
 
 
-type alias InitArgs =
-    { initialSeed : Int
-    , globs : List String
-    , paths : List String
-    , fuzzRuns : Int
-    , tests : Tests
-    , report : Report
-    , previousRun : PreviousRun
-    }
-
-
 type alias RunnerOptions =
-    { seed : Int
+    { seed : SeedChoice
     , runs : Int
     , report : Report
     , globs : List String
     , paths : List String
     , previousRun : PreviousRun
     }
+
+
+type SeedChoice
+    = UserSuppliedSeed Int
+      -- Note: We might not use the random seed here;
+      -- we might end up using the same seed as the previous run instead
+      -- if that reproduces a fuzz test failure.
+    | RandomSeed Int
 
 
 type alias Model =
@@ -203,22 +200,35 @@ dispatchFuzzTest testId model =
                     fuzzTest.tag
 
                 fuzzerInts =
-                    case Dict.get jsDefinitionName model.previousRun.cachedTests of
-                        Nothing ->
-                            []
+                    if
+                        -- In `init` we use the same seed as the previous run if there was a failing fuzz test.
+                        -- If the user has explicitly passed a different seed, don’t try to reproduce the previous
+                        -- failure. They are clearly trying to run something else.
+                        (model.runInfo.initialSeed == model.previousRun.initialSeed)
+                            -- The number of fuzz runs must be the same (or more) as the previous run – otherwise
+                            -- the user has explicitly passed fewer, and we can’t know if the previous failure
+                            -- would hit or not. Since the seed is still the same, there’s still a chance it will.
+                            && (model.runInfo.fuzzRuns >= model.previousRun.fuzzRuns)
+                    then
+                        case Dict.get jsDefinitionName model.previousRun.cachedTests of
+                            Nothing ->
+                                []
 
-                        Just cachedTests ->
-                            case Dict.get fuzzTest.labels cachedTests.fuzzTests of
-                                Nothing ->
-                                    []
+                            Just cachedTests ->
+                                case Dict.get fuzzTest.labels cachedTests.fuzzTests of
+                                    Nothing ->
+                                        []
 
-                                Just ( expectation_, _ ) ->
-                                    case expectation_ of
-                                        FuzzTestPass _ ->
-                                            []
+                                    Just ( expectation_, _ ) ->
+                                        case expectation_ of
+                                            FuzzTestPass _ ->
+                                                []
 
-                                        FuzzTestFail data ->
-                                            data.fuzzerInts
+                                            FuzzTestFail data ->
+                                                data.fuzzerInts
+
+                    else
+                        []
 
                 seed =
                     Random.initialSeed model.runInfo.initialSeed
@@ -487,8 +497,8 @@ update msg ({ testReporter } as model) =
                                     )
 
 
-init : InitArgs -> Bool -> ( Model, Cmd Msg )
-init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } shouldSendBegin =
+init : RunnerOptions -> Tests -> Bool -> ( Model, Cmd Msg )
+init { globs, paths, runs, seed, report, previousRun } tests shouldSendBegin =
     let
         autoFail =
             case ( tests.seenOnly, tests.seenSkip ) of
@@ -510,6 +520,18 @@ init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } shouldS
         testReporter =
             createReporter report
 
+        initialSeed =
+            case seed of
+                UserSuppliedSeed seed_ ->
+                    seed_
+
+                RandomSeed seed_ ->
+                    if previousRunHasFailingFuzzTest previousRun tests.fuzzTests then
+                        previousRun.initialSeed
+
+                    else
+                        seed_
+
         model : Model
         model =
             { unitTests = toIndexedDict tests.unitTests
@@ -518,7 +540,7 @@ init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } shouldS
                 { testCount = testCount
                 , globs = globs
                 , paths = paths
-                , fuzzRuns = fuzzRuns
+                , fuzzRuns = runs
                 , initialSeed = initialSeed
                 }
             , testReporter = testReporter
@@ -545,7 +567,7 @@ init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } shouldS
     , if shouldSendBegin then
         Cmd.batch
             [ Ports.sendBegin
-                testCount
+                initialSeed
                 debugLogs
                 (model.testReporter.reportBegin model.runInfo)
             , trawlNext
@@ -589,6 +611,33 @@ failInit message report _ =
             Ports.sendSummary 1 (Encode.string message)
     in
     ( model, cmd )
+
+
+previousRunHasFailingFuzzTest : PreviousRun -> List FuzzTest -> Bool
+previousRunHasFailingFuzzTest previousRun =
+    List.any
+        (\fuzzTest ->
+            let
+                jsDefinitionName =
+                    fuzzTest.tag
+            in
+            case Dict.get jsDefinitionName previousRun.cachedTests of
+                Nothing ->
+                    False
+
+                Just cachedTests ->
+                    case Dict.get fuzzTest.labels cachedTests.fuzzTests of
+                        Nothing ->
+                            False
+
+                        Just ( expectation_, _ ) ->
+                            case expectation_ of
+                                FuzzTestPass _ ->
+                                    False
+
+                                FuzzTestFail _ ->
+                                    True
+        )
 
 
 toIndexedDict : List a -> Dict Int a
@@ -651,7 +700,7 @@ placeholderReplaceMe___ name =
 {-| Run the tests.
 -}
 run : RunnerOptions -> List ( String, List (Maybe Test) ) -> TestProgram
-run { runs, seed, report, globs, paths, previousRun } possiblyTests =
+run options possiblyTests =
     let
         testsList =
             possiblyTests
@@ -670,7 +719,7 @@ run { runs, seed, report, globs, paths, previousRun } possiblyTests =
     in
     if List.isEmpty testsList then
         Platform.worker
-            { init = failInit (noTestsFoundError globs) report
+            { init = failInit (noTestsFoundError options.globs) options.report
             , update = \_ model -> ( model, Cmd.none )
             , subscriptions = \_ -> Sub.none
             }
@@ -679,20 +728,9 @@ run { runs, seed, report, globs, paths, previousRun } possiblyTests =
         let
             tests =
                 Test.Runner.toTests (Test.concat testsList)
-
-            wrappedInit =
-                init
-                    { initialSeed = seed
-                    , globs = globs
-                    , paths = paths
-                    , fuzzRuns = runs
-                    , tests = tests
-                    , report = report
-                    , previousRun = previousRun
-                    }
         in
         Platform.worker
-            { init = wrappedInit
+            { init = init options tests
             , update = update
             , subscriptions = \_ -> Ports.receive Receive
             }
