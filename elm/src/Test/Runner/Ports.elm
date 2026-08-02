@@ -1,4 +1,4 @@
-port module Test.Runner.Ports exposing (JsMessage(..), receive, sendBegin, sendError, sendResult, sendSummary)
+port module Test.Runner.Ports exposing (JsMessage(..), receive, sendBegin, sendError, sendReady, sendResult, sendSummary)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
@@ -13,8 +13,8 @@ port elmTestPort__send : Decode.Value -> Cmd msg
 port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 
-sendBegin : Int -> Int -> Maybe Decode.Value -> Cmd msg
-sendBegin unitTests fuzzTests maybeReport =
+sendBegin : Int -> Maybe Decode.Value -> Cmd msg
+sendBegin testCount maybeReport =
     let
         extraFields =
             case maybeReport of
@@ -28,10 +28,20 @@ sendBegin unitTests fuzzTests maybeReport =
     elmTestPort__send
         (Encode.object
             (( "type", Encode.string "BEGIN" )
-                :: ( "unitTests", Encode.int unitTests )
-                :: ( "fuzzTests", Encode.int fuzzTests )
+                :: ( "testCount", Encode.int testCount )
                 :: extraFields
             )
+        )
+
+
+sendReady : List Int -> List Int -> Cmd msg
+sendReady unitTests fuzzTests =
+    elmTestPort__send
+        (Encode.object
+            [ ( "type", Encode.string "READY" )
+            , ( "unitTests", Encode.list Encode.int unitTests )
+            , ( "fuzzTests", Encode.list Encode.int fuzzTests )
+            ]
         )
 
 
