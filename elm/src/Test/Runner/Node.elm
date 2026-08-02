@@ -155,7 +155,7 @@ dispatchUnitTest testId model =
                             ( runWithDuration unitTest.thunk, getAndClearDebugLogs False )
 
                 hasDebugLogs =
-                    isEmptyDebugLogs debugLogs
+                    not (isEmptyDebugLogs debugLogs)
 
                 outcome =
                     case expectation of
@@ -187,7 +187,7 @@ dispatchUnitTest testId model =
                     model.testReporter.reportComplete result
 
                 expectationElmCode =
-                    if expectation == UnitTestPass && hasDebugLogs then
+                    if expectation == UnitTestPass && not hasDebugLogs then
                         Nothing
 
                     else
@@ -294,7 +294,7 @@ dispatchFuzzTest testId model =
                                    )
 
                 hasDebugLogs =
-                    isEmptyDebugLogs debugLogs
+                    not (isEmptyDebugLogs debugLogs)
 
                 outcome =
                     case expectation of
@@ -322,7 +322,7 @@ dispatchFuzzTest testId model =
                     model.testReporter.reportComplete result
 
                 expectationElmCode =
-                    if expectation == FuzzTestPass { distributionReport = NoDistribution } && hasDebugLogs then
+                    if expectation == FuzzTestPass { distributionReport = NoDistribution } && not hasDebugLogs then
                         Nothing
 
                     else
