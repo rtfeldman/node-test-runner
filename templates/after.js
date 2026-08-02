@@ -1,5 +1,5 @@
-function run(index, receive) {
-  var app = Elm.Test.Generated.Main.init({ flags: index });
+function run(shouldSendBegin, receive) {
+  var app = Elm.Test.Generated.Main.init({ flags: shouldSendBegin });
   // Without this, each run leaks memory in single-threaded mode:
   Elm = null;
   app.ports.elmTestPort__send.subscribe(receive);
@@ -19,7 +19,7 @@ function main() {
   client.setEncoding('utf8');
   client.setNoDelay(true);
 
-  var send = run(Number(process.argv[2]), function (msg) {
+  var send = run(false, function (msg) {
     // We split incoming messages on the socket on newlines. The gist is that node
     // is rather unpredictable in whether or not a single `write` will result in a
     // single `on('data')` callback. Sometimes it does, sometimes multiple writes

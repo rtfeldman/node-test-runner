@@ -96,7 +96,7 @@ type alias CachedTests =
 {-| A program which will run tests and report their results.
 -}
 type alias TestProgram =
-    Platform.Program Int Model Msg
+    Program Bool Model Msg
 
 
 type Msg
@@ -382,8 +382,8 @@ update msg ({ testReporter } as model) =
             ( model, Ports.sendError (Decode.errorToString err) )
 
 
-init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } index =
+init : InitArgs -> Bool -> ( Model, Cmd Msg )
+init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } shouldSendBegin =
     let
         autoFail =
             case ( tests.seenOnly, tests.seenSkip ) of
@@ -422,8 +422,7 @@ init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } index =
             }
     in
     ( model
-      -- TODO: `index` doesn't really make sense anymore.
-    , if index == 0 then
+    , if shouldSendBegin then
         Ports.sendBegin
             (Dict.size model.unitTests)
             (Dict.size model.fuzzTests)
@@ -434,7 +433,7 @@ init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } index =
     )
 
 
-failInit : String -> Report -> Int -> ( Model, Cmd Msg )
+failInit : String -> Report -> Bool -> ( Model, Cmd Msg )
 failInit message report _ =
     let
         model : Model
@@ -523,7 +522,7 @@ placeholderReplaceMe___ name =
 
 {-| Run the tests.
 -}
-run : RunnerOptions -> List ( String, List (Maybe Test) ) -> Program Int Model Msg
+run : RunnerOptions -> List ( String, List (Maybe Test) ) -> TestProgram
 run { runs, seed, report, globs, paths, previousRun } possiblyTests =
     let
         testsList =
