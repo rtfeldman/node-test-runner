@@ -10,7 +10,6 @@ testEqual =
     test "Expect.equal works" <|
         \() ->
             Something.ultimateAnswer
-                |> Debug.log "HÄR"
                 |> Expect.equal 42
 
 
