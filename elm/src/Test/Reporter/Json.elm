@@ -29,8 +29,10 @@ reportComplete { duration, labels, outcome } =
         , ( "failures", Encode.list identity (encodeFailures outcome) )
         , ( "distributionReports", Encode.list identity (encodeDistributionReports outcome) )
 
-        -- We have a more exact float these days, but to avoid a breaking change we round it to an int.
+        -- Keep the "duration" field Int for backwards compatibility,
+        -- and also expose the new Float field for more precision.
         , ( "duration", Encode.string <| String.fromInt (round duration) )
+        , ( "durationFloat", Encode.string <| String.fromFloat duration )
         ]
 
 
