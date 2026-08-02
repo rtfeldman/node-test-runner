@@ -13,8 +13,8 @@ port elmTestPort__send : Decode.Value -> Cmd msg
 port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 
-sendBegin : Int -> Maybe Decode.Value -> Cmd msg
-sendBegin testCount maybeReport =
+sendBegin : Int -> Decode.Value -> Maybe Decode.Value -> Cmd msg
+sendBegin testCount debugLogs maybeReport =
     let
         extraFields =
             case maybeReport of
@@ -29,6 +29,7 @@ sendBegin testCount maybeReport =
         (Encode.object
             (( "type", Encode.string "BEGIN" )
                 :: ( "testCount", Encode.int testCount )
+                :: ( "debugLogs", debugLogs )
                 :: extraFields
             )
         )

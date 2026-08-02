@@ -534,11 +534,19 @@ init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } shouldS
                 else
                     NotTrawling
             }
+
+        -- In the main thread, we log these.
+        -- In workers, we just clear them and ignore them –
+        -- they are identical to the main thread.
+        debugLogs =
+            getAndClearDebugLogs False
     in
     ( model
     , if shouldSendBegin then
         Cmd.batch
-            [ Ports.sendBegin testCount
+            [ Ports.sendBegin
+                testCount
+                debugLogs
                 (model.testReporter.reportBegin model.runInfo)
             , trawlNext
             ]
