@@ -156,6 +156,22 @@ Start the runner in watch mode. Your tests will automatically rerun whenever you
 
     elm-test --watch
 
+### --no-clear-console
+
+By default, the console is cleared before each run in watch mode, so you only see the latest information. If you don’t like this, turn it off with `--no-clear-console`.
+
+    elm-test --watch --no-clear-console
+
+### --unbuffered-logs
+
+elm-test collects all `Debug.log` output while executing a test, and displays it all once the test in question is finished. This way elm-test can print _which_ test the logs came from.
+
+If the function your are testing gets into an infinite loop, it means that your debug logs will never show up. Then it can be useful to have the logs print _immediately_ instead (at the loss of no longer being able to label which tests the logs came from). To avoid confusion, use [Test.only](https://package.elm-lang.org/packages/elm-explorations/test/latest/Test#only) to isolate your test, or pass `--workers 1` to run in single-threaded mode to avoid oddly mixed output:
+
+    elm-test --unbuffered-logs --workers 1
+
+For _failing_ fuzz tests, elm-test only prints `Debug.log` output from the run of the fuzz test that produced the failure, which is usually what you want to debug. (Earlier, passing runs of the function with different input is just noise). For _passing_ fuzz tests, elm-test _ignores_ your `Debug.log` calls (and instead displays a note about this). Let’s imagine you are debugging a failing fuzz test. After a while it finally passes. There is no longer a failing run, so which one should we pick logs from? All of them? But would you really like to see the screen fill with 100+ repetitions of your logs at that point? Probably not. But if you actually _do_ want to show logs from all runs, you can use `--unbuffered-logs` for this use case, too. Also remember that you can make the test fail from anywhere using `Debug.todo` – that’s also a way to make logs appear!
+
 ### --seed
 
 Run with a specific fuzzer seed, rather than a randomly generated seed. This allows reproducing a failing fuzz-test. The command needed to reproduce (including the `--seed` flag) is printed after each test run. Copy, paste and run it!
