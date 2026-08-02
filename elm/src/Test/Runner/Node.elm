@@ -578,7 +578,6 @@ failInit message report _ =
             }
 
         cmd =
-            -- TODO: This isn't using the reporter? How does that work?
             Ports.sendSummary 1 (Encode.string message)
     in
     ( model, cmd )
