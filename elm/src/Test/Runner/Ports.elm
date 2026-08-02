@@ -35,12 +35,21 @@ sendBegin unitTests fuzzTests maybeReport =
         )
 
 
-sendResult : Int -> String -> List String -> Maybe String -> Decode.Value -> Decode.Value -> Cmd msg
-sendResult testId jsDefinitionName labels expectationElmCode debugLogs report =
+sendResult : Int -> Bool -> String -> List String -> Maybe String -> Decode.Value -> Decode.Value -> Cmd msg
+sendResult testId isFuzzTest jsDefinitionName labels expectationElmCode debugLogs report =
     elmTestPort__send
         (Encode.object
             [ ( "type", Encode.string "RESULT" )
             , ( "testId", Encode.int testId )
+            , ( "testType"
+              , Encode.string
+                    (if isFuzzTest then
+                        "fuzz"
+
+                     else
+                        "unit"
+                    )
+              )
             , ( "jsDefinitionName", Encode.string jsDefinitionName )
             , ( "labels", Encode.list Encode.string labels )
             , ( "expectationElmCode", encodeMaybe Encode.string expectationElmCode )

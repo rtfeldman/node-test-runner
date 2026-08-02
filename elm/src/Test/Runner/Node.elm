@@ -46,7 +46,6 @@ type alias DebugLogs =
 
 type alias InitArgs =
     { initialSeed : Int
-    , processes : Int
     , globs : List String
     , paths : List String
     , fuzzRuns : Int
@@ -62,7 +61,6 @@ type alias RunnerOptions =
     , report : Report
     , globs : List String
     , paths : List String
-    , processes : Int
     , previousRun : PreviousRun
     }
 
@@ -72,7 +70,6 @@ type alias Model =
     , fuzzTests : Dict TestId FuzzTest
     , runInfo : RunInfo
     , testReporter : TestReporter
-    , processes : Int
     , autoFail : Maybe String
     , previousRun : PreviousRun
     }
@@ -193,7 +190,7 @@ dispatchUnitTest testId model =
                         Just (Debug.toString expectation)
             in
             ( model
-            , Ports.sendResult testId jsDefinitionName unitTest.labels expectationElmCode debugLogs report
+            , Ports.sendResult testId False jsDefinitionName unitTest.labels expectationElmCode debugLogs report
             )
 
 
@@ -327,7 +324,7 @@ dispatchFuzzTest testId model =
                             |> Just
             in
             ( model
-            , Ports.sendResult testId jsDefinitionName fuzzTest.labels expectationElmCode debugLogs report
+            , Ports.sendResult testId True jsDefinitionName fuzzTest.labels expectationElmCode debugLogs report
             )
 
 
@@ -378,7 +375,7 @@ update msg ({ testReporter } as model) =
 
 
 init : InitArgs -> Int -> ( Model, Cmd Msg )
-init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } index =
+init { globs, paths, fuzzRuns, initialSeed, report, tests, previousRun } index =
     let
         autoFail =
             case ( tests.seenOnly, tests.seenSkip ) of
@@ -411,7 +408,6 @@ init { processes, globs, paths, fuzzRuns, initialSeed, report, tests, previousRu
                 , fuzzRuns = fuzzRuns
                 , initialSeed = initialSeed
                 }
-            , processes = processes
             , testReporter = testReporter
             , autoFail = autoFail
             , previousRun = previousRun
@@ -444,7 +440,6 @@ failInit message report _ =
                 , fuzzRuns = 0
                 , initialSeed = 0
                 }
-            , processes = 0
             , testReporter = createReporter report
             , autoFail = Nothing
             , previousRun =
@@ -521,7 +516,7 @@ placeholderReplaceMe___ name =
 {-| Run the tests.
 -}
 run : RunnerOptions -> List ( String, List (Maybe Test) ) -> Program Int Model Msg
-run { runs, seed, report, globs, paths, processes, previousRun } possiblyTests =
+run { runs, seed, report, globs, paths, previousRun } possiblyTests =
     let
         testsList =
             possiblyTests
@@ -553,7 +548,6 @@ run { runs, seed, report, globs, paths, processes, previousRun } possiblyTests =
             wrappedInit =
                 init
                     { initialSeed = seed
-                    , processes = processes
                     , globs = globs
                     , paths = paths
                     , fuzzRuns = runs
