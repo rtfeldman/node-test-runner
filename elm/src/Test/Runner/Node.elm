@@ -82,16 +82,6 @@ type alias PreviousRun =
     }
 
 
-{-| A program which will run tests and report their results.
--}
-type alias TestProgram =
-    Platform.Program Int Model Msg
-
-
-type Msg
-    = Receive (Result Decode.Error JsMessage)
-
-
 type alias CachedTests =
     { hash : String
 
@@ -101,6 +91,16 @@ type alias CachedTests =
     -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
     , fuzzTests : Dict (List String) ( FuzzTestExpectation, DebugLogs )
     }
+
+
+{-| A program which will run tests and report their results.
+-}
+type alias TestProgram =
+    Platform.Program Int Model Msg
+
+
+type Msg
+    = Receive (Result Decode.Error JsMessage)
 
 
 noDebugLogs : DebugLogs
