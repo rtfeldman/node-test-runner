@@ -17,7 +17,6 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Platform
 import Random
-import Set exposing (Set)
 import Task
 import Test exposing (Test)
 import Test.Distribution exposing (DistributionReport(..))
@@ -203,9 +202,6 @@ dispatchFuzzTest testId model =
                 jsDefinitionName =
                     fuzzTest.tag
 
-                hash =
-                    getHash jsDefinitionName
-
                 fuzzerInts =
                     case Dict.get jsDefinitionName model.previousRun.cachedTests of
                         Nothing ->
@@ -236,7 +232,7 @@ dispatchFuzzTest testId model =
                                         runWithDuration (\() -> fuzzTest.thunk seed model.runInfo.fuzzRuns fuzzerInts)
                                 in
                                 case expectation_ of
-                                    FuzzTestPass data ->
+                                    FuzzTestPass _ ->
                                         ( expectation_
                                         , duration_
                                         , getAndClearDebugLogs False

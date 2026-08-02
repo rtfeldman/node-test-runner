@@ -5,9 +5,7 @@ module Test.Reporter.TestResults exposing
     , TestResult
     )
 
-import Expect exposing (Expectation)
 import Test.Distribution exposing (DistributionReport)
-import Test.Runner
 import Test.Runner.Failure exposing (Reason)
 
 
