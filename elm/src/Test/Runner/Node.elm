@@ -32,14 +32,24 @@ import Test.Runner.Ports as Ports exposing (JsMessage(..))
 -- TYPES
 
 
+{-| A `TestId` is just an index into an `Array` of tests.
+-}
 type alias TestId =
     Int
 
 
+{-| The compiled JavaScript name of an exposed value,
+such as `$user$project$Tests$suite`.
+-}
 type alias JsDefinitionName =
     String
 
 
+{-| Collected `Debug.log`s during a test (or during initialization before running any tests).
+There are stored as `Decode.Value` instead of `List String` as an optimization. They are
+collected in JavaScript code, given to Elm for a short while, and then sent through a port.
+So going to from a JS array, to an Elm list, back to a JS array is pretty wasteful.
+-}
 type alias DebugLogs =
     Decode.Value
 
