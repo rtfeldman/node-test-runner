@@ -12,6 +12,7 @@ passed and 2 if any failed. Returns 1 if something went wrong.
 
 -}
 
+import Array exposing (Array)
 import Dict exposing (Dict)
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -62,8 +63,8 @@ type SeedChoice
 
 
 type alias Model =
-    { unitTests : Dict TestId UnitTest
-    , fuzzTests : Dict TestId FuzzTest
+    { unitTests : Array UnitTest
+    , fuzzTests : Array FuzzTest
     , runInfo : RunInfo
     , testReporter : TestReporter
     , autoFail : Maybe String
@@ -126,7 +127,7 @@ isEmptyDebugLogs debugLogs =
 
 dispatchUnitTest : TestId -> Model -> Cmd Msg
 dispatchUnitTest testId model =
-    case Dict.get testId model.unitTests of
+    case Array.get testId model.unitTests of
         Nothing ->
             Ports.sendError ("Unit test not found: " ++ String.fromInt testId)
 
@@ -190,7 +191,7 @@ sendUnitTestResult testId unitTest expectation duration debugLogs testReporter =
 
 dispatchFuzzTest : TestId -> Model -> Cmd Msg
 dispatchFuzzTest testId model =
-    case Dict.get testId model.fuzzTests of
+    case Array.get testId model.fuzzTests of
         Nothing ->
             Ports.sendError ("Fuzz test not found: " ++ String.fromInt testId)
 
@@ -366,7 +367,7 @@ update msg ({ testReporter } as model) =
                     ( model, Cmd.none )
 
                 TrawlingUnitTests data ->
-                    case Dict.get data.current model.unitTests of
+                    case Array.get data.current model.unitTests of
                         Nothing ->
                             ( { model
                                 | cacheTrawl =
@@ -431,7 +432,7 @@ update msg ({ testReporter } as model) =
                                     )
 
                 TrawlingFuzzTests data ->
-                    case Dict.get data.current model.fuzzTests of
+                    case Array.get data.current model.fuzzTests of
                         Nothing ->
                             ( { model | cacheTrawl = NotTrawling }
                             , Ports.sendReady (List.reverse data.unitTests) (List.reverse data.fuzzTests)
@@ -515,7 +516,7 @@ init { globs, paths, runs, seed, report, previousRun } tests shouldSendBegin =
                     Just "Test.only and Test.skip were used"
 
         testCount =
-            List.length tests.unitTests + List.length tests.fuzzTests
+            Array.length tests.unitTests + Array.length tests.fuzzTests
 
         testReporter =
             createReporter report
@@ -534,8 +535,8 @@ init { globs, paths, runs, seed, report, previousRun } tests shouldSendBegin =
 
         model : Model
         model =
-            { unitTests = toIndexedDict tests.unitTests
-            , fuzzTests = toIndexedDict tests.fuzzTests
+            { unitTests = tests.unitTests
+            , fuzzTests = tests.fuzzTests
             , runInfo =
                 { testCount = testCount
                 , globs = globs
@@ -588,8 +589,8 @@ failInit message report _ =
     let
         model : Model
         model =
-            { unitTests = Dict.empty
-            , fuzzTests = Dict.empty
+            { unitTests = Array.empty
+            , fuzzTests = Array.empty
             , runInfo =
                 { testCount = 0
                 , globs = []
@@ -613,38 +614,36 @@ failInit message report _ =
     ( model, cmd )
 
 
-previousRunHasFailingFuzzTest : PreviousRun -> List FuzzTest -> Bool
+previousRunHasFailingFuzzTest : PreviousRun -> Array FuzzTest -> Bool
 previousRunHasFailingFuzzTest previousRun =
-    List.any
-        (\fuzzTest ->
-            let
-                jsDefinitionName =
-                    fuzzTest.tag
-            in
-            case Dict.get jsDefinitionName previousRun.cachedTests of
-                Nothing ->
-                    False
+    Array.foldl
+        (\fuzzTest hasFailingFuzzTest ->
+            if hasFailingFuzzTest then
+                hasFailingFuzzTest
 
-                Just cachedTests ->
-                    case Dict.get fuzzTest.labels cachedTests.fuzzTests of
-                        Nothing ->
-                            False
+            else
+                let
+                    jsDefinitionName =
+                        fuzzTest.tag
+                in
+                case Dict.get jsDefinitionName previousRun.cachedTests of
+                    Nothing ->
+                        False
 
-                        Just ( expectation_, _ ) ->
-                            case expectation_ of
-                                FuzzTestPass _ ->
-                                    False
+                    Just cachedTests ->
+                        case Dict.get fuzzTest.labels cachedTests.fuzzTests of
+                            Nothing ->
+                                False
 
-                                FuzzTestFail _ ->
-                                    True
+                            Just ( expectation_, _ ) ->
+                                case expectation_ of
+                                    FuzzTestPass _ ->
+                                        False
+
+                                    FuzzTestFail _ ->
+                                        True
         )
-
-
-toIndexedDict : List a -> Dict Int a
-toIndexedDict list =
-    list
-        |> List.indexedMap Tuple.pair
-        |> Dict.fromList
+        False
 
 
 checkTagged : a -> JsDefinitionName -> Maybe Test
