@@ -547,20 +547,40 @@ describe('flags', () => {
         path.join(rootDir, 'example-package')
       );
 
-    it('Should detect a too low version boundary by not compiling when using --dependencies oldest', () => {
-      const runResult = runTest(['--dependencies=oldest']);
-      assert.strictEqual(runResult.status, 1);
-      assert.strictEqual(runResult.stderr.includes('oneOrMore'), true);
+    describe('run tests', () => {
+      it('Should detect a too low version boundary by not compiling when using --dependencies oldest', () => {
+        const runResult = runTest(['--dependencies=oldest']);
+        assert.strictEqual(runResult.status, 1);
+        assert.strictEqual(runResult.stderr.includes('oneOrMore'), true);
+      });
+
+      it('Should compile when using --dependencies newest', () => {
+        const runResult = runTest(['--dependencies=newest']);
+        assert.strictEqual(runResult.status, 0);
+      });
+
+      it('Should also compile when not using the flag since it defaults to latest', () => {
+        const runResult = runTest(['--dependencies=newest']);
+        assert.strictEqual(runResult.status, 0);
+      });
     });
 
-    it('Should compile when using --dependencies newest', () => {
-      const runResult = runTest(['--dependencies=newest']);
-      assert.strictEqual(runResult.status, 0);
-    });
+    describe('make', () => {
+      it('Should detect a too low version boundary by not compiling when using --dependencies oldest', () => {
+        const runResult = runTest(['make', '--dependencies=oldest']);
+        assert.strictEqual(runResult.status, 1);
+        assert.strictEqual(runResult.stderr.includes('oneOrMore'), true);
+      });
 
-    it('Should also compile when not using the flag since it defaults to latest', () => {
-      const runResult = runTest(['--dependencies=newest']);
-      assert.strictEqual(runResult.status, 0);
+      it('Should compile when using --dependencies newest', () => {
+        const runResult = runTest(['make', '--dependencies=newest']);
+        assert.strictEqual(runResult.status, 0);
+      });
+
+      it('Should also compile when not using the flag since it defaults to latest', () => {
+        const runResult = runTest(['make', '--dependencies=newest']);
+        assert.strictEqual(runResult.status, 0);
+      });
     });
   });
 
