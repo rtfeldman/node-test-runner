@@ -221,3 +221,25 @@ To run a tool installed locally using `npm` you can use `npx`:
 `npx` adds the local `node_modules/.bin/` folder to `$PATH` when it executes the command passed to it. This means that if you have installed `elm` locally, `elm-test` will automatically find that local installation.
 
 As mentioned in [Installation](#installation) we recommend installing elm-test locally in every project. This ensures all contributors and CI use the same version, to avoid nasty “works on my computer” issues.
+
+### --dependencies
+
+This is useful when developing an Elm Package (`"type": "package"` in elm.json).
+
+    elm-test --dependencies oldest
+
+Let’s say your package has the dependency `"elm/json": "1.0.0 <= v < 2.0.0"`. That allows a whole range of `elm/json` versions to be used with your package. Exactly which version of `elm/json` is going to be used in tests? Does it matter?
+
+Turns it it _does_ matter sometimes. For example, `elm/json` 1.1.0 added the `Json.Decode.oneOrMore` function. Let’s say you start using `oneOrMore` in your package. If the tests run with 1.1.0 or later, they are going to pass. But if they run with 1.0.0 (also allowed by the range), the tests are not even going to compile, because `oneOrMore` does not exist. Oops!
+
+When running `elm make` in a package project, the Elm compiler uses the _latest_ version permitted by the dependency ranges and makes sure that your project compiles. But it does not stop you from publishing a package with a too low version boundary.
+
+Tests to the rescue! By using `elm-test --dependencies oldest` your tests are going to be compiled and run with the _oldest_ permitted versions of your dependencies. If your use of the `oneOrMore` function has test coverage, the tests are going to fail (not compile)! The solution is to bump the lower bound: `"elm-test": "1.1.0 <= v < 2.0.0"`.
+
+`--dependencies` defaults to `newest`, because that was the behavior before the flag was added, and it is less surprising since it does the same thing as a plain `elm make`. But not now that you know about this little gotcha, go ahead and start using `--dependencies oldest` for your package!
+
+If you do start using `--dependencies oldest`, remember that your tests could fail due to bugs in a dependency that have been fixed in a later version. If that turns out to be the case, bump the lower bound.
+
+Note: Even with `--dependencies oldest` there are still edge cases. In the example above, let’s say your package also has another dependency, and that dependency in turn also depends on `elm/json`. But it has already specified that it wants at least 1.1.0. Then `--dependencies oldest` has no choice but installing 1.1.0, even if _your_ range allows 1.0.0. So `--dependencies oldest` is no guarantee that your lower version bounds are correct, but it does make it more likely.
+
+The flag is ignored for applications (`"type": "application"` in elm.json), because for applications all dependency versions are specified exactly (no ranges). (In rare edge cases, there _can_ be situations where your pinned _indirect_ dependencies can’t be honored perfectly, due to the merge between regular dependencies, test dependencies and the test runner dependencies that elm-test has to perform. But then we let the solver pick a working version and don’t consider the `--dependencies` flag.)

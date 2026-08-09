@@ -42,7 +42,7 @@ function elmTestWithYes(args, callback) {
  * @param { Array<string> } args
  * @param { string } [cwd]
  * @param { import('child_process').SpawnOptions } extraOpts
- * @returns
+ * @returns { import('child_process').SpawnSyncReturns<string> }
  */
 function execElmTest(args, cwd = fixturesDir, extraOpts = {}) {
   return spawnSync(
@@ -532,6 +532,34 @@ describe('flags', () => {
         path.join('tests', 'Passing', 'One.elm'),
       ]);
 
+      assert.strictEqual(runResult.status, 0);
+    });
+  });
+
+  describe('--dependencies', () => {
+    /**
+     * @param { Array<string>} args
+     * @returns { import('child_process').SpawnSyncReturns<string> }
+     */
+    const runTest = (args) =>
+      execElmTest(
+        [...args, 'tests/DependenciesTest.elm'],
+        path.join(rootDir, 'example-package')
+      );
+
+    it('Should detect a too low version boundary by not compiling when using --dependencies oldest', () => {
+      const runResult = runTest(['--dependencies=oldest']);
+      assert.strictEqual(runResult.status, 1);
+      assert.strictEqual(runResult.stderr.includes('oneOrMore'), true);
+    });
+
+    it('Should compile when using --dependencies newest', () => {
+      const runResult = runTest(['--dependencies=newest']);
+      assert.strictEqual(runResult.status, 0);
+    });
+
+    it('Should also compile when not using the flag since it defaults to latest', () => {
+      const runResult = runTest(['--dependencies=newest']);
       assert.strictEqual(runResult.status, 0);
     });
   });
