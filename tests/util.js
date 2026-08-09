@@ -13,7 +13,7 @@ const spawnOpts = {
 };
 
 module.exports = {
-  fixturesDir,
-  spawnOpts,
-  dummyBinPath,
+  dummyBinPath: dummyBinPath,
+  fixturesDir: fixturesDir,
+  spawnOpts: spawnOpts,
 };
