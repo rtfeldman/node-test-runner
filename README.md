@@ -243,3 +243,15 @@ If you do start using `--dependencies oldest`, remember that your tests could fa
 Note: Even with `--dependencies oldest` there are still edge cases. In the example above, let’s say your package also has another dependency, and that dependency in turn also depends on `elm/json`. But it has already specified that it wants at least 1.1.0. Then `--dependencies oldest` has no choice but installing 1.1.0, even if _your_ range allows 1.0.0. So `--dependencies oldest` is no guarantee that your lower version bounds are correct, but it does make it more likely.
 
 The flag is ignored for applications (`"type": "application"` in elm.json), because for applications all dependency versions are specified exactly (no ranges). (In rare edge cases, there _can_ be situations where your pinned _indirect_ dependencies can’t be honored perfectly, due to the merge between regular dependencies, test dependencies and the test runner dependencies that elm-test has to perform. But then we let the solver pick a working version and don’t consider the `--dependencies` flag.)
+
+If you use this together with `--offline`, beware that “oldest” and “newest” refer to what you packages you have on disk on your computer, not what the actually oldest and newest versions available on the package site are. Going back to the example with `"elm-json": "1.0.0 <= v < 2.0.0"`, if the only `elm/json` version you have on your computer is 1.1.0 then that’s what you’re gonna get with `--dependencies oldest --offline`. Even though 1.0.0 exists on the Internet, the tests are going to use 1.1.0 and therefore _not_ fail (as they would have with 1.0.0).
+
+### --offline
+
+Tell elm-test to fail instead of making HTTP request when “solving dependencies:”
+
+    elm-test --offline
+
+Before running tests, elm-test needs to merge your regular dependencies, test dependencies and dependencies of the test runner, and find a working set of versions. When doing so, elm-test needs to ask the package server for available versions of packages. The results are cached in `~/.elm` (`$ELM_HOME`). If you already have a cache that is supposed to be up-to-date cache, and want elm-test to fail instead of making HTTP requests to the package server if it isn’t, pass `--offline`.
+
+Note: `--offline` only controls HTTP requests that elm-test makes directly. The Elm compiler might still make HTTP requests.
