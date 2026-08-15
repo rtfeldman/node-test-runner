@@ -1,4 +1,7 @@
-module Test.Runner.Node exposing (checkTagged, run, TestProgram, PreviousRun, SeedChoice(..))
+module Test.Runner.Node exposing
+    ( checkTagged, run, TestProgram, PreviousRun, SeedChoice(..)
+    , CachedFuzzTestExpectation(..)
+    )
 
 {-|
 
@@ -97,8 +100,21 @@ type alias CachedTests =
     , unitTests : Dict (List String) ( UnitTestExpectation, DebugLogs )
 
     -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
-    , fuzzTests : Dict (List String) ( FuzzTestExpectation, DebugLogs )
+    , fuzzTests : Dict (List String) ( CachedFuzzTestExpectation, DebugLogs )
     }
+
+
+{-| Same as `FuzzTestExpectation`, but without `rerunFailure`.
+-}
+type CachedFuzzTestExpectation
+    = CachedFuzzTestPass { distributionReport : DistributionReport }
+    | CachedFuzzTestFail
+        { given : Maybe String
+        , fuzzerInts : List Int
+        , description : String
+        , reason : Reason
+        , distributionReport : DistributionReport
+        }
 
 
 type CacheTrawl
@@ -232,10 +248,10 @@ dispatchFuzzTest testId model =
 
                                     Just ( expectation_, _ ) ->
                                         case expectation_ of
-                                            FuzzTestPass _ ->
+                                            CachedFuzzTestPass _ ->
                                                 []
 
-                                            FuzzTestFail data ->
+                                            CachedFuzzTestFail data ->
                                                 data.fuzzerInts
 
                     else
@@ -253,8 +269,8 @@ dispatchFuzzTest testId model =
                                         runWithDuration (\() -> fuzzTest.thunk seed model.runInfo.fuzzRuns fuzzerInts)
                                 in
                                 case expectation_ of
-                                    FuzzTestPass _ ->
-                                        ( expectation_
+                                    FuzzTestPass data ->
+                                        ( CachedFuzzTestPass data
                                         , duration_
                                         , getAndClearDebugLogs False
                                         )
@@ -270,7 +286,13 @@ dispatchFuzzTest testId model =
                                                                 |> (\() -> getAndClearDebugLogs False)
                                                        )
                                         in
-                                        ( expectation_
+                                        ( CachedFuzzTestFail
+                                            { given = data.given
+                                            , fuzzerInts = data.fuzzerInts
+                                            , description = data.description
+                                            , reason = data.reason
+                                            , distributionReport = data.distributionReport
+                                            }
                                         , duration_
                                         , newDebugLogs
                                         )
@@ -279,7 +301,7 @@ dispatchFuzzTest testId model =
             sendFuzzTestResult testId fuzzTest expectation duration debugLogs model.testReporter
 
 
-sendFuzzTestResult : TestId -> FuzzTest -> FuzzTestExpectation -> Float -> DebugLogs -> TestReporter -> Cmd Msg
+sendFuzzTestResult : TestId -> FuzzTest -> CachedFuzzTestExpectation -> Float -> DebugLogs -> TestReporter -> Cmd Msg
 sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
     let
         jsDefinitionName =
@@ -290,10 +312,10 @@ sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
 
         outcome =
             case expectation of
-                FuzzTestPass { distributionReport } ->
+                CachedFuzzTestPass { distributionReport } ->
                     Passed distributionReport
 
-                FuzzTestFail { given, description, reason, distributionReport } ->
+                CachedFuzzTestFail { given, description, reason, distributionReport } ->
                     Failed
                         ( { given = given
                           , description = description
@@ -314,14 +336,11 @@ sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
             testReporter.reportComplete result
 
         expectationElmCode =
-            if expectation == FuzzTestPass { distributionReport = NoDistribution } && not hasDebugLogs then
+            if expectation == CachedFuzzTestPass { distributionReport = NoDistribution } && not hasDebugLogs then
                 Nothing
 
             else
-                Debug.toString expectation
-                    -- For `rerunFailure`:
-                    |> String.replace "<function>" "identity"
-                    |> Just
+                Just (Debug.toString expectation)
     in
     Ports.sendResult testId True jsDefinitionName fuzzTest.labels expectationElmCode debugLogs report
 
@@ -470,7 +489,7 @@ update msg ({ testReporter } as model) =
                                                     case Dict.get fuzzTest.labels cachedTests.fuzzTests of
                                                         -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
                                                         Nothing ->
-                                                            Just ( FuzzTestPass { distributionReport = NoDistribution }, noDebugLogs )
+                                                            Just ( CachedFuzzTestPass { distributionReport = NoDistribution }, noDebugLogs )
 
                                                         cached ->
                                                             cached
@@ -647,10 +666,10 @@ previousRunHasFailingFuzzTest previousRun =
 
                             Just ( expectation_, _ ) ->
                                 case expectation_ of
-                                    FuzzTestPass _ ->
+                                    CachedFuzzTestPass _ ->
                                         False
 
-                                    FuzzTestFail _ ->
+                                    CachedFuzzTestFail _ ->
                                         True
         )
         False
