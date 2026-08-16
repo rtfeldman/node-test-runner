@@ -7,7 +7,6 @@ import Test.Reporter.Console.Format exposing (format)
 import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
 import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo)
-import Test.Runner exposing (formatLabels)
 
 
 formatDuration : Float -> String
@@ -34,6 +33,22 @@ pluralize singular plural count =
                 plural
     in
     String.join " " [ String.fromInt count, suffix ]
+
+
+formatLabels :
+    (String -> Text)
+    -> (String -> Text)
+    -> List String
+    -> List Text
+formatLabels formatDescription formatTest labels =
+    case labels of
+        [] ->
+            []
+
+        test :: descriptions ->
+            formatTest test
+                :: List.map formatDescription descriptions
+                |> List.reverse
 
 
 passedToText : List String -> String -> Text
