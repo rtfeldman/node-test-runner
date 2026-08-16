@@ -26,9 +26,9 @@ import Test exposing (Test)
 import Test.Distribution exposing (DistributionReport(..))
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Outcome(..), TestResult)
-import Test.Runner exposing (FuzzTest, FuzzTestExpectation(..), Tests, UnitTest, UnitTestExpectation(..))
 import Test.Runner.Failure exposing (Reason(..))
 import Test.Runner.Ports as Ports exposing (JsMessage(..))
+import Test.RunnerV2 as Runner exposing (FuzzTest, FuzzTestExpectation(..), Tests, UnitTest, UnitTestExpectation(..))
 
 
 
@@ -678,7 +678,7 @@ previousRunHasFailingFuzzTest previousRun =
 checkTagged : a -> JsDefinitionName -> Maybe Test
 checkTagged value jsDefinitionName =
     check value
-        |> Maybe.map (Test.Runner.tagTest jsDefinitionName)
+        |> Maybe.map (Runner.tagTest jsDefinitionName)
 
 
 {-| Returns `Just value` if `value` is a `Test`, otherwise `Nothing`.
@@ -755,7 +755,7 @@ run options possiblyTests =
     else
         let
             tests =
-                Test.Runner.toTests (Test.concat testsList)
+                Runner.toTests (Test.concat testsList)
         in
         Platform.worker
             { init = init options tests
