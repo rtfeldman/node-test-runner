@@ -1,7 +1,4 @@
-module Test.Runner.Node exposing
-    ( checkTagged, run, TestProgram, PreviousRun, SeedChoice(..)
-    , CachedFuzzTestExpectation(..)
-    )
+module Test.Runner.Node exposing (checkTagged, run, TestProgram, PreviousRun, CachedUnitTestExpectation(..), CachedFuzzTestExpectation(..))
 
 {-|
 
@@ -11,7 +8,7 @@ module Test.Runner.Node exposing
 Runs a test and outputs its results to the console. Exit code is 0 if tests
 passed and 2 if any failed. Returns 1 if something went wrong.
 
-@docs checkTagged, run, TestProgram, PreviousRun, SeedChoice
+@docs checkTagged, run, TestProgram, PreviousRun, CachedUnitTestExpectation, CachedFuzzTestExpectation
 
 -}
 
@@ -58,21 +55,14 @@ type alias DebugLogs =
 
 
 type alias RunnerOptions =
-    { seed : SeedChoice
+    { seed : Int
+    , seedIsUserSupplied : Bool
     , runs : Int
     , report : Report
     , globs : List String
     , paths : List String
     , previousRun : PreviousRun
     }
-
-
-type SeedChoice
-    = UserSuppliedSeed Int
-      -- Note: We might not use the random seed here;
-      -- we might end up using the same seed as the previous run instead
-      -- if that reproduces a fuzz test failure.
-    | RandomSeed Int
 
 
 type alias Model =
@@ -559,7 +549,7 @@ update msg ({ testReporter } as model) =
 
 
 init : RunnerOptions -> Tests -> Bool -> ( Model, Cmd Msg )
-init { globs, paths, runs, seed, report, previousRun } tests shouldSendBegin =
+init { globs, paths, runs, seed, seedIsUserSupplied, report, previousRun } tests shouldSendBegin =
     let
         autoFail =
             case ( Runner.getSeenOnly tests, Runner.getSeenSkip tests ) of
@@ -588,16 +578,11 @@ init { globs, paths, runs, seed, report, previousRun } tests shouldSendBegin =
             createReporter report
 
         initialSeed =
-            case seed of
-                UserSuppliedSeed seed_ ->
-                    seed_
+            if not seedIsUserSupplied && previousRunHasFailingFuzzTest previousRun fuzzTests then
+                previousRun.initialSeed
 
-                RandomSeed seed_ ->
-                    if previousRunHasFailingFuzzTest previousRun fuzzTests then
-                        previousRun.initialSeed
-
-                    else
-                        seed_
+            else
+                seed
 
         model : Model
         model =
