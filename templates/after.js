@@ -36,7 +36,7 @@ function main() {
 
 // For running single-threaded, export the `run` function.
 module.exports = {
-  run,
+  run: run,
 };
 
 // When running multi-threaded, connect the pipe and run.

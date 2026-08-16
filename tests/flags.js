@@ -8,6 +8,9 @@ const os = require('os');
 const readline = require('readline');
 const which = require('which');
 const { fixturesDir, spawnOpts, dummyBinPath } = require('./util');
+const Project = require('../lib/Project');
+const packageInfo = require('../package.json');
+const elmTestVersion = packageInfo.version;
 
 const rootDir = path.join(__dirname, '..');
 const elmTestPath = path.join(rootDir, 'bin', 'elm-test');
@@ -42,7 +45,7 @@ function elmTestWithYes(args, callback) {
  * @param { Array<string> } args
  * @param { string } [cwd]
  * @param { import('child_process').SpawnOptions } extraOpts
- * @returns
+ * @returns { import('child_process').SpawnSyncReturns<string> }
  */
 function execElmTest(args, cwd = fixturesDir, extraOpts = {}) {
   return spawnSync(
@@ -533,6 +536,94 @@ describe('flags', () => {
       ]);
 
       assert.strictEqual(runResult.status, 0);
+    });
+  });
+
+  describe('--dependencies', () => {
+    /**
+     * @param { Array<string>} args
+     * @returns { import('child_process').SpawnSyncReturns<string> }
+     */
+    const runTest = (args) =>
+      execElmTest(
+        [...args, 'tests/DependenciesTest.elm'],
+        path.join(rootDir, 'example-package')
+      );
+
+    describe('run tests', () => {
+      it('Should detect a too low version boundary by not compiling when using --dependencies oldest', () => {
+        const runResult = runTest(['--dependencies=oldest']);
+        assert.strictEqual(runResult.status, 1);
+        assert.strictEqual(runResult.stderr.includes('oneOrMore'), true);
+      });
+
+      it('Should compile when using --dependencies newest', () => {
+        const runResult = runTest(['--dependencies=newest']);
+        assert.strictEqual(runResult.status, 0);
+      });
+
+      it('Should also compile when not using the flag since it defaults to latest', () => {
+        const runResult = runTest(['--dependencies=newest']);
+        assert.strictEqual(runResult.status, 0);
+      });
+    });
+
+    describe('make', () => {
+      it('Should detect a too low version boundary by not compiling when using --dependencies oldest', () => {
+        const runResult = runTest(['make', '--dependencies=oldest']);
+        assert.strictEqual(runResult.status, 1);
+        assert.strictEqual(runResult.stderr.includes('oneOrMore'), true);
+      });
+
+      it('Should compile when using --dependencies newest', () => {
+        const runResult = runTest(['make', '--dependencies=newest']);
+        assert.strictEqual(runResult.status, 0);
+      });
+
+      it('Should also compile when not using the flag since it defaults to latest', () => {
+        const runResult = runTest(['make', '--dependencies=newest']);
+        assert.strictEqual(runResult.status, 0);
+      });
+    });
+  });
+
+  describe('--offline', () => {
+    it('Should fail if ELM_HOME is empty', () => {
+      const elmHome = path.join(fixturesDir, 'elm-stuff', 'elm-home');
+      const generatedCodeDir = Project.getGeneratedCodeDir(
+        fixturesDir,
+        elmTestVersion
+      );
+      for (const name of fs.readdirSync(generatedCodeDir)) {
+        if (name.startsWith('dependencies.') && name.endsWith('.json')) {
+          fs.unlinkSync(path.join(generatedCodeDir, name));
+        }
+      }
+
+      const runResult = execElmTest(
+        ['--offline', path.join('tests', 'Passing', 'One.elm')],
+        fixturesDir,
+        {
+          env: Object.assign({}, spawnOpts.env, { ELM_HOME: elmHome }),
+        }
+      );
+      assert.strictEqual(runResult.status, 1);
+      assert.strictEqual(
+        runResult.stderr.includes('Failed to solve dependencies'),
+        true
+      );
+    });
+
+    it('Should succeed if a previous run succeeded', () => {
+      const runResult1 = execElmTest([
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+      assert.strictEqual(runResult1.status, 0);
+      const runResult2 = execElmTest([
+        '--offline',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+      assert.strictEqual(runResult2.status, 0);
     });
   });
 
