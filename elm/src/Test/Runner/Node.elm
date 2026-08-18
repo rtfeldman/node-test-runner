@@ -107,9 +107,7 @@ type CachedUnitTestExpectation
 {-| Non-opaque version of `FuzzTestExpectation`, but without `rerunFailure`.
 -}
 type CachedFuzzTestExpectation
-    = CachedFuzzTestPass
-        { distributionReport : DistributionReport
-        }
+    = CachedFuzzTestPass DistributionReport
     | CachedFuzzTestFail
         { description : String
         , reason : Reason
@@ -286,9 +284,7 @@ dispatchFuzzTest testId model =
                                 in
                                 case expectation_ of
                                     FuzzTestPass data ->
-                                        ( CachedFuzzTestPass
-                                            { distributionReport = Runner.getFuzzTestPassDistributionReport data
-                                            }
+                                        ( CachedFuzzTestPass (Runner.getFuzzTestPassDistributionReport data)
                                         , duration_
                                         , getAndClearDebugLogs False
                                         )
@@ -330,7 +326,7 @@ sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
 
         outcome =
             case expectation of
-                CachedFuzzTestPass { distributionReport } ->
+                CachedFuzzTestPass distributionReport ->
                     Passed distributionReport
 
                 CachedFuzzTestFail { given, description, reason, distributionReport } ->
@@ -357,7 +353,7 @@ sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
             testReporter.reportComplete result
 
         expectationElmCode =
-            if expectation == CachedFuzzTestPass { distributionReport = NoDistribution } && not hasDebugLogs then
+            if expectation == CachedFuzzTestPass NoDistribution && not hasDebugLogs then
                 Nothing
 
             else
@@ -510,7 +506,7 @@ update msg ({ testReporter } as model) =
                                                     case Dict.get (Runner.getFuzzTestLabels fuzzTest) cachedTests.fuzzTests of
                                                         -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
                                                         Nothing ->
-                                                            Just ( CachedFuzzTestPass { distributionReport = NoDistribution }, noDebugLogs )
+                                                            Just ( CachedFuzzTestPass NoDistribution, noDebugLogs )
 
                                                         cached ->
                                                             cached
