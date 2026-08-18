@@ -193,17 +193,18 @@ sendUnitTestResult testId unitTest expectation duration debugLogs testReporter =
                     Passed NoDistribution
 
                 CachedUnitTestFail { description, reason } ->
-                    if reason == TODO then
-                        Todo description
+                    case reason of
+                        TODO ->
+                            Todo description
 
-                    else
-                        Failed
-                            ( { given = Nothing
-                              , description = description
-                              , reason = reason
-                              }
-                            , NoDistribution
-                            )
+                        _ ->
+                            Failed
+                                ( { given = Nothing
+                                  , description = description
+                                  , reason = reason
+                                  }
+                                , NoDistribution
+                                )
 
         labels =
             Runner.getUnitTestLabels unitTest
