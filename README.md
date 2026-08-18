@@ -166,7 +166,7 @@ By default, the console is cleared before each run in watch mode, so you only se
 
 elm-test collects all `Debug.log` output while executing a test, and displays it all once the test in question is finished. This way elm-test can print _which_ test the logs came from.
 
-If the function your are testing gets into an infinite loop, it means that your debug logs will never show up. Then it can be useful to have the logs print _immediately_ instead (at the loss of no longer being able to label which tests the logs came from). To avoid confusion, use [Test.only](https://package.elm-lang.org/packages/elm-explorations/test/latest/Test#only) to isolate your test, or pass `--workers 1` to run in single-threaded mode to avoid oddly mixed output:
+If the function you are testing gets into an infinite loop, it means that your debug logs will never show up. Then it can be useful to have the logs print _immediately_ instead (at the loss of no longer being able to label which tests the logs came from). To avoid confusion, use [Test.only](https://package.elm-lang.org/packages/elm-explorations/test/latest/Test#only) to isolate your test, or pass `--workers 1` to run in single-threaded mode to avoid oddly mixed output:
 
     elm-test --unbuffered-logs --workers 1
 
