@@ -46,9 +46,10 @@ formatLabels formatDescription formatTest labels =
             []
 
         test :: descriptions ->
-            formatTest test
-                :: List.map formatDescription descriptions
-                |> List.reverse
+            List.foldl
+                (\x acc -> formatDescription x :: acc)
+                [ formatTest test ]
+                descriptions
 
 
 passedToText : List String -> String -> Text
