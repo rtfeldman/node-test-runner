@@ -4,6 +4,36 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.2-X of this project will be compatible with Elm 0.19.2. See [Versions](./README.md#versions) for details.
 
+## 0.19.2-1 - 2026-08-21
+
+This release adds a few CLI options, reduces the dependency footprint, and fixes a bug.
+
+### Added
+
+This release adds a few CLI options that [elm-test-rs](https://github.com/mpizenberg/elm-test-rs) already has:
+
+- [--workers](./README.md#--workers) for choosing how many workers elm-test should use to run tests in parallel. Use `--workers 1` to run tests single-threaded.
+- [--dependencies oldest](./README.md#--dependencies) for Elm package developers.
+- [--offline](./README.md#--offline) for making sure elm-test makes no HTTP requests.
+
+## Performance
+
+This release removes a bunch of dependencies. Including dependencies of dependencies, elm-test went from 31 to 23 dependencies, and about half a megabyte less stuff to install!
+
+These direct dependencies were removed, in case you are curious (or run into regressions):
+
+- `cross-spawn`: This was used to make spawning the Elm compiler work reliably on Windows. That package is made to work for any situation you could imagine, but we can take advantage of the fact that the only subprocess we are spawning is the Elm compiler. We now use the Node.js builtin `child_process.spawn` function instead, with `shell: true` for Windows. Executing using a shell (`cmd.exe`) is needed when you install Elm using `npm`, which uses a batch script to call `elm.exe` (and works when you have installed `elm.exe` directly, too). Using shell requires escaping all arguments passed to `elm.exe`. Here we can take advantage of that we know that the only dynamic arguments are going to be file paths. File paths on Windows cannot contain `"`, which makes escaping using quoting much easier. This way we don’t need a full escaping solution like `cross-spawn` has. Testing on Windows shows that the new approach should work just as well as `cross-spawn`, but do let us know if you run into any issues!
+
+- `xmlbuilder`: This was used to generate XML for `--report junit`. elm-test now has its own implementation of the small part of that library that was actually used. We took inspiration from `xmlbuilder` when it comes to escaping characters for XML. The output should be equivalent, but stuff like this is always tricky so there’s of course a small risk of regressions.
+
+- `graceful-fs`: This was used when elm-test was looking for exposed test values in modules. elm-test used to read the files asynchronously, and when you do that there’s the risk that you try to open more files at once than the OS allows. `graceful-fs` made sure that didn’t happen. elm-test now reads the files synchronously instead, making sure that just one file is open at a time. As a bonus this is up to 2 times faster, due to less overhead!
+
+- `split`: This was used to split messages streamed from workers into newline delimited lines. elm-test now uses Node.js’ builtin `readline` module instead.
+
+### Fixed
+
+- If you print something big to the terminal and then call `process.exit(0)` in Node.js, there is a risk that Node.js does not have time to print everything before exiting. This happened especially with `--report json` and large test suites. This caused tests to be marked as “Terminated” instead of “Passed” in [intellij-elm](https://github.com/elm-tooling/intellij-elm/) since the plugin never received messages that tests finished and passed. elm-test now sets the exit code using `process.exitCode = 0` instead, and lets Node.js exit by itself when it has run out of things to do. This required explicitly shutting down some things, which otherwise kept the process running forever without the explicit `process.exit` call. elm-test only uses this approach in the “happy path” where it knows that stuff has been shut down properly, but there is of course a risk of regressions. If you run into a situation where elm-test never exits, please let us know!
+
 ## 0.19.2-0 - 2026-07-06
 
 ### Breaking
