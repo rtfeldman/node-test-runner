@@ -780,7 +780,7 @@ checkTagged value jsDefinitionName =
 -}
 getHash : JsDefinitionName -> String
 getHash =
-    placeholderReplaceMe___ "getHash"
+    placeholderReplaceMe___
 
 
 {-| The implementation of functions calling this one will be replaced in the generated JS
@@ -789,9 +789,9 @@ with versions that do something not normally possible in Elm.
 If you rename or change this function, or any function that calls it, you also need to update the regexes that looks for it.
 
 -}
-placeholderReplaceMe___ : String -> a
-placeholderReplaceMe___ name =
-    Debug.todo ("The regex for replacing this Debug.todo for '" ++ name ++ "' with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n")
+placeholderReplaceMe___ : a -> b
+placeholderReplaceMe___ _ =
+    Debug.todo "The regex for replacing this Debug.todo with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 
 {-| Run the tests.
