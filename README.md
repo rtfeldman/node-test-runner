@@ -156,11 +156,29 @@ Start the runner in watch mode. Your tests will automatically rerun whenever you
 
     elm-test --watch
 
+### --no-clear-console
+
+By default, the console is cleared before each run in watch mode, so you only see the latest information. If you don’t like this, turn it off with `--no-clear-console`.
+
+    elm-test --watch --no-clear-console
+
+### --unbuffered-logs
+
+elm-test collects all `Debug.log` output while executing a test, and displays it all once the test in question is finished. This way elm-test can print _which_ test the logs came from.
+
+If the function you are testing gets into an infinite loop, it means that your debug logs will never show up. Then it can be useful to have the logs print _immediately_ instead (at the loss of no longer being able to label which tests the logs came from). To avoid confusion, use [Test.only](https://package.elm-lang.org/packages/elm-explorations/test/latest/Test#only) to isolate your test, or pass `--workers 1` to run in single-threaded mode to avoid oddly mixed output:
+
+    elm-test --unbuffered-logs --workers 1
+
+For _failing_ fuzz tests, elm-test only prints `Debug.log` output from the run of the fuzz test that produced the failure, which is usually what you want to debug. (Earlier, passing runs of the function with different input is just noise). For _passing_ fuzz tests, elm-test _ignores_ your `Debug.log` calls (and instead displays a note about this). Let’s imagine you are debugging a failing fuzz test. After a while it finally passes. There is no longer a failing run, so which one should we pick logs from? All of them? But would you really like to see the screen fill with 100+ repetitions of your logs at that point? Probably not. But if you actually _do_ want to show logs from all runs, you can use `--unbuffered-logs` for this use case, too. Also remember that you can make the test fail from anywhere using `Debug.todo` – that’s also a way to make logs appear!
+
 ### --seed
 
 Run with a specific fuzzer seed, rather than a randomly generated seed. This allows reproducing a failing fuzz-test. The command needed to reproduce (including the `--seed` flag) is printed after each test run. Copy, paste and run it!
 
     elm-test --seed 336948560956134
+
+On top of that, if you run elm-test without the `--seed` flag, elm-test will automatically use the same seed as the last run if there was a fuzz test failure, letting you reproduce errors without doing anything. It even tries to fast-forward you through the fuzzing. So if it took some time for the fuzzer to find the problem the first time, the next run should be instant.
 
 ### --fuzz
 
@@ -173,15 +191,17 @@ Define how many times each fuzz-test should run. Defaults to `100`.
 
 ### --workers
 
-Choose how many workers elm-test should use to run tests in parallel. Defaults to the number of “logical CPU cores” of the machine you run the tests on.
+Choose how many workers elm-test should use to run fuzz tests in parallel. Defaults to the number of “logical CPU cores” of the machine you run the tests on.
 
     elm-test --workers 4
 
-Your computer might say that it has 12 logical CPU cores. Then dividing up the tests between 12 parallel workers is the theoretical optimum for running the tests as quickly as possible. But in practice your tests might run faster with just 4 workers in parallel due to overhead. Play around with it and see what is the fastest for your test suite on your computer!
+Your computer might say that it has 12 logical CPU cores. Then dividing up the fuzz tests between 12 parallel workers is the theoretical optimum for running the tests as quickly as possible. But in practice your tests might run faster with just 4 workers in parallel due to overhead. Play around with it and see what is the fastest for your test suite on your computer!
 
 To see the number of logical CPU cores on your machine, run `node -p "os.cpus().length"` (it’s also shown in `elm-test --help`).
 
 If you pass `--workers 1`, elm-test won’t even start a new thread for running the tests in – it’ll do everything in the main thread (single-threaded mode).
+
+Currently, elm-test always executes unit tests on the main thread, and only uses separate threads for fuzz tests. Unit tests tend to execute so fast that the overhead of threads isn’t worth it. But fuzz tests often run long enough to benefit from parallelization.
 
 ### --report
 
