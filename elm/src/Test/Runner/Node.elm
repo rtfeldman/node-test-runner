@@ -176,7 +176,16 @@ dispatchUnitTest testId model =
             Ports.sendError ("Unit test not found: " ++ String.fromInt testId)
 
         Just unitTest ->
-            Runner.runUnitTest unitTest
+            let
+                task =
+                    if model.unbufferedLogs then
+                        Runner.runUnitTestWithUnbufferedLogs unitTest
+                            |> Task.map unbufferedLogsDebugLogsUglySolution
+
+                    else
+                        Runner.runUnitTest unitTest
+            in
+            task
                 |> Task.perform
                     (\( expectation, duration, debugLogs ) ->
                         NestedCmd (sendUnitTestResult testId unitTest (toCachedUnitTestExpectation expectation) duration debugLogs model.testReporter)
@@ -279,8 +288,16 @@ dispatchFuzzTest testId model =
 
                 seed =
                     Random.initialSeed model.runInfo.initialSeed
+
+                task =
+                    if model.unbufferedLogs then
+                        Runner.runFuzzTestWithUnbufferedLogs fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
+                            |> Task.map unbufferedLogsDebugLogsUglySolution
+
+                    else
+                        Runner.runFuzzTest fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
             in
-            Runner.runFuzzTest fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
+            task
                 |> Task.perform
                     (\( expectation, duration, debugLogs ) ->
                         NestedCmd (sendFuzzTestResult testId fuzzTest (toCachedFuzzTestExpectation expectation) duration debugLogs model.testReporter)
@@ -332,6 +349,23 @@ sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
                 Just (Debug.toString expectation)
     in
     Ports.sendResult testId True jsDefinitionName labels expectationElmCode debugLogs report
+
+
+{-| We currently always assume that we will get a string of debug logs after running tests,
+and if `Debug.log` was called or not is inferred from whether the string is empty or not.
+Supervisor.js skips printing the debug logs if `unbufferedLogs` is true. So in that case
+we can lie and say that we got a dummy log. This should be refactored.
+-}
+unbufferedLogsDebugLogsUglySolution : ( a, b, Bool ) -> ( a, b, String )
+unbufferedLogsDebugLogsUglySolution ( a, b, usedDebugLog ) =
+    ( a
+    , b
+    , if usedDebugLog then
+        "THIS FAKE DEBUG LOG SHOULD NOT BE SEEN IN UNBUFFERED MODE"
+
+      else
+        ""
+    )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
