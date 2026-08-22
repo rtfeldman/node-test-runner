@@ -140,6 +140,35 @@ type Msg
     | Trawl
 
 
+toCachedUnitTestExpectation : UnitTestExpectation -> CachedUnitTestExpectation
+toCachedUnitTestExpectation expectation =
+    case expectation of
+        UnitTestPass ->
+            CachedUnitTestPass
+
+        UnitTestFail data ->
+            CachedUnitTestFail
+                { description = Runner.getUnitTestFailDescription data
+                , reason = Runner.getUnitTestFailReason data
+                }
+
+
+toCachedFuzzTestExpectation : FuzzTestExpectation -> CachedFuzzTestExpectation
+toCachedFuzzTestExpectation expectation =
+    case expectation of
+        FuzzTestPass data ->
+            CachedFuzzTestPass (Runner.getFuzzTestPassDistributionReport data)
+
+        FuzzTestFail data ->
+            CachedFuzzTestFail
+                { description = Runner.getFuzzTestFailDescription data
+                , reason = Runner.getFuzzTestFailReason data
+                , distributionReport = Runner.getFuzzTestFailDistributionReport data
+                , given = Runner.getFuzzTestFailGiven data
+                , fuzzerInts = Runner.getFuzzTestFailFuzzerInts data
+                }
+
+
 dispatchUnitTest : TestId -> Model -> Cmd Msg
 dispatchUnitTest testId model =
     case Array.get testId model.unitTests of
@@ -150,19 +179,7 @@ dispatchUnitTest testId model =
             Runner.runUnitTest unitTest
                 |> Task.perform
                     (\( expectation, duration, debugLogs ) ->
-                        let
-                            cachedExpectation =
-                                case expectation of
-                                    UnitTestPass ->
-                                        CachedUnitTestPass
-
-                                    UnitTestFail data ->
-                                        CachedUnitTestFail
-                                            { description = Runner.getUnitTestFailDescription data
-                                            , reason = Runner.getUnitTestFailReason data
-                                            }
-                        in
-                        NestedCmd (sendUnitTestResult testId unitTest cachedExpectation duration debugLogs model.testReporter)
+                        NestedCmd (sendUnitTestResult testId unitTest (toCachedUnitTestExpectation expectation) duration debugLogs model.testReporter)
                     )
 
 
@@ -266,22 +283,7 @@ dispatchFuzzTest testId model =
             Runner.runFuzzTest fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
                 |> Task.perform
                     (\( expectation, duration, debugLogs ) ->
-                        let
-                            cachedExpectation =
-                                case expectation of
-                                    FuzzTestPass data ->
-                                        CachedFuzzTestPass (Runner.getFuzzTestPassDistributionReport data)
-
-                                    FuzzTestFail data ->
-                                        CachedFuzzTestFail
-                                            { description = Runner.getFuzzTestFailDescription data
-                                            , reason = Runner.getFuzzTestFailReason data
-                                            , distributionReport = Runner.getFuzzTestFailDistributionReport data
-                                            , given = Runner.getFuzzTestFailGiven data
-                                            , fuzzerInts = Runner.getFuzzTestFailFuzzerInts data
-                                            }
-                        in
-                        NestedCmd (sendFuzzTestResult testId fuzzTest cachedExpectation duration debugLogs model.testReporter)
+                        NestedCmd (sendFuzzTestResult testId fuzzTest (toCachedFuzzTestExpectation expectation) duration debugLogs model.testReporter)
                     )
 
 
