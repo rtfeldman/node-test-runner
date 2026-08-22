@@ -14,7 +14,7 @@ port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 
 sendBegin : Int -> String -> Maybe Decode.Value -> Cmd msg
-sendBegin initialSeed debugLogs maybeReport =
+sendBegin initialSeed bufferedDebugLogs maybeReport =
     let
         extraFields =
             case maybeReport of
@@ -29,7 +29,7 @@ sendBegin initialSeed debugLogs maybeReport =
         (Encode.object
             (( "type", Encode.string "BEGIN" )
                 :: ( "initialSeed", Encode.int initialSeed )
-                :: ( "debugLogs", Encode.string debugLogs )
+                :: ( "bufferedDebugLogs", Encode.string bufferedDebugLogs )
                 :: extraFields
             )
         )
@@ -47,7 +47,7 @@ sendReady unitTests fuzzTests =
 
 
 sendResult : Int -> Bool -> String -> List String -> Maybe String -> String -> Decode.Value -> Cmd msg
-sendResult testId isFuzzTest jsDefinitionName labels expectationElmCode debugLogs report =
+sendResult testId isFuzzTest jsDefinitionName labels expectationElmCode bufferedDebugLogs report =
     elmTestPort__send
         (Encode.object
             [ ( "type", Encode.string "RESULT" )
@@ -64,7 +64,7 @@ sendResult testId isFuzzTest jsDefinitionName labels expectationElmCode debugLog
             , ( "jsDefinitionName", Encode.string jsDefinitionName )
             , ( "labels", Encode.list Encode.string labels )
             , ( "expectationElmCode", encodeMaybe Encode.string expectationElmCode )
-            , ( "debugLogs", Encode.string debugLogs )
+            , ( "bufferedDebugLogs", Encode.string bufferedDebugLogs )
 
             -- Test reporter specific:
             , ( "message", report )

@@ -79,15 +79,17 @@ type alias PreviousRun =
 type alias CachedTests =
     { hash : String
 
-    -- As an optimization, passing unit tests without debug logs are not stored.
-    , unitTests : Dict (List String) ( CachedUnitTestExpectation, DebugLogs )
+    -- In buffered logs mode: As an optimization, passing unit tests without debug logs are not stored.
+    -- In unbuffered logs mode: Unit tests that used `Debug.log` are not cached, no optimizations.
+    , unitTests : Dict (List String) ( CachedUnitTestExpectation, BufferedDebugLogs )
 
-    -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
-    , fuzzTests : Dict (List String) ( CachedFuzzTestExpectation, DebugLogs )
+    -- In buffered logs mode: As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
+    -- In unbuffered logs mode: Fuzz tests that used `Debug.log` are not cached, no optimizations.
+    , fuzzTests : Dict (List String) ( CachedFuzzTestExpectation, BufferedDebugLogs )
     }
 
 
-type alias DebugLogs =
+type alias BufferedDebugLogs =
     String
 
 
@@ -134,7 +136,7 @@ type alias TestProgram =
 
 
 type Msg
-    = GotDebugLogsBeforeFirstTestRun DebugLogs
+    = GotDebugLogsBeforeFirstTestRun BufferedDebugLogs
     | Receive (Result Decode.Error JsMessage)
     | NestedCmd (Cmd Msg)
     | Trawl
@@ -176,30 +178,47 @@ dispatchUnitTest testId model =
             Ports.sendError ("Unit test not found: " ++ String.fromInt testId)
 
         Just unitTest ->
-            let
-                task =
-                    if model.unbufferedLogs then
-                        Runner.runUnitTestWithUnbufferedLogs unitTest
-                            |> Task.map unbufferedLogsDebugLogsUglySolution
+            if model.unbufferedLogs then
+                Runner.runUnitTestWithUnbufferedLogs unitTest
+                    |> Task.perform
+                        (\( expectation, duration, usedDebugLog ) ->
+                            NestedCmd
+                                (sendUnitTestResult
+                                    model
+                                    testId
+                                    unitTest
+                                    (toCachedUnitTestExpectation expectation)
+                                    duration
+                                    usedDebugLog
+                                    ""
+                                )
+                        )
 
-                    else
-                        Runner.runUnitTest unitTest
-            in
-            task
-                |> Task.perform
-                    (\( expectation, duration, debugLogs ) ->
-                        NestedCmd (sendUnitTestResult testId unitTest (toCachedUnitTestExpectation expectation) duration debugLogs model.testReporter)
-                    )
+            else
+                Runner.runUnitTest unitTest
+                    |> Task.perform
+                        (\( expectation, duration, bufferedDebugLogs ) ->
+                            NestedCmd
+                                (sendUnitTestResult
+                                    model
+                                    testId
+                                    unitTest
+                                    (toCachedUnitTestExpectation expectation)
+                                    duration
+                                    (not (String.isEmpty bufferedDebugLogs))
+                                    bufferedDebugLogs
+                                )
+                        )
 
 
-sendUnitTestResult : TestId -> UnitTest -> CachedUnitTestExpectation -> Float -> DebugLogs -> TestReporter -> Cmd Msg
-sendUnitTestResult testId unitTest expectation duration debugLogs testReporter =
+sendUnitTestResult : Model -> TestId -> UnitTest -> CachedUnitTestExpectation -> Float -> Bool -> BufferedDebugLogs -> Cmd Msg
+sendUnitTestResult model testId unitTest expectation duration usedDebugLog bufferedDebugLogs =
     let
         jsDefinitionName =
             Runner.getUnitTestTag unitTest
 
-        hasDebugLogs =
-            not (String.isEmpty debugLogs)
+        hasBufferedDebugLogs =
+            not (String.isEmpty bufferedDebugLogs)
 
         outcome =
             case expectation of
@@ -228,20 +247,27 @@ sendUnitTestResult testId unitTest expectation duration debugLogs testReporter =
             { labels = labels
             , outcome = outcome
             , duration = duration
-            , hasDebugLogs = hasDebugLogs
+            , hasBufferedDebugLogs = hasBufferedDebugLogs
             }
 
         report =
-            testReporter.reportComplete result
+            model.testReporter.reportComplete result
 
-        expectationElmCode =
-            if expectation == CachedUnitTestPass && not hasDebugLogs then
-                Nothing
+        shouldCache =
+            if model.unbufferedLogs then
+                not usedDebugLog
 
             else
+                not (expectation == CachedUnitTestPass && not usedDebugLog)
+
+        expectationElmCode =
+            if shouldCache then
                 Just (Debug.toString expectation)
+
+            else
+                Nothing
     in
-    Ports.sendResult testId False jsDefinitionName labels expectationElmCode debugLogs report
+    Ports.sendResult testId False jsDefinitionName labels expectationElmCode bufferedDebugLogs report
 
 
 dispatchFuzzTest : TestId -> Model -> Cmd Msg
@@ -288,30 +314,48 @@ dispatchFuzzTest testId model =
 
                 seed =
                     Random.initialSeed model.runInfo.initialSeed
-
-                task =
-                    if model.unbufferedLogs then
-                        Runner.runFuzzTestWithUnbufferedLogs fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
-                            |> Task.map unbufferedLogsDebugLogsUglySolution
-
-                    else
-                        Runner.runFuzzTest fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
             in
-            task
-                |> Task.perform
-                    (\( expectation, duration, debugLogs ) ->
-                        NestedCmd (sendFuzzTestResult testId fuzzTest (toCachedFuzzTestExpectation expectation) duration debugLogs model.testReporter)
-                    )
+            if model.unbufferedLogs then
+                Runner.runFuzzTestWithUnbufferedLogs fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
+                    |> Task.perform
+                        (\( expectation, duration, usedDebugLog ) ->
+                            NestedCmd
+                                (sendFuzzTestResult
+                                    model
+                                    testId
+                                    fuzzTest
+                                    (toCachedFuzzTestExpectation expectation)
+                                    duration
+                                    usedDebugLog
+                                    ""
+                                )
+                        )
+
+            else
+                Runner.runFuzzTest fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
+                    |> Task.perform
+                        (\( expectation, duration, bufferedDebugLogs ) ->
+                            NestedCmd
+                                (sendFuzzTestResult
+                                    model
+                                    testId
+                                    fuzzTest
+                                    (toCachedFuzzTestExpectation expectation)
+                                    duration
+                                    (not (String.isEmpty bufferedDebugLogs))
+                                    bufferedDebugLogs
+                                )
+                        )
 
 
-sendFuzzTestResult : TestId -> FuzzTest -> CachedFuzzTestExpectation -> Float -> DebugLogs -> TestReporter -> Cmd Msg
-sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
+sendFuzzTestResult : Model -> TestId -> FuzzTest -> CachedFuzzTestExpectation -> Float -> Bool -> BufferedDebugLogs -> Cmd Msg
+sendFuzzTestResult model testId fuzzTest expectation duration usedDebugLog bufferedDebugLogs =
     let
         jsDefinitionName =
             Runner.getFuzzTestTag fuzzTest
 
-        hasDebugLogs =
-            not (String.isEmpty debugLogs)
+        hasBufferedDebugLogs =
+            not (String.isEmpty bufferedDebugLogs)
 
         outcome =
             case expectation of
@@ -335,48 +379,38 @@ sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
             { labels = labels
             , outcome = outcome
             , duration = duration
-            , hasDebugLogs = hasDebugLogs
+            , hasBufferedDebugLogs = hasBufferedDebugLogs
             }
 
         report =
-            testReporter.reportComplete result
+            model.testReporter.reportComplete result
 
-        expectationElmCode =
-            if expectation == CachedFuzzTestPass NoDistribution && not hasDebugLogs then
-                Nothing
+        shouldCache =
+            if model.unbufferedLogs then
+                not usedDebugLog
 
             else
+                not (expectation == CachedFuzzTestPass NoDistribution && not usedDebugLog)
+
+        expectationElmCode =
+            if shouldCache then
                 Just (Debug.toString expectation)
+
+            else
+                Nothing
     in
-    Ports.sendResult testId True jsDefinitionName labels expectationElmCode debugLogs report
-
-
-{-| We currently always assume that we will get a string of debug logs after running tests,
-and if `Debug.log` was called or not is inferred from whether the string is empty or not.
-Supervisor.js skips printing the debug logs if `unbufferedLogs` is true. So in that case
-we can lie and say that we got a dummy log. This should be refactored.
--}
-unbufferedLogsDebugLogsUglySolution : ( a, b, Bool ) -> ( a, b, String )
-unbufferedLogsDebugLogsUglySolution ( a, b, usedDebugLog ) =
-    ( a
-    , b
-    , if usedDebugLog then
-        "THIS FAKE DEBUG LOG SHOULD NOT BE SEEN IN UNBUFFERED MODE"
-
-      else
-        ""
-    )
+    Ports.sendResult testId True jsDefinitionName labels expectationElmCode bufferedDebugLogs report
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ testReporter } as model) =
     case msg of
-        GotDebugLogsBeforeFirstTestRun debugLogs ->
+        GotDebugLogsBeforeFirstTestRun bufferedDebugLogs ->
             ( model
             , Cmd.batch
                 [ Ports.sendBegin
                     model.runInfo.initialSeed
-                    debugLogs
+                    bufferedDebugLogs
                     (model.testReporter.reportBegin model.runInfo)
                 , trawlNext
                 ]
@@ -460,9 +494,13 @@ update msg ({ testReporter } as model) =
                                             (\cachedTests ->
                                                 if hash == cachedTests.hash then
                                                     case Dict.get (Runner.getUnitTestLabels unitTest) cachedTests.unitTests of
-                                                        -- As an optimization, passing unit tests without debug logs are not stored.
                                                         Nothing ->
-                                                            Just ( CachedUnitTestPass, "" )
+                                                            if model.unbufferedLogs then
+                                                                Nothing
+
+                                                            else
+                                                                -- As an optimization in buffered logs mode, passing unit tests without debug logs are not stored.
+                                                                Just ( CachedUnitTestPass, "" )
 
                                                         cached ->
                                                             cached
@@ -483,7 +521,7 @@ update msg ({ testReporter } as model) =
                                     , trawlNext
                                     )
 
-                                Just ( expectation, debugLogs ) ->
+                                Just ( expectation, bufferedDebugLogs ) ->
                                     ( { model
                                         | cacheTrawl =
                                             TrawlingUnitTests
@@ -493,7 +531,19 @@ update msg ({ testReporter } as model) =
                                       }
                                     , Cmd.batch
                                         [ trawlNext
-                                        , sendUnitTestResult data.current unitTest expectation 0 debugLogs model.testReporter
+                                        , sendUnitTestResult
+                                            model
+                                            data.current
+                                            unitTest
+                                            expectation
+                                            0
+                                            (if model.unbufferedLogs then
+                                                False
+
+                                             else
+                                                not (String.isEmpty bufferedDebugLogs)
+                                            )
+                                            bufferedDebugLogs
                                         ]
                                     )
 
@@ -524,9 +574,13 @@ update msg ({ testReporter } as model) =
                                                         && (Runner.getFuzzTestRuns fuzzTest /= Nothing || model.runInfo.fuzzRuns <= model.previousRun.fuzzRuns)
                                                 then
                                                     case Dict.get (Runner.getFuzzTestLabels fuzzTest) cachedTests.fuzzTests of
-                                                        -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
                                                         Nothing ->
-                                                            Just ( CachedFuzzTestPass NoDistribution, "" )
+                                                            if model.unbufferedLogs then
+                                                                Nothing
+
+                                                            else
+                                                                -- As an optimization in buffered logs mode, passing fuzz tests without debug logs and distribution report are not stored.
+                                                                Just ( CachedFuzzTestPass NoDistribution, "" )
 
                                                         cached ->
                                                             cached
@@ -548,7 +602,7 @@ update msg ({ testReporter } as model) =
                                     , trawlNext
                                     )
 
-                                Just ( expectation, debugLogs ) ->
+                                Just ( expectation, bufferedDebugLogs ) ->
                                     ( { model
                                         | cacheTrawl =
                                             TrawlingFuzzTests
@@ -559,7 +613,19 @@ update msg ({ testReporter } as model) =
                                       }
                                     , Cmd.batch
                                         [ trawlNext
-                                        , sendFuzzTestResult data.current fuzzTest expectation 0 debugLogs model.testReporter
+                                        , sendFuzzTestResult
+                                            model
+                                            data.current
+                                            fuzzTest
+                                            expectation
+                                            0
+                                            (if model.unbufferedLogs then
+                                                False
+
+                                             else
+                                                not (String.isEmpty bufferedDebugLogs)
+                                            )
+                                            bufferedDebugLogs
                                         ]
                                     )
 

@@ -19,7 +19,7 @@ type alias TestResult =
     { labels : List String
     , outcome : Outcome
     , duration : Float -- in milliseconds
-    , hasDebugLogs : Bool
+    , hasBufferedDebugLogs : Bool
     }
 
 
