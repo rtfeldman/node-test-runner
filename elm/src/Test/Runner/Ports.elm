@@ -2,7 +2,6 @@ port module Test.Runner.Ports exposing (JsMessage(..), receive, sendBegin, sendE
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
-import Test.DebugLogs as DebugLogs exposing (DebugLogs)
 
 
 {-| The port names are prefixed to reduce the likelihood of the project
@@ -14,7 +13,7 @@ port elmTestPort__send : Decode.Value -> Cmd msg
 port elmTestPort__receive : (Decode.Value -> msg) -> Sub msg
 
 
-sendBegin : Int -> DebugLogs -> Maybe Decode.Value -> Cmd msg
+sendBegin : Int -> String -> Maybe Decode.Value -> Cmd msg
 sendBegin initialSeed debugLogs maybeReport =
     let
         extraFields =
@@ -30,7 +29,7 @@ sendBegin initialSeed debugLogs maybeReport =
         (Encode.object
             (( "type", Encode.string "BEGIN" )
                 :: ( "initialSeed", Encode.int initialSeed )
-                :: ( "debugLogs", DebugLogs.encode debugLogs )
+                :: ( "debugLogs", Encode.string debugLogs )
                 :: extraFields
             )
         )
@@ -47,7 +46,7 @@ sendReady unitTests fuzzTests =
         )
 
 
-sendResult : Int -> Bool -> String -> List String -> Maybe String -> DebugLogs -> Decode.Value -> Cmd msg
+sendResult : Int -> Bool -> String -> List String -> Maybe String -> String -> Decode.Value -> Cmd msg
 sendResult testId isFuzzTest jsDefinitionName labels expectationElmCode debugLogs report =
     elmTestPort__send
         (Encode.object
@@ -65,7 +64,7 @@ sendResult testId isFuzzTest jsDefinitionName labels expectationElmCode debugLog
             , ( "jsDefinitionName", Encode.string jsDefinitionName )
             , ( "labels", Encode.list Encode.string labels )
             , ( "expectationElmCode", encodeMaybe Encode.string expectationElmCode )
-            , ( "debugLogs", DebugLogs.encode debugLogs )
+            , ( "debugLogs", Encode.string debugLogs )
 
             -- Test reporter specific:
             , ( "message", report )

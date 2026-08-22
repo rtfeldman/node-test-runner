@@ -20,7 +20,6 @@ import Platform
 import Random
 import Task
 import Test exposing (Test)
-import Test.DebugLogs as DebugLogs exposing (DebugLogs)
 import Test.Distribution exposing (DistributionReport(..))
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Outcome(..), TestResult)
@@ -86,6 +85,10 @@ type alias CachedTests =
     -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
     , fuzzTests : Dict (List String) ( CachedFuzzTestExpectation, DebugLogs )
     }
+
+
+type alias DebugLogs =
+    String
 
 
 {-| Non-opaque version of `UnitTestExpectation`.
@@ -170,7 +173,7 @@ sendUnitTestResult testId unitTest expectation duration debugLogs testReporter =
             Runner.getUnitTestTag unitTest
 
         hasDebugLogs =
-            not (DebugLogs.isEmpty debugLogs)
+            not (String.isEmpty debugLogs)
 
         outcome =
             case expectation of
@@ -289,7 +292,7 @@ sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
             Runner.getFuzzTestTag fuzzTest
 
         hasDebugLogs =
-            not (DebugLogs.isEmpty debugLogs)
+            not (String.isEmpty debugLogs)
 
         outcome =
             case expectation of
@@ -423,7 +426,7 @@ update msg ({ testReporter } as model) =
                                                     case Dict.get (Runner.getUnitTestLabels unitTest) cachedTests.unitTests of
                                                         -- As an optimization, passing unit tests without debug logs are not stored.
                                                         Nothing ->
-                                                            Just ( CachedUnitTestPass, DebugLogs.empty )
+                                                            Just ( CachedUnitTestPass, "" )
 
                                                         cached ->
                                                             cached
@@ -487,7 +490,7 @@ update msg ({ testReporter } as model) =
                                                     case Dict.get (Runner.getFuzzTestLabels fuzzTest) cachedTests.fuzzTests of
                                                         -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
                                                         Nothing ->
-                                                            Just ( CachedFuzzTestPass NoDistribution, DebugLogs.empty )
+                                                            Just ( CachedFuzzTestPass NoDistribution, "" )
 
                                                         cached ->
                                                             cached
@@ -589,7 +592,7 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, pre
     in
     ( model
     , if shouldSendBegin then
-        DebugLogs.getDebugLogsBeforeFirstTestRun
+        Runner.getDebugLogsBeforeFirstTestRun
             |> Task.perform GotDebugLogsBeforeFirstTestRun
 
       else
