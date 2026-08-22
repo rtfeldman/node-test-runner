@@ -20,6 +20,7 @@ import Platform
 import Random
 import Task
 import Test exposing (Test)
+import Test.DebugLogs as DebugLogs exposing (DebugLogs)
 import Test.Distribution exposing (DistributionReport(..))
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
 import Test.Reporter.TestResults exposing (Outcome(..), TestResult)
@@ -45,20 +46,12 @@ type alias JsDefinitionName =
     String
 
 
-{-| Collected `Debug.log`s during a test (or during initialization before running any tests).
-There are stored as `Decode.Value` instead of `List String` as an optimization. They are
-collected in JavaScript code, given to Elm for a short while, and then sent through a port.
-So going to from a JS array, to an Elm list, back to a JS array is pretty wasteful.
--}
-type alias DebugLogs =
-    Decode.Value
-
-
 type alias RunnerOptions =
     { seed : Int
     , seedIsUserSupplied : Bool
     , runs : Int
     , report : Report
+    , unbufferedLogs : Bool
     , globs : List String
     , paths : List String
     , previousRun : PreviousRun
@@ -71,6 +64,7 @@ type alias Model =
     , runInfo : RunInfo
     , testReporter : TestReporter
     , autoFail : Maybe String
+    , unbufferedLogs : Bool
     , previousRun : PreviousRun
     , cacheTrawl : CacheTrawl
     }
@@ -137,19 +131,10 @@ type alias TestProgram =
 
 
 type Msg
-    = Receive (Result Decode.Error JsMessage)
+    = GotDebugLogsBeforeFirstTestRun DebugLogs
+    | Receive (Result Decode.Error JsMessage)
     | NestedCmd (Cmd Msg)
     | Trawl
-
-
-noDebugLogs : DebugLogs
-noDebugLogs =
-    Encode.list never []
-
-
-isEmptyDebugLogs : DebugLogs -> Bool
-isEmptyDebugLogs debugLogs =
-    Decode.decodeValue (Decode.field "length" Decode.int) debugLogs == Ok 0
 
 
 dispatchUnitTest : TestId -> Model -> Cmd Msg
@@ -161,11 +146,8 @@ dispatchUnitTest testId model =
         Just unitTest ->
             Runner.runUnitTest unitTest
                 |> Task.perform
-                    (\( expectation, duration ) ->
+                    (\( expectation, duration, debugLogs ) ->
                         let
-                            debugLogs =
-                                getAndClearDebugLogs False
-
                             cachedExpectation =
                                 case expectation of
                                     UnitTestPass ->
@@ -188,7 +170,7 @@ sendUnitTestResult testId unitTest expectation duration debugLogs testReporter =
             Runner.getUnitTestTag unitTest
 
         hasDebugLogs =
-            not (isEmptyDebugLogs debugLogs)
+            not (DebugLogs.isEmpty debugLogs)
 
         outcome =
             case expectation of
@@ -278,46 +260,26 @@ dispatchFuzzTest testId model =
                 seed =
                     Random.initialSeed model.runInfo.initialSeed
             in
-            -- Pause debug logs.
-            getAndClearDebugLogs True
-                |> (\_ ->
-                        Runner.runFuzzTest fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
-                            |> Task.perform
-                                (\( expectation_, duration_ ) ->
-                                    let
-                                        ( expectation, duration, debugLogs ) =
-                                            case expectation_ of
-                                                FuzzTestPass data ->
-                                                    ( CachedFuzzTestPass (Runner.getFuzzTestPassDistributionReport data)
-                                                    , duration_
-                                                    , getAndClearDebugLogs False
-                                                    )
+            Runner.runFuzzTest fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
+                |> Task.perform
+                    (\( expectation, duration, debugLogs ) ->
+                        let
+                            cachedExpectation =
+                                case expectation of
+                                    FuzzTestPass data ->
+                                        CachedFuzzTestPass (Runner.getFuzzTestPassDistributionReport data)
 
-                                                FuzzTestFail data ->
-                                                    let
-                                                        newDebugLogs =
-                                                            -- Unpause debug logs.
-                                                            getAndClearDebugLogs False
-                                                                |> (\_ ->
-                                                                        -- Collect debug logs from failing run.
-                                                                        Runner.rerunFuzzTestFailure data
-                                                                            |> (\() -> getAndClearDebugLogs False)
-                                                                   )
-                                                    in
-                                                    ( CachedFuzzTestFail
-                                                        { description = Runner.getFuzzTestFailDescription data
-                                                        , reason = Runner.getFuzzTestFailReason data
-                                                        , distributionReport = Runner.getFuzzTestFailDistributionReport data
-                                                        , given = Runner.getFuzzTestFailGiven data
-                                                        , fuzzerInts = Runner.getFuzzTestFailFuzzerInts data
-                                                        }
-                                                    , duration_
-                                                    , newDebugLogs
-                                                    )
-                                    in
-                                    NestedCmd (sendFuzzTestResult testId fuzzTest expectation duration debugLogs model.testReporter)
-                                )
-                   )
+                                    FuzzTestFail data ->
+                                        CachedFuzzTestFail
+                                            { description = Runner.getFuzzTestFailDescription data
+                                            , reason = Runner.getFuzzTestFailReason data
+                                            , distributionReport = Runner.getFuzzTestFailDistributionReport data
+                                            , given = Runner.getFuzzTestFailGiven data
+                                            , fuzzerInts = Runner.getFuzzTestFailFuzzerInts data
+                                            }
+                        in
+                        NestedCmd (sendFuzzTestResult testId fuzzTest cachedExpectation duration debugLogs model.testReporter)
+                    )
 
 
 sendFuzzTestResult : TestId -> FuzzTest -> CachedFuzzTestExpectation -> Float -> DebugLogs -> TestReporter -> Cmd Msg
@@ -327,7 +289,7 @@ sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
             Runner.getFuzzTestTag fuzzTest
 
         hasDebugLogs =
-            not (isEmptyDebugLogs debugLogs)
+            not (DebugLogs.isEmpty debugLogs)
 
         outcome =
             case expectation of
@@ -370,6 +332,17 @@ sendFuzzTestResult testId fuzzTest expectation duration debugLogs testReporter =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ testReporter } as model) =
     case msg of
+        GotDebugLogsBeforeFirstTestRun debugLogs ->
+            ( model
+            , Cmd.batch
+                [ Ports.sendBegin
+                    model.runInfo.initialSeed
+                    debugLogs
+                    (model.testReporter.reportBegin model.runInfo)
+                , trawlNext
+                ]
+            )
+
         Receive (Ok jsMessage) ->
             case jsMessage of
                 RunUnitTest testId ->
@@ -450,7 +423,7 @@ update msg ({ testReporter } as model) =
                                                     case Dict.get (Runner.getUnitTestLabels unitTest) cachedTests.unitTests of
                                                         -- As an optimization, passing unit tests without debug logs are not stored.
                                                         Nothing ->
-                                                            Just ( CachedUnitTestPass, noDebugLogs )
+                                                            Just ( CachedUnitTestPass, DebugLogs.empty )
 
                                                         cached ->
                                                             cached
@@ -514,7 +487,7 @@ update msg ({ testReporter } as model) =
                                                     case Dict.get (Runner.getFuzzTestLabels fuzzTest) cachedTests.fuzzTests of
                                                         -- As an optimization, passing fuzz tests without debug logs and distribution report are not stored.
                                                         Nothing ->
-                                                            Just ( CachedFuzzTestPass NoDistribution, noDebugLogs )
+                                                            Just ( CachedFuzzTestPass NoDistribution, DebugLogs.empty )
 
                                                         cached ->
                                                             cached
@@ -553,7 +526,7 @@ update msg ({ testReporter } as model) =
 
 
 init : RunnerOptions -> Tests -> Bool -> ( Model, Cmd Msg )
-init { globs, paths, runs, seed, seedIsUserSupplied, report, previousRun } tests shouldSendBegin =
+init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, previousRun } tests shouldSendBegin =
     let
         autoFail =
             case ( Runner.getSeenOnly tests, Runner.getSeenSkip tests ) of
@@ -601,6 +574,7 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, previousRun } tests
                 }
             , testReporter = testReporter
             , autoFail = autoFail
+            , unbufferedLogs = unbufferedLogs
             , previousRun = previousRun
             , cacheTrawl =
                 if shouldSendBegin then
@@ -612,22 +586,11 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, previousRun } tests
                 else
                     NotTrawling
             }
-
-        -- In the main thread, we log these.
-        -- In workers, we just clear them and ignore them –
-        -- they are identical to the main thread.
-        debugLogs =
-            getAndClearDebugLogs False
     in
     ( model
     , if shouldSendBegin then
-        Cmd.batch
-            [ Ports.sendBegin
-                initialSeed
-                debugLogs
-                (model.testReporter.reportBegin model.runInfo)
-            , trawlNext
-            ]
+        DebugLogs.getDebugLogsBeforeFirstTestRun
+            |> Task.perform GotDebugLogsBeforeFirstTestRun
 
       else
         Cmd.none
@@ -655,6 +618,7 @@ failInit message report _ =
                 }
             , testReporter = createReporter report
             , autoFail = Nothing
+            , unbufferedLogs = False
             , previousRun =
                 { fuzzRuns = 0
                 , initialSeed = 0
@@ -705,20 +669,6 @@ checkTagged : a -> JsDefinitionName -> Maybe Test
 checkTagged value jsDefinitionName =
     Runner.identifyTest value
         |> Maybe.map (Runner.tagTest jsDefinitionName)
-
-
-{-| Returns all debug logs created since the beginning,
-or last time this function was called.
-
-The `Bool` is set to `True` for fuzz tests, and pauses
-`Debug.log` - logging is not supported for passing fuzz
-tests. If the fuzz test fails, the failing run is run
-again and that time we do collect logs.
-
--}
-getAndClearDebugLogs : Bool -> DebugLogs
-getAndClearDebugLogs =
-    placeholderReplaceMe___ "getAndClearDebugLogs"
 
 
 {-| Takes a `jsDefinitionName` and returns its hash.
