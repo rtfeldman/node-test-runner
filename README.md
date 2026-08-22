@@ -19,12 +19,13 @@ You need to keep the versions of these three things in sync:
 
 When it comes to the first two it’s easy: Use the same version for both. If you use Elm 0.19.2, use version 0.19.2 of this CLI tool as well. Note that the npm packages for both `elm` and `elm-test` might have suffixes such as `-0` and `-1` etc. It’s totally OK to use `elm@0.19.2-0` with `elm-test@0.19.2-1`! The suffixes don’t need to match. The suffixes are all about bug fixes or features in the respective npm packages, while the base version says which compiler version we’re working with.
 
-When it comes to [elm-explorations/test]: Use at least version 2.0.0 with elm-test 0.19.2. If you’re on 0.19.1, see the following table:
+When it comes to [elm-explorations/test], see the following table:
 
-| elm-explorations/test | elm-test CLI         |
-| --------------------- | -------------------- |
-| >= 2.0.0              | >= 0.19.1-revision10 |
-| <= 1.2.2              | <= 0.19.1-revision9  |
+| elm-explorations/test | elm-test CLI                              |
+| --------------------- | ----------------------------------------- |
+| 2.3.0 <= v < ?        | 0.19.2-2 <= v < ?                         |
+| 2.0.0 <= v < 2.3.0    | 0.19.1-revision10 <= v < 0.19.2-1         |
+| 1.0.0 <= v < 2.0.0    | 0.19.1-revision2 <= v < 0.19.1-revision10 |
 
 (For 0.19.1, the suffix used was for example `-revision9` instead of just `-9`. This was changed in 0.19.2 to match the `elm` npm package.)
 
