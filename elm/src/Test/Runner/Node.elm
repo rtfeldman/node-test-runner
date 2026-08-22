@@ -685,18 +685,24 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, pre
             Runner.toTests (Test.concat testsList)
 
         autoFail =
-            case ( Runner.getSeenOnly tests, Runner.getSeenSkip tests ) of
-                ( False, False ) ->
+            case ( Runner.getSeenOnly tests, Runner.getSkipCount tests ) of
+                ( False, 0 ) ->
                     Nothing
 
-                ( True, False ) ->
+                ( True, 0 ) ->
                     Just "Test.only was used"
 
-                ( False, True ) ->
-                    Just "Test.skip was used"
+                ( False, 1 ) ->
+                    Just "Test.skip was used (1 time)"
 
-                ( True, True ) ->
-                    Just "Test.only and Test.skip were used"
+                ( False, skipCount ) ->
+                    Just ("Test.skip was used (" ++ String.fromInt skipCount ++ " times)")
+
+                ( True, 1 ) ->
+                    Just "Test.only was used, and Test.skip was used (1 time)"
+
+                ( True, skipCount ) ->
+                    Just ("Test.only was used, and Test.skip was used (" ++ String.fromInt skipCount ++ " times)")
 
         unitTests =
             Runner.getUnitTests tests
