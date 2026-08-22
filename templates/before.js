@@ -1,3 +1,12 @@
+// Silence `console.warn('Compiled in DEV mode. ...')`.
+// The call is near the top of the compiled JS, and the first usage of `console.warn`.
+var console = {
+  ...console,
+  warn: function () {
+    console = globalThis.console;
+  },
+};
+
 // Apply Node polyfills as necessary.
 var window = {
   Date: Date,

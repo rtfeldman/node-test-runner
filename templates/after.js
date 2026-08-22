@@ -1,5 +1,10 @@
 function run(shouldSendBegin, receive) {
-  var app = Elm.Test.Generated.Main.init({ flags: shouldSendBegin });
+  var app = Elm.Test.Generated.Main.init({
+    flags: {
+      shouldSendBegin: shouldSendBegin,
+      hashes: elmTestHashes,
+    },
+  });
   // Without this, each run leaks memory in single-threaded mode:
   Elm = null;
   app.ports.elmTestPort__send.subscribe(receive);

@@ -14,7 +14,7 @@ passed and 2 if any failed. Returns 1 if something went wrong.
 
 import Array exposing (Array)
 import Dict exposing (Dict)
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Platform
 import Random
@@ -64,6 +64,7 @@ type alias Model =
     , testReporter : TestReporter
     , autoFail : Maybe String
     , unbufferedLogs : Bool
+    , hashes : Dict JsDefinitionName String
     , previousRun : PreviousRun
     , cacheTrawl : CacheTrawl
     }
@@ -132,7 +133,17 @@ type CacheTrawl
 {-| A program which will run tests and report their results.
 -}
 type alias TestProgram =
-    Program Bool Model Msg
+    Program Flags Model Msg
+
+
+type alias Flags =
+    Decode.Value
+
+
+type alias FlagsDecoded =
+    { shouldSendBegin : Bool
+    , hashes : Dict JsDefinitionName String
+    }
 
 
 type Msg
@@ -486,7 +497,8 @@ update msg ({ testReporter } as model) =
                                     Runner.getUnitTestTag unitTest
 
                                 hash =
-                                    getHash jsDefinitionName
+                                    Dict.get jsDefinitionName model.hashes
+                                        |> Maybe.withDefault ""
 
                                 maybeCached =
                                     Dict.get jsDefinitionName model.previousRun.cachedTests
@@ -560,7 +572,8 @@ update msg ({ testReporter } as model) =
                                     Runner.getFuzzTestTag fuzzTest
 
                                 hash =
-                                    getHash jsDefinitionName
+                                    Dict.get jsDefinitionName model.hashes
+                                        |> Maybe.withDefault ""
 
                                 maybeCached =
                                     Dict.get jsDefinitionName model.previousRun.cachedTests
@@ -630,9 +643,29 @@ update msg ({ testReporter } as model) =
                                     )
 
 
-init : RunnerOptions -> Tests -> Bool -> ( Model, Cmd Msg )
-init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, previousRun } tests shouldSendBegin =
+flagsDecoder : Decoder FlagsDecoded
+flagsDecoder =
+    Decode.map2 FlagsDecoded
+        (Decode.field "shouldSendBegin" Decode.bool)
+        (Decode.field "hashes" (Decode.dict Decode.string))
+
+
+emptyFlags : FlagsDecoded
+emptyFlags =
+    { shouldSendBegin = False
+    , hashes = Dict.empty
+    }
+
+
+init : RunnerOptions -> Tests -> Flags -> ( Model, Cmd Msg )
+init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, previousRun } tests flagsValue =
     let
+        flagsResult =
+            Decode.decodeValue flagsDecoder flagsValue
+
+        flags =
+            flagsResult |> Result.withDefault emptyFlags
+
         autoFail =
             case ( Runner.getSeenOnly tests, Runner.getSeenSkip tests ) of
                 ( False, False ) ->
@@ -680,9 +713,10 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, pre
             , testReporter = testReporter
             , autoFail = autoFail
             , unbufferedLogs = unbufferedLogs
+            , hashes = flags.hashes
             , previousRun = previousRun
             , cacheTrawl =
-                if shouldSendBegin then
+                if flags.shouldSendBegin then
                     TrawlingUnitTests
                         { current = 0
                         , unitTests = []
@@ -693,12 +727,17 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, pre
             }
     in
     ( model
-    , if shouldSendBegin then
-        Runner.getDebugLogsBeforeFirstTestRun
-            |> Task.perform GotDebugLogsBeforeFirstTestRun
+    , case flagsResult of
+        Ok _ ->
+            if flags.shouldSendBegin then
+                Runner.getDebugLogsBeforeFirstTestRun
+                    |> Task.perform GotDebugLogsBeforeFirstTestRun
 
-      else
-        Cmd.none
+            else
+                Cmd.none
+
+        Err error ->
+            Ports.sendError ("Flags failed to decode:\n" ++ Decode.errorToString error)
     )
 
 
@@ -707,7 +746,7 @@ trawlNext =
     Task.perform (\() -> Trawl) (Task.succeed ())
 
 
-failInit : String -> Report -> Bool -> ( Model, Cmd Msg )
+failInit : String -> Report -> Flags -> ( Model, Cmd Msg )
 failInit message report _ =
     let
         model : Model
@@ -723,6 +762,7 @@ failInit message report _ =
                 }
             , testReporter = createReporter report
             , autoFail = Nothing
+            , hashes = Dict.empty
             , unbufferedLogs = False
             , previousRun =
                 { fuzzRuns = 0
@@ -774,13 +814,6 @@ checkTagged : a -> JsDefinitionName -> Maybe Test
 checkTagged value jsDefinitionName =
     Runner.identifyTest value
         |> Maybe.map (Runner.tagTest jsDefinitionName)
-
-
-{-| Takes a `jsDefinitionName` and returns its hash.
--}
-getHash : JsDefinitionName -> String
-getHash =
-    placeholderReplaceMe___
 
 
 {-| The implementation of functions calling this one will be replaced in the generated JS
