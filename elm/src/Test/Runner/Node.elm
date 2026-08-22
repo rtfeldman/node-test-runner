@@ -657,14 +657,32 @@ emptyFlags =
     }
 
 
-init : RunnerOptions -> Tests -> Flags -> ( Model, Cmd Msg )
-init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, previousRun } tests flagsValue =
+init : RunnerOptions -> List ( String, List (Maybe Test) ) -> Flags -> ( Model, Cmd Msg )
+init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, previousRun } possiblyTests flagsValue =
     let
         flagsResult =
             Decode.decodeValue flagsDecoder flagsValue
 
         flags =
             flagsResult |> Result.withDefault emptyFlags
+
+        testsList =
+            possiblyTests
+                |> List.filterMap
+                    (\( moduleName, maybeModuleTests ) ->
+                        let
+                            moduleTests =
+                                List.filterMap identity maybeModuleTests
+                        in
+                        if List.isEmpty moduleTests then
+                            Nothing
+
+                        else
+                            Just (Test.describe moduleName moduleTests)
+                    )
+
+        tests =
+            Runner.toTests (Test.concat testsList)
 
         autoFail =
             case ( Runner.getSeenOnly tests, Runner.getSeenSkip tests ) of
@@ -729,7 +747,10 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, pre
     ( model
     , case flagsResult of
         Ok _ ->
-            if flags.shouldSendBegin then
+            if List.isEmpty testsList then
+                Ports.sendSummary 1 (Encode.string (noTestsFoundError globs))
+
+            else if flags.shouldSendBegin then
                 Runner.getDebugLogsBeforeFirstTestRun
                     |> Task.perform GotDebugLogsBeforeFirstTestRun
 
@@ -744,38 +765,6 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, pre
 trawlNext : Cmd Msg
 trawlNext =
     Task.perform (\() -> Trawl) (Task.succeed ())
-
-
-failInit : String -> Report -> Flags -> ( Model, Cmd Msg )
-failInit message report _ =
-    let
-        model : Model
-        model =
-            { unitTests = Array.empty
-            , fuzzTests = Array.empty
-            , runInfo =
-                { testCount = 0
-                , globs = []
-                , paths = []
-                , fuzzRuns = 0
-                , initialSeed = 0
-                }
-            , testReporter = createReporter report
-            , autoFail = Nothing
-            , hashes = Dict.empty
-            , unbufferedLogs = False
-            , previousRun =
-                { fuzzRuns = 0
-                , initialSeed = 0
-                , cachedTests = Dict.empty
-                }
-            , cacheTrawl = NotTrawling
-            }
-
-        cmd =
-            Ports.sendSummary 1 (Encode.string message)
-    in
-    ( model, cmd )
 
 
 previousRunHasFailingFuzzTest : PreviousRun -> Array FuzzTest -> Bool
@@ -831,39 +820,11 @@ placeholderReplaceMe___ _ =
 -}
 run : RunnerOptions -> List ( String, List (Maybe Test) ) -> TestProgram
 run options possiblyTests =
-    let
-        testsList =
-            possiblyTests
-                |> List.filterMap
-                    (\( moduleName, maybeModuleTests ) ->
-                        let
-                            moduleTests =
-                                List.filterMap identity maybeModuleTests
-                        in
-                        if List.isEmpty moduleTests then
-                            Nothing
-
-                        else
-                            Just (Test.describe moduleName moduleTests)
-                    )
-    in
-    if List.isEmpty testsList then
-        Platform.worker
-            { init = failInit (noTestsFoundError options.globs) options.report
-            , update = \_ model -> ( model, Cmd.none )
-            , subscriptions = \_ -> Sub.none
-            }
-
-    else
-        let
-            tests =
-                Runner.toTests (Test.concat testsList)
-        in
-        Platform.worker
-            { init = init options tests
-            , update = update
-            , subscriptions = \_ -> Ports.receive Receive
-            }
+    Platform.worker
+        { init = init options possiblyTests
+        , update = update
+        , subscriptions = \_ -> Ports.receive Receive
+        }
 
 
 noTestsFoundError : List String -> String
