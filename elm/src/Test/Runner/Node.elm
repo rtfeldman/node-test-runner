@@ -138,6 +138,7 @@ type alias TestProgram =
 
 type Msg
     = Receive (Result Decode.Error JsMessage)
+    | NestedCmd (Cmd Msg)
     | Trawl
 
 
@@ -158,24 +159,26 @@ dispatchUnitTest testId model =
             Ports.sendError ("Unit test not found: " ++ String.fromInt testId)
 
         Just unitTest ->
-            let
-                -- The unnecessary-looking tuple here ensures that `getAndClearDebugLogs`
-                -- runs _after_ the thunk.
-                ( ( expectation, duration ), debugLogs ) =
-                    ( runWithDuration (\() -> Runner.runUnitTest unitTest), getAndClearDebugLogs False )
+            Runner.runUnitTest unitTest
+                |> Task.perform
+                    (\( expectation, duration ) ->
+                        let
+                            debugLogs =
+                                getAndClearDebugLogs False
 
-                cachedExpectation =
-                    case expectation of
-                        UnitTestPass ->
-                            CachedUnitTestPass
+                            cachedExpectation =
+                                case expectation of
+                                    UnitTestPass ->
+                                        CachedUnitTestPass
 
-                        UnitTestFail data ->
-                            CachedUnitTestFail
-                                { description = Runner.getUnitTestFailDescription data
-                                , reason = Runner.getUnitTestFailReason data
-                                }
-            in
-            sendUnitTestResult testId unitTest cachedExpectation duration debugLogs model.testReporter
+                                    UnitTestFail data ->
+                                        CachedUnitTestFail
+                                            { description = Runner.getUnitTestFailDescription data
+                                            , reason = Runner.getUnitTestFailReason data
+                                            }
+                        in
+                        NestedCmd (sendUnitTestResult testId unitTest cachedExpectation duration debugLogs model.testReporter)
+                    )
 
 
 sendUnitTestResult : TestId -> UnitTest -> CachedUnitTestExpectation -> Float -> DebugLogs -> TestReporter -> Cmd Msg
@@ -274,46 +277,47 @@ dispatchFuzzTest testId model =
 
                 seed =
                     Random.initialSeed model.runInfo.initialSeed
-
-                ( expectation, duration, debugLogs ) =
-                    -- Pause debug logs.
-                    getAndClearDebugLogs True
-                        |> (\_ ->
-                                let
-                                    ( expectation_, duration_ ) =
-                                        runWithDuration (\() -> Runner.runFuzzTest fuzzTest seed model.runInfo.fuzzRuns fuzzerInts)
-                                in
-                                case expectation_ of
-                                    FuzzTestPass data ->
-                                        ( CachedFuzzTestPass (Runner.getFuzzTestPassDistributionReport data)
-                                        , duration_
-                                        , getAndClearDebugLogs False
-                                        )
-
-                                    FuzzTestFail data ->
-                                        let
-                                            newDebugLogs =
-                                                -- Unpause debug logs.
-                                                getAndClearDebugLogs False
-                                                    |> (\_ ->
-                                                            -- Collect debug logs from failing run.
-                                                            Runner.rerunFuzzTestFailure data
-                                                                |> (\() -> getAndClearDebugLogs False)
-                                                       )
-                                        in
-                                        ( CachedFuzzTestFail
-                                            { description = Runner.getFuzzTestFailDescription data
-                                            , reason = Runner.getFuzzTestFailReason data
-                                            , distributionReport = Runner.getFuzzTestFailDistributionReport data
-                                            , given = Runner.getFuzzTestFailGiven data
-                                            , fuzzerInts = Runner.getFuzzTestFailFuzzerInts data
-                                            }
-                                        , duration_
-                                        , newDebugLogs
-                                        )
-                           )
             in
-            sendFuzzTestResult testId fuzzTest expectation duration debugLogs model.testReporter
+            -- Pause debug logs.
+            getAndClearDebugLogs True
+                |> (\_ ->
+                        Runner.runFuzzTest fuzzTest seed model.runInfo.fuzzRuns fuzzerInts
+                            |> Task.perform
+                                (\( expectation_, duration_ ) ->
+                                    let
+                                        ( expectation, duration, debugLogs ) =
+                                            case expectation_ of
+                                                FuzzTestPass data ->
+                                                    ( CachedFuzzTestPass (Runner.getFuzzTestPassDistributionReport data)
+                                                    , duration_
+                                                    , getAndClearDebugLogs False
+                                                    )
+
+                                                FuzzTestFail data ->
+                                                    let
+                                                        newDebugLogs =
+                                                            -- Unpause debug logs.
+                                                            getAndClearDebugLogs False
+                                                                |> (\_ ->
+                                                                        -- Collect debug logs from failing run.
+                                                                        Runner.rerunFuzzTestFailure data
+                                                                            |> (\() -> getAndClearDebugLogs False)
+                                                                   )
+                                                    in
+                                                    ( CachedFuzzTestFail
+                                                        { description = Runner.getFuzzTestFailDescription data
+                                                        , reason = Runner.getFuzzTestFailReason data
+                                                        , distributionReport = Runner.getFuzzTestFailDistributionReport data
+                                                        , given = Runner.getFuzzTestFailGiven data
+                                                        , fuzzerInts = Runner.getFuzzTestFailFuzzerInts data
+                                                        }
+                                                    , duration_
+                                                    , newDebugLogs
+                                                    )
+                                    in
+                                    NestedCmd (sendFuzzTestResult testId fuzzTest expectation duration debugLogs model.testReporter)
+                                )
+                   )
 
 
 sendFuzzTestResult : TestId -> FuzzTest -> CachedFuzzTestExpectation -> Float -> DebugLogs -> TestReporter -> Cmd Msg
@@ -407,6 +411,9 @@ update msg ({ testReporter } as model) =
 
         Receive (Err err) ->
             ( model, Ports.sendError (Decode.errorToString err) )
+
+        NestedCmd cmd ->
+            ( model, cmd )
 
         Trawl ->
             case model.cacheTrawl of
@@ -696,15 +703,8 @@ previousRunHasFailingFuzzTest previousRun =
 
 checkTagged : a -> JsDefinitionName -> Maybe Test
 checkTagged value jsDefinitionName =
-    check value
+    Runner.identifyTest value
         |> Maybe.map (Runner.tagTest jsDefinitionName)
-
-
-{-| Returns `Just value` if `value` is a `Test`, otherwise `Nothing`.
--}
-check : a -> Maybe Test
-check =
-    placeholderReplaceMe___ "check"
 
 
 {-| Returns all debug logs created since the beginning,
@@ -726,11 +726,6 @@ getAndClearDebugLogs =
 getHash : JsDefinitionName -> String
 getHash =
     placeholderReplaceMe___ "getHash"
-
-
-runWithDuration : (() -> a) -> ( a, Float )
-runWithDuration =
-    placeholderReplaceMe___ "runWithDuration"
 
 
 {-| The implementation of functions calling this one will be replaced in the generated JS
