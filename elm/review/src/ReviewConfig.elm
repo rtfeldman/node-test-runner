@@ -31,14 +31,12 @@ config =
             ]
     , NoUnused.Exports.rule
         |> Review.Rule.ignoreErrorsForFiles
-            [ "x" --"src/Test/Runner/Node/Vendor/Diff.elm"
-            , "src/Test/Runner/Node.elm" -- run, TestProgram are used externally
+            [ "src/Test/Runner/Node.elm" -- run, TestProgram are used externally
             ]
     , NoUnused.Modules.rule
     , NoUnused.CustomTypeConstructorArgs.rule
         |> Review.Rule.ignoreErrorsForFiles
             [ "src/Test/Runner/Node/Vendor/Diff.elm" -- UnexpectedPath is used for reporting errors
-            , "src/Test/Runner/JsMessage.elm" -- Test is used for JSON decoding
             ]
     , NoUnused.Dependencies.rule
     , NoUnused.Parameters.rule

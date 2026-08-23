@@ -7,7 +7,6 @@ import Test.Reporter.Console.Format exposing (format)
 import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
 import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo)
-import Test.Runner exposing (formatLabels)
 
 
 formatDuration : Float -> String
@@ -34,6 +33,23 @@ pluralize singular plural count =
                 plural
     in
     String.join " " [ String.fromInt count, suffix ]
+
+
+formatLabels :
+    (String -> Text)
+    -> (String -> Text)
+    -> List String
+    -> List Text
+formatLabels formatDescription formatTest labels =
+    case labels of
+        [] ->
+            []
+
+        test :: descriptions ->
+            List.foldl
+                (\x acc -> formatDescription x :: acc)
+                [ formatTest test ]
+                descriptions
 
 
 passedToText : List String -> String -> Text
@@ -147,7 +163,7 @@ getStatus outcome =
 
 
 reportComplete : UseColor -> Results.TestResult -> Value
-reportComplete useColor { labels, outcome } =
+reportComplete useColor { labels, outcome, hasBufferedDebugLogs } =
     Encode.object <|
         ( "type", Encode.string "complete" )
             :: ( "status", Encode.string (getStatus outcome) )
@@ -156,10 +172,18 @@ reportComplete useColor { labels, outcome } =
                         -- No failures of any kind.
                         case distributionReportToString distributionReport of
                             Nothing ->
-                                []
+                                if hasBufferedDebugLogs then
+                                    [ ( "message"
+                                      , passedLabelsToText labels
+                                            |> textToValue useColor
+                                      )
+                                    ]
+
+                                else
+                                    []
 
                             Just report ->
-                                [ ( "distributionReport"
+                                [ ( "message"
                                   , report
                                         |> passedToText labels
                                         |> textToValue useColor

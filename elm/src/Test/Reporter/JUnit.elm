@@ -84,9 +84,9 @@ formatClassAndName labels =
             ( "", "" )
 
 
-encodeDuration : Int -> Value
+encodeDuration : Float -> Value
 encodeDuration time =
-    (toFloat time / 1000)
+    (time / 1000)
         |> String.fromFloat
         |> Encode.string
 
@@ -119,6 +119,7 @@ encodeExtraFailure _ =
                   }
                 , NoDistribution
                 )
+        , hasBufferedDebugLogs = False
         }
 
 
