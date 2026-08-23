@@ -25,7 +25,7 @@ import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createRep
 import Test.Reporter.TestResults exposing (Outcome(..), TestResult)
 import Test.Runner.Failure exposing (Reason(..))
 import Test.Runner.Ports as Ports exposing (JsMessage(..))
-import Test.RunnerV2 as Runner exposing (FuzzTest, FuzzTestExpectation(..), Tests, UnitTest, UnitTestExpectation(..))
+import Test.RunnerV2 as Runner exposing (FuzzTest, FuzzTestExpectation(..), UnitTest, UnitTestExpectation(..))
 
 
 
@@ -803,17 +803,6 @@ checkTagged : a -> JsDefinitionName -> Maybe Test
 checkTagged value jsDefinitionName =
     Runner.identifyTest value
         |> Maybe.map (Runner.tagTest jsDefinitionName)
-
-
-{-| The implementation of functions calling this one will be replaced in the generated JS
-with versions that do something not normally possible in Elm.
-
-If you rename or change this function, or any function that calls it, you also need to update the regexes that looks for it.
-
--}
-placeholderReplaceMe___ : a -> b
-placeholderReplaceMe___ _ =
-    Debug.todo "The regex for replacing this Debug.todo with some real code must have failed since you see this message!\n\nPlease report this bug: https://github.com/rtfeldman/node-test-runner/issues/new\n"
 
 
 {-| Run the tests.
