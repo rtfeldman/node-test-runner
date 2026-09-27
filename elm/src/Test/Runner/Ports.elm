@@ -35,13 +35,14 @@ sendBegin initialSeed bufferedDebugLogs maybeReport =
         )
 
 
-sendReady : List Int -> List Int -> Cmd msg
-sendReady unitTests fuzzTests =
+sendReady : List Int -> List Int -> Int -> Cmd msg
+sendReady unitTests fuzzTests excluded =
     elmTestPort__send
         (Encode.object
             [ ( "type", Encode.string "READY" )
             , ( "unitTests", Encode.list Encode.int unitTests )
             , ( "fuzzTests", Encode.list Encode.int fuzzTests )
+            , ( "excluded", Encode.int excluded )
             ]
         )
 
@@ -108,7 +109,7 @@ encodeMaybe encoder maybe =
 type JsMessage
     = RunUnitTest Int
     | RunFuzzTest Int
-    | Summary Float Int (List ( List String, String ))
+    | Summary Float Int Int (List ( List String, String ))
 
 
 decoder : Decoder JsMessage
@@ -129,9 +130,10 @@ decodeMessageFromType messageType =
                 (Decode.field "testId" Decode.int)
 
         "SUMMARY" ->
-            Decode.map3 Summary
+            Decode.map4 Summary
                 (Decode.field "duration" Decode.float)
                 (Decode.field "failures" Decode.int)
+                (Decode.field "excluded" Decode.int)
                 (Decode.field "todos" (Decode.list todoDecoder))
 
         _ ->

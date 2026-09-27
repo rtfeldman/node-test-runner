@@ -27,6 +27,7 @@ type alias SummaryInfo =
     { testCount : Int
     , passed : Int
     , failed : Int
+    , excluded : Int
     , todos : List ( List String, String )
     , duration : Float
     }

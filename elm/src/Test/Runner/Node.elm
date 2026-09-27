@@ -22,7 +22,7 @@ import Task
 import Test exposing (Test)
 import Test.Distribution exposing (DistributionReport(..))
 import Test.Reporter.Reporter exposing (Report, RunInfo, TestReporter, createReporter)
-import Test.Reporter.TestResults exposing (Outcome(..), TestResult)
+import Test.Reporter.TestResults exposing (Outcome(..), SummaryInfo, TestResult)
 import Test.Runner.Failure exposing (Reason(..))
 import Test.Runner.Ports as Ports exposing (JsMessage(..))
 import Test.RunnerV2 as Runner exposing (FuzzTest, FuzzTestExpectation(..), UnitTest, UnitTestExpectation(..))
@@ -435,15 +435,17 @@ update msg ({ testReporter } as model) =
                 RunFuzzTest testId ->
                     ( model, dispatchFuzzTest testId model )
 
-                Summary duration failed todos ->
+                Summary duration failed excluded todos ->
                     let
                         testCount =
                             model.runInfo.testCount
 
+                        summaryInfo : SummaryInfo
                         summaryInfo =
                             { testCount = testCount
                             , passed = testCount - failed - List.length todos
                             , failed = failed
+                            , excluded = excluded
                             , todos = todos
                             , duration = duration
                             }
@@ -563,7 +565,7 @@ update msg ({ testReporter } as model) =
                     case Array.get data.current model.fuzzTests of
                         Nothing ->
                             ( { model | cacheTrawl = NotTrawling }
-                            , Ports.sendReady (List.reverse data.unitTests) (List.reverse data.fuzzTests)
+                            , Ports.sendReady (List.reverse data.unitTests) (List.reverse data.fuzzTests) model.runInfo.excludedCount
                             )
 
                         Just fuzzTest ->
@@ -684,8 +686,14 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, pre
         tests =
             Runner.toTests (Test.concat testsList)
 
+        excludedDueToOnly =
+            Runner.getExcludedDueToOnly tests
+
+        excludedDueToSkip =
+            Runner.getExcludedDueToSkip tests
+
         autoFail =
-            case ( Runner.getExcludedDueToOnly tests, Runner.getExcludedDueToSkip tests ) of
+            case ( excludedDueToOnly, excludedDueToSkip ) of
                 ( Nothing, 0 ) ->
                     Nothing
 
@@ -723,6 +731,7 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, pre
             , fuzzTests = fuzzTests
             , runInfo =
                 { testCount = testCount
+                , excludedCount = Maybe.withDefault 0 excludedDueToOnly + excludedDueToSkip
                 , globs = globs
                 , paths = paths
                 , fuzzRuns = runs

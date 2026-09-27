@@ -7,7 +7,7 @@ import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), 
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
 
-reportBegin : { globs : List String, paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin : { globs : List String, paths : List String, fuzzRuns : Int, testCount : Int, excludedCount : Int, initialSeed : Int } -> Maybe Value
 reportBegin { globs, paths, fuzzRuns, testCount, initialSeed } =
     Encode.object
         [ ( "event", Encode.string "runStart" )
@@ -134,11 +134,12 @@ encodeLabels labels =
 
 
 reportSummary : SummaryInfo -> Maybe String -> Value
-reportSummary { duration, passed, failed } autoFail =
+reportSummary { duration, passed, failed, excluded } autoFail =
     Encode.object
         [ ( "event", Encode.string "runComplete" )
         , ( "passed", Encode.string <| String.fromInt passed )
         , ( "failed", Encode.string <| String.fromInt failed )
+        , ( "excluded", Encode.string <| String.fromInt excluded )
         , ( "duration", Encode.string <| String.fromFloat duration )
         , ( "autoFail"
           , autoFail

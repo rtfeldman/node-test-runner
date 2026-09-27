@@ -212,7 +212,7 @@ summarizeTodos =
 
 
 reportSummary : UseColor -> SummaryInfo -> Maybe String -> Value
-reportSummary useColor { todos, passed, failed, duration } autoFail =
+reportSummary useColor { todos, passed, failed, excluded, duration } autoFail =
     let
         headlineResult =
             case ( autoFail, failed, List.length todos ) of
@@ -242,16 +242,7 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
                     ]
                         |> Text.concat
 
-        todoStats =
-            -- Print stats for Todos if there are any,
-            --but don't print details unless only Todos remain
-            case List.length todos of
-                0 ->
-                    plain ""
-
-                numTodos ->
-                    stat "Todo:     " (String.fromInt numTodos)
-
+        -- Don't print details unless only Todos remain
         individualTodos =
             if failed > 0 then
                 plain ""
@@ -266,7 +257,8 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
             , stat "Duration: " (formatDuration duration)
             , stat "Passed:   " (String.fromInt passed)
             , stat "Failed:   " (String.fromInt failed)
-            , todoStats
+            , statUnless0 "Excluded: " excluded
+            , statUnless0 "Todo:     " (List.length todos)
             , individualTodos
             ]
                 |> Text.concat
@@ -282,6 +274,15 @@ stat label value =
         [ dark (plain label)
         , plain (value ++ "\n")
         ]
+
+
+statUnless0 : String -> Int -> Text
+statUnless0 label value =
+    if value == 0 then
+        plain ""
+
+    else
+        stat label (String.fromInt value)
 
 
 withChar : Char -> String -> String
