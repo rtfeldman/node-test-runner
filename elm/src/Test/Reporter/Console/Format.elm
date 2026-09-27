@@ -77,6 +77,9 @@ format formatEquality description reason =
                 , missingStr
                 ]
 
+        Multiple list ->
+            Debug.todo ("Multiple: " ++ Debug.toString list)
+
 
 highlightEqual : String -> String -> Maybe ( List (Highlightable String), List (Highlightable String) )
 highlightEqual expected actual =

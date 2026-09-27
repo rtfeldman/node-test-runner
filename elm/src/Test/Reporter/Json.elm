@@ -65,7 +65,7 @@ encodeDistributionReports outcome =
 encodeDistributionReport : DistributionReport -> Value
 encodeDistributionReport distributionReport =
     case distributionReport of
-        Test.Distribution.NoDistribution ->
+        Test.Distribution.NoDistribution () ->
             Encode.null
                 |> encodeSumType "NoDistribution"
 
@@ -223,3 +223,6 @@ encodeReason description reason =
             ]
                 |> Encode.object
                 |> encodeSumType "CollectionDiff"
+
+        Multiple list ->
+            Debug.todo ("Multiple: " ++ Debug.toString list)

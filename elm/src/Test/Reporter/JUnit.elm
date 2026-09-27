@@ -19,7 +19,7 @@ encodeDistributionReport reportText =
 distributionReportToString : DistributionReport -> Maybe String
 distributionReportToString distributionReport =
     case distributionReport of
-        Test.Distribution.NoDistribution ->
+        Test.Distribution.NoDistribution () ->
             Nothing
 
         Test.Distribution.DistributionToReport r ->
@@ -117,7 +117,7 @@ encodeExtraFailure _ =
                   , description = ""
                   , reason = Custom
                   }
-                , NoDistribution
+                , NoDistribution ()
                 )
         , hasBufferedDebugLogs = False
         }
@@ -197,3 +197,6 @@ reasonToString description reason =
                 ++ String.join "\n" extra
                 ++ "\n\nthese were missing:\n\n"
                 ++ String.join "\n" missing
+
+        Multiple list ->
+            Debug.todo ("Multiple: " ++ Debug.toString list)

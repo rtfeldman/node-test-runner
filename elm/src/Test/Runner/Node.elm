@@ -234,7 +234,7 @@ sendUnitTestResult model testId unitTest expectation duration usedDebugLog buffe
         outcome =
             case expectation of
                 CachedUnitTestPass ->
-                    Passed NoDistribution
+                    Passed (NoDistribution ())
 
                 CachedUnitTestFail { description, reason } ->
                     case reason of
@@ -247,7 +247,7 @@ sendUnitTestResult model testId unitTest expectation duration usedDebugLog buffe
                                   , description = description
                                   , reason = reason
                                   }
-                                , NoDistribution
+                                , NoDistribution ()
                                 )
 
         labels =
@@ -401,7 +401,7 @@ sendFuzzTestResult model testId fuzzTest expectation duration usedDebugLog buffe
                 not usedDebugLog
 
             else
-                not (expectation == CachedFuzzTestPass NoDistribution && not usedDebugLog)
+                not (expectation == CachedFuzzTestPass (NoDistribution ()) && not usedDebugLog)
 
         expectationElmCode =
             if shouldCache then
@@ -593,7 +593,7 @@ update msg ({ testReporter } as model) =
 
                                                             else
                                                                 -- As an optimization in buffered logs mode, passing fuzz tests without debug logs and distribution report are not stored.
-                                                                Just ( CachedFuzzTestPass NoDistribution, "" )
+                                                                Just ( CachedFuzzTestPass (NoDistribution ()), "" )
 
                                                         cached ->
                                                             cached
@@ -685,17 +685,17 @@ init { globs, paths, runs, seed, seedIsUserSupplied, report, unbufferedLogs, pre
             Runner.toTests (Test.concat testsList)
 
         autoFail =
-            case ( Runner.getSeenOnly tests, Runner.getSeenSkip tests ) of
-                ( False, False ) ->
+            case ( Runner.getExcludedDueToOnly tests, Runner.getExcludedDueToSkip tests ) of
+                ( Nothing, 0 ) ->
                     Nothing
 
-                ( True, False ) ->
+                ( Just _, 0 ) ->
                     Just "Test.only was used"
 
-                ( False, True ) ->
+                ( Nothing, _ ) ->
                     Just "Test.skip was used"
 
-                ( True, True ) ->
+                ( Just _, _ ) ->
                     Just "Test.only and Test.skip were used"
 
         unitTests =
