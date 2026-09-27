@@ -15,7 +15,7 @@ withoutNums =
 testWithoutNums : Test
 testWithoutNums =
     describe "withoutNums"
-        [ fuzzWith { runs = 100, distribution = Test.noDistribution } (triple string int string) "adding numbers to strings has no effect" <|
+        [ fuzzWith "adding numbers to strings has no effect" { runs = 100, distribution = Test.noDistribution } (triple string int string) <|
             \( prefix, num, suffix ) ->
                 withoutNums (prefix ++ String.fromInt num ++ suffix)
                     |> Expect.equal (withoutNums (prefix ++ suffix))
