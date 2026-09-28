@@ -198,5 +198,6 @@ reasonToString description reason =
                 ++ "\n\nthese were missing:\n\n"
                 ++ String.join "\n" missing
 
-        Multiple list ->
-            Debug.todo ("Multiple: " ++ Debug.toString list)
+        Multiple _ ->
+            -- node-test-runner does not support showing the `reason` for `Expect.oneOf`.
+            description

@@ -77,8 +77,9 @@ format formatEquality description reason =
                 , missingStr
                 ]
 
-        Multiple list ->
-            Debug.todo ("Multiple: " ++ Debug.toString list)
+        Multiple _ ->
+            -- node-test-runner does not support showing the `reason` for `Expect.oneOf`.
+            description
 
 
 highlightEqual : String -> String -> Maybe ( List (Highlightable String), List (Highlightable String) )

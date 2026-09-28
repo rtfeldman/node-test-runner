@@ -225,5 +225,9 @@ encodeReason description reason =
                 |> Encode.object
                 |> encodeSumType "CollectionDiff"
 
-        Multiple list ->
-            Debug.todo ("Multiple: " ++ Debug.toString list)
+        Multiple _ ->
+            -- node-test-runner does not support showing the `reason` for `Expect.oneOf`.
+            -- Also, when this was added, this avoided downstream consumers of this JSON
+            -- choking on a new variant.
+            Encode.string description
+                |> encodeSumType "Custom"
