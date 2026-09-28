@@ -77,6 +77,10 @@ format formatEquality description reason =
                 , missingStr
                 ]
 
+        Multiple _ ->
+            -- node-test-runner does not support showing the `reason` for `Expect.oneOf`.
+            description
+
 
 highlightEqual : String -> String -> Maybe ( List (Highlightable String), List (Highlightable String) )
 highlightEqual expected actual =

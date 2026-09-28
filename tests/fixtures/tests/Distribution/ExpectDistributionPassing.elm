@@ -9,6 +9,7 @@ import Test.Distribution
 test : Test
 test =
     Test.fuzzWith
+        "expectDistribution: passing"
         { runs = 10000
         , distribution =
             Test.expectDistribution
@@ -20,5 +21,4 @@ test =
                 ]
         }
         (Fuzz.intRange 1 20)
-        "expectDistribution: passing"
         (\_ -> Expect.pass)

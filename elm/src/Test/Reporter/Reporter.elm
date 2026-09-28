@@ -27,6 +27,7 @@ type alias RunInfo =
     , paths : List String
     , fuzzRuns : Int
     , testCount : Int
+    , excludedCount : Int
     , initialSeed : Int
     }
 

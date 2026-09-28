@@ -7,7 +7,6 @@ import Test.Reporter.Console.Format exposing (format)
 import Test.Reporter.Console.Format.Color as FormatColor
 import Test.Reporter.Console.Format.Monochrome as FormatMonochrome
 import Test.Reporter.TestResults as Results exposing (Failure, Outcome(..), SummaryInfo)
-import Test.Runner exposing (formatLabels)
 
 
 formatDuration : Float -> String
@@ -34,6 +33,23 @@ pluralize singular plural count =
                 plural
     in
     String.join " " [ String.fromInt count, suffix ]
+
+
+formatLabels :
+    (String -> Text)
+    -> (String -> Text)
+    -> List String
+    -> List Text
+formatLabels formatDescription formatTest labels =
+    case labels of
+        [] ->
+            []
+
+        test :: descriptions ->
+            List.foldl
+                (\x acc -> formatDescription x :: acc)
+                [ formatTest test ]
+                descriptions
 
 
 passedToText : List String -> String -> Text
@@ -147,7 +163,7 @@ getStatus outcome =
 
 
 reportComplete : UseColor -> Results.TestResult -> Value
-reportComplete useColor { labels, outcome } =
+reportComplete useColor { labels, outcome, hasBufferedDebugLogs } =
     Encode.object <|
         ( "type", Encode.string "complete" )
             :: ( "status", Encode.string (getStatus outcome) )
@@ -156,10 +172,18 @@ reportComplete useColor { labels, outcome } =
                         -- No failures of any kind.
                         case distributionReportToString distributionReport of
                             Nothing ->
-                                []
+                                if hasBufferedDebugLogs then
+                                    [ ( "message"
+                                      , passedLabelsToText labels
+                                            |> textToValue useColor
+                                      )
+                                    ]
+
+                                else
+                                    []
 
                             Just report ->
-                                [ ( "distributionReport"
+                                [ ( "message"
                                   , report
                                         |> passedToText labels
                                         |> textToValue useColor
@@ -188,7 +212,7 @@ summarizeTodos =
 
 
 reportSummary : UseColor -> SummaryInfo -> Maybe String -> Value
-reportSummary useColor { todos, passed, failed, duration } autoFail =
+reportSummary useColor { todos, passed, failed, excluded, duration } autoFail =
     let
         headlineResult =
             case ( autoFail, failed, List.length todos ) of
@@ -218,16 +242,7 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
                     ]
                         |> Text.concat
 
-        todoStats =
-            -- Print stats for Todos if there are any,
-            --but don't print details unless only Todos remain
-            case List.length todos of
-                0 ->
-                    plain ""
-
-                numTodos ->
-                    stat "Todo:     " (String.fromInt numTodos)
-
+        -- Don't print details unless only Todos remain
         individualTodos =
             if failed > 0 then
                 plain ""
@@ -242,7 +257,8 @@ reportSummary useColor { todos, passed, failed, duration } autoFail =
             , stat "Duration: " (formatDuration duration)
             , stat "Passed:   " (String.fromInt passed)
             , stat "Failed:   " (String.fromInt failed)
-            , todoStats
+            , statUnless0 "Excluded: " excluded
+            , statUnless0 "Todo:     " (List.length todos)
             , individualTodos
             ]
                 |> Text.concat
@@ -260,6 +276,15 @@ stat label value =
         ]
 
 
+statUnless0 : String -> Int -> Text
+statUnless0 label value =
+    if value == 0 then
+        plain ""
+
+    else
+        stat label (String.fromInt value)
+
+
 withChar : Char -> String -> String
 withChar icon str =
     String.fromChar icon ++ " " ++ str ++ "\n"
@@ -268,7 +293,7 @@ withChar icon str =
 distributionReportToString : DistributionReport -> Maybe String
 distributionReportToString distributionReport =
     case distributionReport of
-        Test.Distribution.NoDistribution ->
+        Test.Distribution.NoDistribution () ->
             Nothing
 
         Test.Distribution.DistributionToReport r ->
