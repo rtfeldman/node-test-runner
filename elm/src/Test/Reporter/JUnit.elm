@@ -124,7 +124,7 @@ encodeExtraFailure _ =
 
 
 reportSummary : SummaryInfo -> Maybe String -> Value
-reportSummary { testCount, duration, failed, excluded } autoFail =
+reportSummary { testCount, duration, failed } autoFail =
     let
         -- JUnit doesn't have a notion of "everything passed, but you left
         -- a Test.only in there, so it's a failure overall." In that case
