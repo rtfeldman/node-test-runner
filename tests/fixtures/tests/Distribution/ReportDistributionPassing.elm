@@ -8,6 +8,7 @@ import Test exposing (Test)
 test : Test
 test =
     Test.fuzzWith
+        "reportDistribution: passing"
         { runs = 10000
         , distribution =
             Test.reportDistribution
@@ -18,5 +19,4 @@ test =
                 ]
         }
         (Fuzz.intRange 1 20)
-        "reportDistribution: passing"
         (\_ -> Expect.pass)

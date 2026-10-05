@@ -19,7 +19,7 @@ encodeDistributionReport reportText =
 distributionReportToString : DistributionReport -> Maybe String
 distributionReportToString distributionReport =
     case distributionReport of
-        Test.Distribution.NoDistribution ->
+        Test.Distribution.NoDistribution () ->
             Nothing
 
         Test.Distribution.DistributionToReport r ->
@@ -84,9 +84,9 @@ formatClassAndName labels =
             ( "", "" )
 
 
-encodeDuration : Int -> Value
+encodeDuration : Float -> Value
 encodeDuration time =
-    (toFloat time / 1000)
+    (time / 1000)
         |> String.fromFloat
         |> Encode.string
 
@@ -117,8 +117,9 @@ encodeExtraFailure _ =
                   , description = ""
                   , reason = Custom
                   }
-                , NoDistribution
+                , NoDistribution ()
                 )
+        , hasBufferedDebugLogs = False
         }
 
 
@@ -196,3 +197,7 @@ reasonToString description reason =
                 ++ String.join "\n" extra
                 ++ "\n\nthese were missing:\n\n"
                 ++ String.join "\n" missing
+
+        Multiple _ ->
+            -- node-test-runner does not support showing the `reason` for `Expect.oneOf`.
+            description
