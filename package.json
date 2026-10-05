@@ -54,7 +54,7 @@
     "@types/node": "26.0.1",
     "@types/which": "3.0.4",
     "elm-review": "2.13.1",
-    "elm-tooling": "1.18.0",
+    "elm-tooling": "1.21.0",
     "eslint": "9.20.1",
     "eslint-plugin-mocha": "10.5.0",
     "globals": "15.15.0",
