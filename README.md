@@ -26,7 +26,7 @@ When it comes to [elm-explorations/test]: Use at least version 2.0.0 with elm-te
 | >= 2.0.0              | >= 0.19.1-revision10 |
 | <= 1.2.2              | <= 0.19.1-revision9  |
 
-(For 0.19.1, the suffix used was for example `-revision9` instead of just `-9`. This was changed in 0.19.3 to match the `elm` npm package.)
+(For 0.19.1, the suffix used was for example `-revision9` instead of just `-9`. This was changed in 0.19.2 to match the `elm` npm package.)
 
 > **Unfortunate behavior of 0.19.1-revision9 and older**
 >
