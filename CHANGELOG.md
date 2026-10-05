@@ -4,6 +4,29 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.2-X of this project will be compatible with Elm 0.19.2. See [Versions](./README.md#versions) for details.
 
+## 0.19.3-0 - 2026-10-05
+
+### Breaking
+
+elm-test now requires [Elm 0.19.3](https://github.com/elm/compiler/releases/tag/0.19.3)!
+
+Note that if you install Elm 0.19.3, but forget to update elm-test, you’ll get an error like this:
+
+```
+-- ELM VERSION MISMATCH ----------------------------------------------- elm.json
+
+Your elm.json says this application needs a different version of Elm.
+
+It requires 0.19.2, but you are using 0.19.3 right now.
+
+
+`elm make` failed with exit code 1.
+```
+
+That error message is slightly confusing because it’s talking about a generated `elm.json` file deep in the `elm-stuff/` directory, not your own elm.json! But either way, the solution is to use the same version of `elm` and `elm-test`. See [Versions](./README.md#versions) for details.
+
+elm-test has used the strategy of mirroring the Elm version for quite a while. Now that there are more frequent Elm patch releases, that might need to be reconsidered. The only change in this version was replacing the string "0.19.2" with "0.19.3" in a few places. Either way, for now we’re keeping the current versioning strategy to get something out that supports 0.19.3.
+
 ## 0.19.2-1 - 2026-08-21
 
 This release adds a few CLI options, reduces the dependency footprint, and fixes a bug.
