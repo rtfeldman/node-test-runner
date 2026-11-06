@@ -33,7 +33,7 @@ withoutNums =
 testWithoutNums : Test
 testWithoutNums =
     describe "withoutNums"
-        [ fuzzWith { runs = 100, distribution = Test.noDistribution } (triple string int string) "adding numbers to strings has no effect" <|
+        [ fuzzWith "adding numbers to strings has no effect" { runs = 100, distribution = Test.noDistribution } (triple string int string) <|
             \( prefix, num, suffix ) ->
                 withoutNums (prefix ++ String.fromInt num ++ suffix)
                     |> Expect.equal (withoutNums (prefix ++ suffix))
@@ -61,21 +61,21 @@ testExpectations =
 testFuzz : Test
 testFuzz =
     describe "fuzzing"
-        [ fuzz2 string string "empty list etc" <|
+        [ fuzz2 "empty list etc" string string <|
             \name punctuation ->
                 oxfordify "This sentence is empty" "." []
                     |> Expect.equal ""
                     |> Expect.onFail "given an empty list, did not return an empty string"
-        , fuzz2 string string "further testing" <|
+        , fuzz2 "further testing" string string <|
             \name punctuation ->
                 oxfordify "This sentence contains " "." [ "one item" ]
                     |> Expect.equal "This sentence contains one item."
-        , fuzz2 string string "custom onFail here" <|
+        , fuzz2 "custom onFail here" string string <|
             \name punctuation ->
                 oxfordify "This sentence contains " "." [ "one item", "two item" ]
                     |> Expect.equal "This sentence contains one item and two item."
                     |> Expect.onFail "given an empty list, did not return an empty string"
-        , fuzz2 string string "This is a test." <|
+        , fuzz2 "This is a test." string string <|
             \name punctuation ->
                 oxfordify "This sentence contains " "." [ "one item", "two item", "three item" ]
                     |> Expect.equal "This sentence contains one item, two item, and three item."
