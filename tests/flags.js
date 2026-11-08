@@ -378,6 +378,32 @@ describe('flags', () => {
       assert.strictEqual('12345', firstOutput.initialSeed);
     });
 
+    it('Should allow the maximum seed', () => {
+      const runResult = execElmTest([
+        '--report=json',
+        '--seed=4294967295',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+      const firstOutput = JSON.parse(runResult.stdout.split('\n')[0]);
+
+      assert.strictEqual('4294967295', firstOutput.initialSeed);
+    });
+
+    it('Should fail if given a seed larger than 32 bits', () => {
+      const runResult = execElmTest([
+        '--seed',
+        '4294967296',
+        path.join('tests', 'Passing', 'One.elm'),
+      ]);
+
+      assert.ok(Number.isInteger(runResult.status));
+      assert.notStrictEqual(runResult.status, 0);
+      assert.ok(
+        runResult.stderr.includes('Expected at most 4294967295.'),
+        runResult.stderr
+      );
+    });
+
     it('Should allow 0', () => {
       const runResult = execElmTest([
         '--report=json',

@@ -15,7 +15,7 @@ withoutNums =
 testWithoutNums : Test
 testWithoutNums =
     describe "withoutNums"
-        [ fuzzWith { runs = 100, distribution = Test.noDistribution } (triple string float string) "adding numbers to strings has no effect" <|
+        [ fuzzWith "adding numbers to strings has no effect" { runs = 100, distribution = Test.noDistribution } (triple string float string) <|
             \( prefix, num, suffix ) ->
                 withoutNums (prefix ++ String.fromFloat num ++ suffix)
                     |> Expect.equal (withoutNums (prefix ++ suffix))
@@ -48,21 +48,21 @@ oxfordify _ _ _ =
 testFuzz : Test
 testFuzz =
     describe "fuzzing"
-        [ fuzz2 string string "empty list etc" <|
+        [ fuzz2 "empty list etc" string string <|
             \name punctuation ->
                 oxfordify "This sentence is empty" "." []
                     |> Expect.equal ""
                     |> Expect.onFail "given an empty list, did not return an empty string"
-        , fuzz2 string string "further testing" <|
+        , fuzz2 "further testing" string string <|
             \name punctuation ->
                 oxfordify "This sentence contains " "." [ "one item" ]
                     |> Expect.equal "This sentence contains one item."
-        , fuzz2 string string "custom onFail here" <|
+        , fuzz2 "custom onFail here" string string <|
             \name punctuation ->
                 oxfordify "This sentence contains " "." [ "one item", "two item" ]
                     |> Expect.equal "This sentence contains one item and two item."
                     |> Expect.onFail "given an empty list, did not return an empty string"
-        , fuzz2 string string "This is a test." <|
+        , fuzz2 "This is a test." string string <|
             \name punctuation ->
                 oxfordify "This sentence contains " "." [ "one item", "two item", "three item" ]
                     |> Expect.equal "This sentence contains one item, two item, and three item."
@@ -73,7 +73,7 @@ testFuzz =
 testFailingFuzzTests : Test
 testFailingFuzzTests =
     describe "the first element in this fuzz tuple"
-        [ fuzz2 string string "is always \"foo\"" <|
+        [ fuzz2 "is always \"foo\"" string string <|
             \str1 str2 ->
                 str1
                     |> Expect.equal "foo"
@@ -116,12 +116,12 @@ testShrinkables : Test
 testShrinkables =
     describe "Some tests that should fail and produce shrunken values"
         [ describe "a randomly generated integer"
-            [ fuzz int "is for sure exactly 0" <| Expect.equal 0
-            , fuzz int "is <42" <| Expect.lessThan 42
-            , fuzz int "is also >42" <| Expect.greaterThan 42
+            [ fuzz "is for sure exactly 0" int <| Expect.equal 0
+            , fuzz "is <42" int <| Expect.lessThan 42
+            , fuzz "is also >42" int <| Expect.greaterThan 42
             ]
         , describe "a randomly generated string"
-            [ fuzz string "equals its reverse" <|
+            [ fuzz "equals its reverse" string <|
                 \str ->
                     Expect.equal str (String.reverse str)
             ]

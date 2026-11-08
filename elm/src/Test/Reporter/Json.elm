@@ -7,7 +7,7 @@ import Test.Reporter.TestResults as TestResults exposing (Failure, Outcome(..), 
 import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
 
 
-reportBegin : { globs : List String, paths : List String, fuzzRuns : Int, testCount : Int, initialSeed : Int } -> Maybe Value
+reportBegin : { globs : List String, paths : List String, fuzzRuns : Int, testCount : Int, excludedCount : Int, initialSeed : Int } -> Maybe Value
 reportBegin { globs, paths, fuzzRuns, testCount, initialSeed } =
     Encode.object
         [ ( "event", Encode.string "runStart" )
@@ -28,7 +28,11 @@ reportComplete { duration, labels, outcome } =
         , ( "labels", encodeLabels labels )
         , ( "failures", Encode.list identity (encodeFailures outcome) )
         , ( "distributionReports", Encode.list identity (encodeDistributionReports outcome) )
-        , ( "duration", Encode.string <| String.fromInt duration )
+
+        -- Keep the "duration" field Int for backwards compatibility,
+        -- and also expose the new Float field for more precision.
+        , ( "duration", Encode.string <| String.fromInt (round duration) )
+        , ( "durationFloat", Encode.string <| String.fromFloat duration )
         ]
 
 
@@ -61,7 +65,7 @@ encodeDistributionReports outcome =
 encodeDistributionReport : DistributionReport -> Value
 encodeDistributionReport distributionReport =
     case distributionReport of
-        Test.Distribution.NoDistribution ->
+        Test.Distribution.NoDistribution () ->
             Encode.null
                 |> encodeSumType "NoDistribution"
 
@@ -130,11 +134,12 @@ encodeLabels labels =
 
 
 reportSummary : SummaryInfo -> Maybe String -> Value
-reportSummary { duration, passed, failed } autoFail =
+reportSummary { duration, passed, failed, excluded } autoFail =
     Encode.object
         [ ( "event", Encode.string "runComplete" )
         , ( "passed", Encode.string <| String.fromInt passed )
         , ( "failed", Encode.string <| String.fromInt failed )
+        , ( "excluded", Encode.string <| String.fromInt excluded )
         , ( "duration", Encode.string <| String.fromFloat duration )
         , ( "autoFail"
           , autoFail
@@ -219,3 +224,10 @@ encodeReason description reason =
             ]
                 |> Encode.object
                 |> encodeSumType "CollectionDiff"
+
+        Multiple _ ->
+            -- node-test-runner does not support showing the `reason` for `Expect.oneOf`.
+            -- Also, when this was added, this avoided downstream consumers of this JSON
+            -- choking on a new variant.
+            Encode.string description
+                |> encodeSumType "Custom"
