@@ -4,6 +4,10 @@ Notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/). This project mirrors the Elm version. So version 0.19.2-X of this project will be compatible with Elm 0.19.2. See [Versions](./README.md#versions) for details.
 
+## 0.19.1-revision18 - 2026-11-17
+
+This version is identical to elm-test 0.19.3-0, but it is for Elm 0.19.1 instead of Elm 0.19.3. This is useful if you want the latest elm-test improvements, but ran into regressions with newer Elm versions and need to stay on 0.19.1.
+
 ## 0.19.3-0 - 2026-10-05
 
 ### Breaking
